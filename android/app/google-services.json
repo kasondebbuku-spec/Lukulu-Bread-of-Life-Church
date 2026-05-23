@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "663921871682",
+    "project_id": "kasonde-bbuku",
+    "storage_bucket": "kasonde-bbuku.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:663921871682:android:f5eaedb062175cc1c9d6db",
+        "android_client_info": {
+          "package_name": "com.breadoflife.church_cms"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDf1WaEZHll2bAtYHvBW7_11AsShIDJBq8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
