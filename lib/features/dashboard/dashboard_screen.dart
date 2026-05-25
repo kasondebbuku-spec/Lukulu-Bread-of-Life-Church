@@ -1,25 +1,66 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../members/screens/members_screen.dart';
 import '../prayer/screens/prayer_screen.dart';
-// 🟢 Add these imports for the new screens
 import '../attendance/screens/attendance_screen.dart';
 import '../giving/screens/giving_screen.dart';
 import '../events/screens/events_screen.dart';
 import '../announcements/screens/announcements_screen.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final List<Map<String, dynamic>> dashboardItems = [
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  String userRole = 'member';
+  bool isLoading = true;
+  String userName = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      setState(() {
+        userName = user.displayName ?? user.email?.split('@').first ?? 'User';
+      });
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      if (doc.exists) {
+        setState(() {
+          userRole = doc['role'] ?? 'member';
+          isLoading = false;
+        });
+        debugPrint("✅ Role loaded: $userRole");
+      } else {
+        debugPrint("⚠️ No role document found for user ${user.uid}");
+        setState(() => isLoading = false);
+      }
+    } else {
+      setState(() => isLoading = false);
+    }
+  }
+
+  List<Map<String, dynamic>> _getFilteredItems() {
+    final allItems = [
       {
         'title': 'Members Directory',
         'subtitle': 'Manage branch database',
         'count': '150+',
         'icon': Icons.people,
         'isPrimaryColor': true,
-        'destination': MembersScreen(),
+        'destination': const MembersScreen(),
+        'roles': ['admin', 'secretariat'],
       },
       {
         'title': 'Attendance Tracker',
@@ -27,7 +68,8 @@ class DashboardScreen extends StatelessWidget {
         'count': 'Active',
         'icon': Icons.how_to_reg,
         'isPrimaryColor': true,
-        'destination': const AttendanceScreen(), // 🟢 Now clickable
+        'destination': const AttendanceScreen(),
+        'roles': ['admin', 'secretariat', 'pastor'],
       },
       {
         'title': 'Giving & Tithes',
@@ -36,6 +78,7 @@ class DashboardScreen extends StatelessWidget {
         'icon': Icons.account_balance_wallet,
         'isPrimaryColor': false,
         'destination': const GivingScreen(),
+        'roles': ['admin', 'secretariat'],
       },
       {
         'title': 'Upcoming Events',
@@ -44,6 +87,7 @@ class DashboardScreen extends StatelessWidget {
         'icon': Icons.event,
         'isPrimaryColor': true,
         'destination': const EventsScreen(),
+        'roles': ['admin', 'secretariat', 'pastor', 'member'],
       },
       {
         'title': 'Announcements',
@@ -52,6 +96,7 @@ class DashboardScreen extends StatelessWidget {
         'icon': Icons.campaign,
         'isPrimaryColor': true,
         'destination': const AnnouncementsScreen(),
+        'roles': ['admin', 'secretariat', 'pastor', 'member'],
       },
       {
         'title': 'Prayer Request Wall',
@@ -59,20 +104,61 @@ class DashboardScreen extends StatelessWidget {
         'count': '5 New',
         'icon': Icons.volunteer_activism,
         'isPrimaryColor': false,
-        'destination': PrayerScreen(),
+        'destination': const PrayerScreen(),
+        'roles': ['admin', 'secretariat', 'pastor', 'member'],
       },
     ];
 
+    // Filter by role with null safety
+    return allItems.where((item) {
+      final roles = item['roles'] as List<String>?;
+      return roles != null && roles.contains(userRole);
+    }).toList();
+  }
+
+  Future<void> _logout() async {
+    await FirebaseAuth.instance.signOut();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final dashboardItems = _getFilteredItems();
+
     return Scaffold(
       appBar: AppBar(
-        title:
-            const Text('Bread of Life Lukulu Branch Church Management System'),
+        title: const Text('Bread of Life Lukulu Branch'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.account_circle, size: 28),
-            onPressed: () {},
+          PopupMenuButton<String>(
+            icon: const CircleAvatar(
+              child: Icon(Icons.person),
+            ),
+            onSelected: (value) async {
+              if (value == 'logout') {
+                await _logout();
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'info',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(userName,
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text('Role: ${userRole.toUpperCase()}',
+                        style: const TextStyle(fontSize: 12)),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(value: 'logout', child: Text('Logout')),
+            ],
           ),
-          const SizedBox(width: 16),
         ],
       ),
       body: SingleChildScrollView(
@@ -81,12 +167,12 @@ class DashboardScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Welcome, Admin',
+              'Welcome, $userName',
               style: Theme.of(context).textTheme.headlineLarge,
             ),
             const SizedBox(height: 4),
             Text(
-              'Bread of Life Church — Lukulu Branch Management Portal',
+              'Role: ${userRole.toUpperCase()}',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 32),
@@ -106,18 +192,17 @@ class DashboardScreen extends StatelessWidget {
                     ? Theme.of(context).colorScheme.primary
                     : Theme.of(context).colorScheme.secondary;
 
+                // Replace deprecated withOpacity with withValues()
+                final backgroundColor = cardColor.withValues(alpha: 0.1);
+
                 return InkWell(
-                  onTap: item['destination'] != null
-                      ? () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  item['destination'] as Widget,
-                            ),
-                          );
-                        }
-                      : null,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => item['destination'] as Widget),
+                    );
+                  },
                   borderRadius: BorderRadius.circular(12),
                   child: Card(
                     margin: EdgeInsets.zero,
@@ -136,7 +221,7 @@ class DashboardScreen extends StatelessWidget {
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: cardColor.withOpacity(0.1),
+                                  color: backgroundColor,
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
