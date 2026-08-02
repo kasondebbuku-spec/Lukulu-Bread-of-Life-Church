@@ -1,142 +1,154 @@
-// lib/features/attendance/screens/attendance_screen.dart
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class AttendanceScreen extends StatefulWidget {
+import '../../../core/providers/user_role_provider.dart';
+import '../../../core/utils/date_format.dart';
+import '../../../core/widgets/confirm_delete_dialog.dart';
+import '../../../core/widgets/empty_state.dart';
+import '../../../models/attendance_record.dart';
+import '../../../repositories/repository_providers.dart';
+
+class AttendanceScreen extends ConsumerStatefulWidget {
   const AttendanceScreen({super.key});
 
   @override
-  State<AttendanceScreen> createState() => _AttendanceScreenState();
+  ConsumerState<AttendanceScreen> createState() => _AttendanceScreenState();
 }
 
-class _AttendanceScreenState extends State<AttendanceScreen> {
-  String userRole = 'member';
-  final TextEditingController _dateController = TextEditingController();
-  final TextEditingController _countController = TextEditingController();
-  final TextEditingController _newVisitorsController = TextEditingController();
+class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _countController = TextEditingController();
+  final _newVisitorsController = TextEditingController();
+  DateTime _selectedDate = DateTime.now();
 
   @override
-  void initState() {
-    super.initState();
-    _loadUserRole();
+  void dispose() {
+    _countController.dispose();
+    _newVisitorsController.dispose();
+    super.dispose();
   }
 
-  Future<void> _loadUserRole() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
-      if (doc.exists && mounted) {
-        setState(() {
-          userRole = doc['role'] ?? 'member';
-        });
-      }
+  Future<void> _pickDate(StateSetter setDialogState) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) {
+      setDialogState(() => _selectedDate = picked);
     }
   }
 
-  bool get canEdit => ['admin', 'secretariat'].contains(userRole);
-
   Future<void> _addAttendance() async {
-    final date = _dateController.text.trim();
-    final count = int.tryParse(_countController.text.trim());
-    final newVisitors = int.tryParse(_newVisitorsController.text.trim());
-    if (date.isEmpty || count == null || newVisitors == null) return;
+    if (!_formKey.currentState!.validate()) return;
 
-    await FirebaseFirestore.instance.collection('attendance').add({
-      'date': date,
-      'count': count,
-      'newVisitors': newVisitors,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+    final record = AttendanceRecord(
+      id: '',
+      date: _selectedDate,
+      count: int.parse(_countController.text.trim()),
+      newVisitors: int.parse(_newVisitorsController.text.trim()),
+    );
+    await ref.read(attendanceRepositoryProvider).add(record);
+
     if (!mounted) return;
-    _dateController.clear();
     _countController.clear();
     _newVisitorsController.clear();
+    _selectedDate = DateTime.now();
     Navigator.pop(context);
   }
 
   void _showAddDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Attendance Record'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-                controller: _dateController,
-                decoration: const InputDecoration(
-                    labelText: 'Date (e.g., Sunday, May 25)')),
-            TextField(
-                controller: _countController,
-                decoration:
-                    const InputDecoration(labelText: 'Total Attendance'),
-                keyboardType: TextInputType.number),
-            TextField(
-                controller: _newVisitorsController,
-                decoration: const InputDecoration(labelText: 'New Visitors'),
-                keyboardType: TextInputType.number),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Add Attendance Record'),
+          content: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(formatDate(_selectedDate)),
+                  trailing: const Icon(Icons.calendar_today),
+                  onTap: () => _pickDate(setDialogState),
+                ),
+                TextFormField(
+                  controller: _countController,
+                  decoration: const InputDecoration(labelText: 'Total Attendance'),
+                  keyboardType: TextInputType.number,
+                  validator: (val) =>
+                      int.tryParse((val ?? '').trim()) == null ? 'Enter a number' : null,
+                ),
+                TextFormField(
+                  controller: _newVisitorsController,
+                  decoration: const InputDecoration(labelText: 'New Visitors'),
+                  keyboardType: TextInputType.number,
+                  validator: (val) =>
+                      int.tryParse((val ?? '').trim()) == null ? 'Enter a number' : null,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel')),
+            ElevatedButton(onPressed: _addAttendance, child: const Text('Save')),
           ],
         ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
-          ElevatedButton(onPressed: _addAttendance, child: const Text('Save')),
-        ],
       ),
     );
   }
 
   Future<void> _deleteAttendance(String docId) async {
-    await FirebaseFirestore.instance
-        .collection('attendance')
-        .doc(docId)
-        .delete();
+    if (!await confirmDelete(context, itemLabel: 'attendance record')) return;
+    await ref.read(attendanceRepositoryProvider).delete(docId);
   }
 
   @override
   Widget build(BuildContext context) {
+    final canEdit = ref.watch(userRoleProvider).maybeWhen(
+          data: (role) => role.canManageAttendance,
+          orElse: () => false,
+        );
+    final recordsAsync = ref.watch(attendanceRecordsProvider);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Attendance Tracker')),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('attendance')
-            .orderBy('createdAt', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError)
-            return Center(child: Text('Error: ${snapshot.error}'));
-          if (snapshot.connectionState == ConnectionState.waiting)
-            return const Center(child: CircularProgressIndicator());
-          final docs = snapshot.data!.docs;
-          if (docs.isEmpty)
-            return const Center(child: Text('No attendance records yet.'));
-
+      body: recordsAsync.when(
+        data: (docs) {
+          if (docs.isEmpty) {
+            return const EmptyState(
+              icon: Icons.how_to_reg_outlined,
+              message: 'No attendance records yet.\nLog a service to get started.',
+            );
+          }
           return ListView.builder(
             itemCount: docs.length,
             itemBuilder: (context, index) {
-              final data = docs[index].data() as Map<String, dynamic>;
-              final docId = docs[index].id;
+              final record = docs[index];
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 child: ListTile(
-                  title: Text(data['date'] ?? 'No date'),
+                  leading: const CircleAvatar(child: Icon(Icons.how_to_reg)),
+                  title: Text(formatDate(record.date)),
                   subtitle: Text(
-                      'Attended: ${data['count']}  •  New: ${data['newVisitors']}'),
+                      'Attended: ${record.count}  •  New: ${record.newVisitors}'),
                   trailing: canEdit
                       ? IconButton(
                           icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () => _deleteAttendance(docId))
+                          onPressed: () => _deleteAttendance(record.id))
                       : null,
                 ),
               );
             },
           );
         },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => Center(child: Text('Error: $error')),
       ),
       floatingActionButton: canEdit
           ? FloatingActionButton(

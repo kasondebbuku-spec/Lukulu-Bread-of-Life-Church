@@ -17,6 +17,9 @@ class AppColors {
   static const Color textPrimary = Color(0xFF1A1A2E);
   static const Color textSecondary = Color(0xFF6B6B8A);
   static const Color divider = Color(0xFFE0D7F5);
+
+  // Accent used for financial / giving-related UI
+  static const Color finance = Color(0xFF00796B);
 }
 
 class AppTheme {

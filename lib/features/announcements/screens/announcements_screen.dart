@@ -1,56 +1,49 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class AnnouncementsScreen extends StatefulWidget {
+import '../../../core/providers/firebase_providers.dart';
+import '../../../core/providers/user_role_provider.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/date_format.dart';
+import '../../../core/widgets/confirm_delete_dialog.dart';
+import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/tag_chip.dart';
+import '../../../models/announcement.dart';
+import '../../../repositories/repository_providers.dart';
+
+class AnnouncementsScreen extends ConsumerStatefulWidget {
   const AnnouncementsScreen({super.key});
 
   @override
-  State<AnnouncementsScreen> createState() => _AnnouncementsScreenState();
+  ConsumerState<AnnouncementsScreen> createState() => _AnnouncementsScreenState();
 }
 
-class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _contentController = TextEditingController();
-  String userRole = 'member';
-  String _selectedAudience = 'all'; // 'all' or 'leaders'
+class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _titleController = TextEditingController();
+  final _contentController = TextEditingController();
+  String _selectedAudience = 'all';
 
   @override
-  void initState() {
-    super.initState();
-    _loadUserRole();
+  void dispose() {
+    _titleController.dispose();
+    _contentController.dispose();
+    super.dispose();
   }
-
-  Future<void> _loadUserRole() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
-      if (doc.exists && mounted) {
-        setState(() {
-          userRole = doc['role'] ?? 'member';
-        });
-      }
-    }
-  }
-
-  bool get canWrite => ['admin', 'secretariat', 'pastor'].contains(userRole);
 
   Future<void> _addAnnouncement() async {
-    final title = _titleController.text.trim();
-    final content = _contentController.text.trim();
-    if (title.isEmpty || content.isEmpty) return;
+    if (!_formKey.currentState!.validate()) return;
 
-    final user = FirebaseAuth.instance.currentUser;
-    await FirebaseFirestore.instance.collection('announcements').add({
-      'title': title,
-      'content': content,
-      'createdBy': user?.displayName ?? user?.email,
-      'createdAt': FieldValue.serverTimestamp(),
-      'targetAudience': _selectedAudience, // 👈 new field
-    });
+    final user = ref.read(firebaseAuthProvider).currentUser;
+    final announcement = Announcement(
+      id: '',
+      title: _titleController.text.trim(),
+      content: _contentController.text.trim(),
+      createdBy: user?.displayName ?? user?.email ?? 'unknown',
+      targetAudience: _selectedAudience,
+    );
+    await ref.read(announcementsRepositoryProvider).add(announcement);
+
     if (!mounted) return;
     _titleController.clear();
     _contentController.clear();
@@ -65,36 +58,45 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
         builder: (context, setDialogState) {
           return AlertDialog(
             title: const Text('New Announcement'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
+            content: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
                     controller: _titleController,
-                    decoration: const InputDecoration(labelText: 'Title')),
-                const SizedBox(height: 12),
-                TextField(
+                    decoration: const InputDecoration(labelText: 'Title'),
+                    validator: (val) =>
+                        (val == null || val.trim().isEmpty) ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
                     controller: _contentController,
                     decoration: const InputDecoration(labelText: 'Content'),
-                    maxLines: 3),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  value: _selectedAudience,
-                  decoration: const InputDecoration(labelText: 'Audience'),
-                  items: const [
-                    DropdownMenuItem(
-                        value: 'all', child: Text('Everyone (all members)')),
-                    DropdownMenuItem(
-                        value: 'leaders',
-                        child:
-                            Text('Leaders only (admin, secretariat, pastor)')),
-                  ],
-                  onChanged: (value) {
-                    setDialogState(() {
-                      _selectedAudience = value!;
-                    });
-                  },
-                ),
-              ],
+                    maxLines: 3,
+                    validator: (val) =>
+                        (val == null || val.trim().isEmpty) ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: _selectedAudience,
+                    decoration: const InputDecoration(labelText: 'Audience'),
+                    items: const [
+                      DropdownMenuItem(
+                          value: 'all', child: Text('Everyone (all members)')),
+                      DropdownMenuItem(
+                          value: 'leaders',
+                          child:
+                              Text('Leaders only (admin, secretariat, pastor)')),
+                    ],
+                    onChanged: (value) {
+                      setDialogState(() {
+                        _selectedAudience = value!;
+                      });
+                    },
+                  ),
+                ],
+              ),
             ),
             actions: [
               TextButton(
@@ -110,77 +112,43 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
   }
 
   Future<void> _deleteAnnouncement(String docId) async {
-    await FirebaseFirestore.instance
-        .collection('announcements')
-        .doc(docId)
-        .delete();
+    if (!await confirmDelete(context, itemLabel: 'announcement')) return;
+    await ref.read(announcementsRepositoryProvider).delete(docId);
   }
 
   @override
   Widget build(BuildContext context) {
+    final canWrite = ref.watch(userRoleProvider).maybeWhen(
+          data: (role) => role.canPostAnnouncements,
+          orElse: () => false,
+        );
+    final announcementsAsync = ref.watch(announcementsProvider);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Announcements')),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('announcements')
-            .orderBy('createdAt', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError)
-            return Center(child: Text('Error: ${snapshot.error}'));
-          if (snapshot.connectionState == ConnectionState.waiting)
-            return const Center(child: CircularProgressIndicator());
-          final docs = snapshot.data!.docs;
-          if (docs.isEmpty)
-            return const Center(child: Text('No announcements yet.'));
-
+      body: announcementsAsync.when(
+        data: (announcements) {
+          if (announcements.isEmpty) {
+            return const EmptyState(
+              icon: Icons.campaign_outlined,
+              message: 'No announcements yet.\nBranch-wide updates will appear here.',
+            );
+          }
           return ListView.builder(
-            itemCount: docs.length,
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            itemCount: announcements.length,
             itemBuilder: (context, index) {
-              final data = docs[index].data() as Map<String, dynamic>;
-              final docId = docs[index].id;
-              final audience = data['targetAudience'] ?? 'all';
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                child: ListTile(
-                  title: Text(data['title'] ?? 'No title'),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(data['content'] ?? ''),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Posted by ${data['createdBy'] ?? 'unknown'} • ${(data['createdAt'] as Timestamp?)?.toDate().toString().substring(0, 16) ?? 'recent'}',
-                        style:
-                            const TextStyle(fontSize: 10, color: Colors.grey),
-                      ),
-                      if (canWrite && audience == 'leaders')
-                        Container(
-                          margin: const EdgeInsets.only(top: 4),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.shade100,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Text('Leaders only',
-                              style: TextStyle(
-                                  fontSize: 10, color: Colors.orange)),
-                        ),
-                    ],
-                  ),
-                  isThreeLine: true,
-                  trailing: canWrite
-                      ? IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () => _deleteAnnouncement(docId),
-                        )
-                      : null,
-                ),
+              final announcement = announcements[index];
+              return _AnnouncementCard(
+                announcement: announcement,
+                canWrite: canWrite,
+                onDelete: () => _deleteAnnouncement(announcement.id),
               );
             },
           );
         },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => Center(child: Text('Error: $error')),
       ),
       floatingActionButton: canWrite
           ? FloatingActionButton(
@@ -188,6 +156,85 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
               child: const Icon(Icons.add),
             )
           : null,
+    );
+  }
+}
+
+class _AnnouncementCard extends StatelessWidget {
+  const _AnnouncementCard({
+    required this.announcement,
+    required this.canWrite,
+    required this.onDelete,
+  });
+
+  final Announcement announcement;
+  final bool canWrite;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final isLeadersOnly = announcement.targetAudience == 'leaders';
+    final accent = isLeadersOnly ? AppColors.secondaryDark : AppColors.primary;
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border(left: BorderSide(color: accent, width: 4)),
+        ),
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.campaign, color: accent, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    announcement.title,
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                if (canWrite)
+                  IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                    onPressed: onDelete,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(announcement.content, style: Theme.of(context).textTheme.bodyMedium),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                TagChip(
+                  label: isLeadersOnly ? 'Leaders only' : 'Everyone',
+                  color: accent,
+                  icon: isLeadersOnly ? Icons.shield_outlined : Icons.public,
+                ),
+                Text(
+                  'Posted by ${announcement.createdBy}'
+                  '${announcement.createdAt != null ? ' • ${formatDate(announcement.createdAt!)}' : ''}',
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

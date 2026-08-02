@@ -1,0 +1,88 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userData(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data;
+    }
+
+    function myRole() {
+      return isSignedIn() ? userData(request.auth.uid).role : 'member';
+    }
+
+    function isAdmin() { return myRole() == 'admin'; }
+    function isSecretariat() { return myRole() == 'secretariat'; }
+    function isFinance() { return myRole() == 'finance'; }
+    function isLeadership() {
+      return myRole() in ['elder', 'deacon', 'deaconess', 'pastor'];
+    }
+
+    // Mirrors lib/core/providers/user_role_provider.dart — keep in sync.
+    function canManageMembers() { return isAdmin() || isSecretariat(); }
+    function canManageGiving() { return isAdmin() || isFinance(); }
+    function canManageAttendance() { return isAdmin() || isSecretariat() || isLeadership(); }
+    function canManageEvents() { return isAdmin() || isSecretariat(); }
+    function canPostAnnouncements() { return isAdmin() || isSecretariat() || isLeadership(); }
+    function canSeeAllPrayer() { return isAdmin() || isSecretariat() || isLeadership(); }
+
+    // Each signed-up user gets exactly one profile doc holding their role.
+    // Self-signup can only ever create a 'member' doc — any other role
+    // (elder, finance, admin, ...) must be granted by an admin editing
+    // Firestore directly (client SDK writes are still bound by these rules,
+    // the Firebase Console/Admin SDK are not).
+    match /users/{uid} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+                    && request.auth.uid == uid
+                    && request.resource.data.role == 'member';
+      allow update: if isAdmin()
+                    || (isSignedIn() && request.auth.uid == uid
+                        && request.resource.data.role == resource.data.role);
+      allow delete: if isAdmin();
+    }
+
+    // Congregation directory holds personal contact info (email, phone) —
+    // readable only by the roles that have a Members tab in the app.
+    match /members/{id} {
+      allow read, write: if canManageMembers();
+    }
+
+    // Financial records — the whole point of this rule set: only Admin and
+    // Finance can touch this collection, regardless of any other seniority.
+    match /giving/{id} {
+      allow read, write: if canManageGiving();
+    }
+
+    match /attendance/{id} {
+      allow read, write: if canManageAttendance();
+    }
+
+    // Events are public to every signed-in member; only certain roles edit them.
+    match /events/{id} {
+      allow read: if isSignedIn();
+      allow write: if canManageEvents();
+    }
+
+    // 'leaders'-only announcements are hidden from plain members server-side,
+    // not just cosmetically as before.
+    match /announcements/{id} {
+      allow read: if isSignedIn()
+                  && (resource.data.targetAudience == 'all' || canPostAnnouncements());
+      allow create: if canPostAnnouncements();
+      allow update, delete: if canPostAnnouncements();
+    }
+
+    // Members only ever see their own prayer requests; leadership tier sees all.
+    match /prayer_requests/{id} {
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow read: if isSignedIn()
+                  && (resource.data.userId == request.auth.uid || canSeeAllPrayer());
+      allow update, delete: if canSeeAllPrayer();
+    }
+  }
+}

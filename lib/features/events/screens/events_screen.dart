@@ -1,156 +1,174 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class EventsScreen extends StatefulWidget {
+import '../../../core/providers/user_role_provider.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/date_format.dart';
+import '../../../core/widgets/confirm_delete_dialog.dart';
+import '../../../core/widgets/empty_state.dart';
+import '../../../models/church_event.dart';
+import '../../../repositories/repository_providers.dart';
+
+class EventsScreen extends ConsumerStatefulWidget {
   const EventsScreen({super.key});
 
   @override
-  State<EventsScreen> createState() => _EventsScreenState();
+  ConsumerState<EventsScreen> createState() => _EventsScreenState();
 }
 
-class _EventsScreenState extends State<EventsScreen> {
-  String userRole = 'member';
-  bool isLoading = true;
-
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _dateController = TextEditingController();
-  final TextEditingController _locationController = TextEditingController();
+class _EventsScreenState extends ConsumerState<EventsScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _titleController = TextEditingController();
+  final _locationController = TextEditingController();
+  DateTime _selectedDate = DateTime.now();
 
   @override
-  void initState() {
-    super.initState();
-    _loadUserRole();
+  void dispose() {
+    _titleController.dispose();
+    _locationController.dispose();
+    super.dispose();
   }
 
-  Future<void> _loadUserRole() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
-      if (doc.exists && mounted) {
-        setState(() {
-          userRole = doc['role'] ?? 'member';
-          isLoading = false;
-        });
-        debugPrint("✅ EventsScreen: userRole = $userRole");
-      } else {
-        setState(() => isLoading = false);
-      }
-    } else {
-      setState(() => isLoading = false);
+  Future<void> _pickDate(StateSetter setDialogState) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) {
+      setDialogState(() => _selectedDate = picked);
     }
   }
 
-  bool get canEdit => userRole == 'admin' || userRole == 'secretariat';
-
   Future<void> _addEvent() async {
-    final title = _titleController.text.trim();
-    final date = _dateController.text.trim();
-    final location = _locationController.text.trim();
-    if (title.isEmpty || date.isEmpty) return;
+    if (!_formKey.currentState!.validate()) return;
 
-    await FirebaseFirestore.instance.collection('events').add({
-      'title': title,
-      'date': date,
-      'location': location,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+    final event = ChurchEvent(
+      id: '',
+      title: _titleController.text.trim(),
+      date: _selectedDate,
+      location: _locationController.text.trim(),
+    );
+    await ref.read(eventsRepositoryProvider).add(event);
+
     if (!mounted) return;
     _titleController.clear();
-    _dateController.clear();
     _locationController.clear();
+    _selectedDate = DateTime.now();
     Navigator.pop(context);
   }
 
   void _showAddDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Event'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-                controller: _titleController,
-                decoration: const InputDecoration(labelText: 'Event Title')),
-            const SizedBox(height: 12),
-            TextField(
-                controller: _dateController,
-                decoration: const InputDecoration(labelText: 'Date & Time')),
-            const SizedBox(height: 12),
-            TextField(
-                controller: _locationController,
-                decoration:
-                    const InputDecoration(labelText: 'Location (optional)')),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Add Event'),
+          content: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: _titleController,
+                  decoration: const InputDecoration(labelText: 'Event Title'),
+                  validator: (val) =>
+                      (val == null || val.trim().isEmpty) ? 'Required' : null,
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(formatDate(_selectedDate)),
+                  trailing: const Icon(Icons.calendar_today),
+                  onTap: () => _pickDate(setDialogState),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _locationController,
+                  decoration:
+                      const InputDecoration(labelText: 'Location (optional)'),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel')),
+            ElevatedButton(onPressed: _addEvent, child: const Text('Save')),
           ],
         ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
-          ElevatedButton(onPressed: _addEvent, child: const Text('Save')),
-        ],
       ),
     );
   }
 
   Future<void> _deleteEvent(String docId) async {
-    await FirebaseFirestore.instance.collection('events').doc(docId).delete();
+    if (!await confirmDelete(context, itemLabel: 'event')) return;
+    await ref.read(eventsRepositoryProvider).delete(docId);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
+    final canEdit = ref.watch(userRoleProvider).maybeWhen(
+          data: (role) => role.canManageEvents,
+          orElse: () => false,
+        );
+    final eventsAsync = ref.watch(eventsProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Upcoming Events')),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('events')
-            .orderBy('createdAt', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError)
-            return Center(child: Text('Error: ${snapshot.error}'));
-          if (snapshot.connectionState == ConnectionState.waiting)
-            return const Center(child: CircularProgressIndicator());
-          final docs = snapshot.data!.docs;
-          if (docs.isEmpty) return const Center(child: Text('No events yet.'));
+      body: eventsAsync.when(
+        data: (events) {
+          if (events.isEmpty) {
+            return const EmptyState(
+              icon: Icons.event_busy_outlined,
+              message: 'No events yet.\nUpcoming services and gatherings will appear here.',
+            );
+          }
 
-          return ListView.builder(
-            itemCount: docs.length,
-            itemBuilder: (context, index) {
-              final data = docs[index].data() as Map<String, dynamic>;
-              final docId = docs[index].id;
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                child: ListTile(
-                  title: Text(data['title'] ?? 'No title'),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(data['date'] ?? ''),
-                      if (data['location'] != null &&
-                          data['location'].toString().isNotEmpty)
-                        Text(data['location']),
-                    ],
-                  ),
-                  trailing: canEdit
-                      ? IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () => _deleteEvent(docId),
-                        )
-                      : null,
+          final today = DateTime.now();
+          final startOfToday = DateTime(today.year, today.month, today.day);
+          final upcoming = events.where((e) => !e.date.isBefore(startOfToday)).toList();
+          final past = events.where((e) => e.date.isBefore(startOfToday)).toList()
+            ..sort((a, b) => b.date.compareTo(a.date));
+
+          return ListView(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            children: [
+              if (upcoming.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                  child: Text('No upcoming events scheduled.'),
+                )
+              else
+                ...upcoming.map((e) => _EventCard(
+                      event: e,
+                      isPast: false,
+                      canEdit: canEdit,
+                      onDelete: () => _deleteEvent(e.id),
+                    )),
+              if (past.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
+                  child: Text('Past Events',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(color: AppColors.textSecondary)),
                 ),
-              );
-            },
+                ...past.map((e) => _EventCard(
+                      event: e,
+                      isPast: true,
+                      canEdit: canEdit,
+                      onDelete: () => _deleteEvent(e.id),
+                    )),
+              ],
+            ],
           );
         },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => Center(child: Text('Error: $error')),
       ),
       floatingActionButton: canEdit
           ? FloatingActionButton(
@@ -158,6 +176,100 @@ class _EventsScreenState extends State<EventsScreen> {
               child: const Icon(Icons.add),
             )
           : null,
+    );
+  }
+}
+
+const _monthAbbrev = [
+  'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
+  'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
+];
+
+class _EventCard extends StatelessWidget {
+  const _EventCard({
+    required this.event,
+    required this.isPast,
+    required this.canEdit,
+    required this.onDelete,
+  });
+
+  final ChurchEvent event;
+  final bool isPast;
+  final bool canEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = isPast ? AppColors.textSecondary : AppColors.primary;
+
+    return Opacity(
+      opacity: isPast ? 0.6 : 1,
+      child: Card(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 52,
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: accent.withValues(alpha: 0.3)),
+                ),
+                child: Column(
+                  children: [
+                    Text(_monthAbbrev[event.date.month - 1],
+                        style: TextStyle(
+                            color: accent, fontWeight: FontWeight.bold, fontSize: 11)),
+                    Text('${event.date.day}',
+                        style: TextStyle(
+                            color: accent, fontWeight: FontWeight.bold, fontSize: 20)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(event.title,
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 2),
+                    Text(formatDate(event.date),
+                        style: Theme.of(context).textTheme.bodySmall),
+                    if (event.location.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          const Icon(Icons.place_outlined,
+                              size: 13, color: AppColors.textSecondary),
+                          const SizedBox(width: 3),
+                          Expanded(
+                            child: Text(event.location,
+                                style: Theme.of(context).textTheme.bodySmall,
+                                overflow: TextOverflow.ellipsis),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (canEdit)
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                  onPressed: onDelete,
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

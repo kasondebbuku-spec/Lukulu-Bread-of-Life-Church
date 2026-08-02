@@ -1,52 +1,46 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class PrayerScreen extends StatefulWidget {
+import '../../../core/providers/firebase_providers.dart';
+import '../../../core/providers/user_role_provider.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/date_format.dart';
+import '../../../core/widgets/confirm_delete_dialog.dart';
+import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/tag_chip.dart';
+import '../../../models/prayer_request.dart';
+import '../../../repositories/repository_providers.dart';
+
+class PrayerScreen extends ConsumerStatefulWidget {
   const PrayerScreen({super.key});
 
   @override
-  State<PrayerScreen> createState() => _PrayerScreenState();
+  ConsumerState<PrayerScreen> createState() => _PrayerScreenState();
 }
 
-class _PrayerScreenState extends State<PrayerScreen> {
-  final TextEditingController _requestController = TextEditingController();
-  String userRole = 'member';
-  String userId = '';
+class _PrayerScreenState extends ConsumerState<PrayerScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _requestController = TextEditingController();
 
   @override
-  void initState() {
-    super.initState();
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      userId = user.uid;
-      _loadUserRole();
-    }
+  void dispose() {
+    _requestController.dispose();
+    super.dispose();
   }
-
-  Future<void> _loadUserRole() async {
-    final doc =
-        await FirebaseFirestore.instance.collection('users').doc(userId).get();
-    if (doc.exists && mounted) {
-      setState(() {
-        userRole = doc['role'] ?? 'member';
-      });
-    }
-  }
-
-  bool get canSeeAll => ['admin', 'secretariat', 'pastor'].contains(userRole);
 
   Future<void> _addPrayerRequest() async {
-    final content = _requestController.text.trim();
-    if (content.isEmpty) return;
-    final user = FirebaseAuth.instance.currentUser;
-    await FirebaseFirestore.instance.collection('prayer_requests').add({
-      'userId': userId,
-      'userName': user?.displayName ?? user?.email,
-      'request': content,
-      'createdAt': FieldValue.serverTimestamp(),
-      'status': 'pending',
-    });
+    if (!_formKey.currentState!.validate()) return;
+
+    final user = ref.read(firebaseAuthProvider).currentUser;
+    final request = PrayerRequest(
+      id: '',
+      userId: user?.uid ?? '',
+      userName: user?.displayName ?? user?.email ?? 'Anonymous',
+      request: _requestController.text.trim(),
+      status: 'pending',
+    );
+    await ref.read(prayerRepositoryProvider).add(request);
+
     if (!mounted) return;
     _requestController.clear();
     Navigator.pop(context);
@@ -57,11 +51,16 @@ class _PrayerScreenState extends State<PrayerScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Prayer Request'),
-        content: TextField(
-          controller: _requestController,
-          decoration: const InputDecoration(
-              labelText: 'What would you like prayer for?'),
-          maxLines: 3,
+        content: Form(
+          key: _formKey,
+          child: TextFormField(
+            controller: _requestController,
+            decoration: const InputDecoration(
+                labelText: 'What would you like prayer for?'),
+            maxLines: 3,
+            validator: (val) =>
+                (val == null || val.trim().isEmpty) ? 'Required' : null,
+          ),
         ),
         actions: [
           TextButton(
@@ -74,75 +73,144 @@ class _PrayerScreenState extends State<PrayerScreen> {
     );
   }
 
+  Future<void> _deletePrayerRequest(String docId) async {
+    if (!await confirmDelete(context, itemLabel: 'prayer request')) return;
+    await ref.read(prayerRepositoryProvider).delete(docId);
+  }
+
+  Future<void> _toggleStatus(PrayerRequest request) async {
+    await ref
+        .read(prayerRepositoryProvider)
+        .updateStatus(request.id, request.isAnswered ? 'pending' : 'answered');
+  }
+
   @override
   Widget build(BuildContext context) {
-    Query query = FirebaseFirestore.instance.collection('prayer_requests');
-    if (!canSeeAll) {
-      query = query.where('userId', isEqualTo: userId);
-    }
-    query = query.orderBy('createdAt', descending: true);
+    final canSeeAll = ref.watch(userRoleProvider).maybeWhen(
+          data: (role) => role.canSeeAllPrayerRequests,
+          orElse: () => false,
+        );
+    final requestsAsync = ref.watch(prayerRequestsProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Prayer Requests')),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: query.snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final docs = snapshot.data!.docs;
-          if (docs.isEmpty) {
-            return Center(
-              child: Text(canSeeAll
+      body: requestsAsync.when(
+        data: (requests) {
+          if (requests.isEmpty) {
+            return EmptyState(
+              icon: Icons.volunteer_activism_outlined,
+              message: canSeeAll
                   ? 'No prayer requests yet.'
-                  : 'You have not submitted any prayer requests.'),
+                  : 'You have not submitted any prayer requests.\nTap + to share one.',
             );
           }
           return ListView.builder(
-            itemCount: docs.length,
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            itemCount: requests.length,
             itemBuilder: (context, index) {
-              final data = docs[index].data() as Map<String, dynamic>;
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                child: ListTile(
-                  leading: const Icon(Icons.volunteer_activism,
-                      color: Colors.purple),
-                  title: Text(data['request'] ?? ''),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (canSeeAll)
-                        Text('From: ${data['userName'] ?? 'Anonymous'}'),
-                      Text(
-                          'Submitted: ${(data['createdAt'] as Timestamp?)?.toDate().toString().substring(0, 16) ?? 'recent'}'),
-                    ],
-                  ),
-                  isThreeLine: canSeeAll,
-                  trailing: canSeeAll
-                      ? PopupMenuButton(
-                          onSelected: (value) async {
-                            if (value == 'delete') {
-                              await docs[index].reference.delete();
-                            }
-                          },
-                          itemBuilder: (context) => const [
-                            PopupMenuItem(
-                                value: 'delete', child: Text('Delete')),
-                          ],
-                        )
-                      : null,
-                ),
+              final request = requests[index];
+              return _PrayerCard(
+                request: request,
+                showRequester: canSeeAll,
+                canManage: canSeeAll,
+                onToggleStatus: () => _toggleStatus(request),
+                onDelete: () => _deletePrayerRequest(request.id),
               );
             },
           );
         },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => Center(child: Text('Error: $error')),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddDialog,
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+class _PrayerCard extends StatelessWidget {
+  const _PrayerCard({
+    required this.request,
+    required this.showRequester,
+    required this.canManage,
+    required this.onToggleStatus,
+    required this.onDelete,
+  });
+
+  final PrayerRequest request;
+  final bool showRequester;
+  final bool canManage;
+  final VoidCallback onToggleStatus;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border(
+            left: BorderSide(
+              color: request.isAnswered ? Colors.green : AppColors.primary,
+              width: 4,
+            ),
+          ),
+        ),
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              request.isAnswered ? Icons.check_circle_outline : Icons.volunteer_activism,
+              color: request.isAnswered ? Colors.green : AppColors.primary,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(request.request, style: Theme.of(context).textTheme.bodyLarge),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      TagChip(
+                        label: request.isAnswered ? 'Answered' : 'Pending',
+                        color: request.isAnswered ? Colors.green : AppColors.secondaryDark,
+                        icon: request.isAnswered ? Icons.check : Icons.hourglass_empty,
+                      ),
+                      if (showRequester)
+                        Text('From: ${request.userName}',
+                            style: Theme.of(context).textTheme.bodySmall),
+                      if (request.createdAt != null)
+                        Text(formatDate(request.createdAt!),
+                            style: Theme.of(context).textTheme.bodySmall),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            if (canManage)
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == 'delete') onDelete();
+                  if (value == 'toggle') onToggleStatus();
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'toggle',
+                    child: Text(request.isAnswered ? 'Mark as pending' : 'Mark as answered'),
+                  ),
+                  const PopupMenuItem(value: 'delete', child: Text('Delete')),
+                ],
+              ),
+          ],
+        ),
       ),
     );
   }

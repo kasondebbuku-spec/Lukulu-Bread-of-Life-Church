@@ -1,54 +1,46 @@
-// lib/features/giving/screens/giving_screen.dart
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class GivingScreen extends StatefulWidget {
+import '../../../core/providers/user_role_provider.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/date_format.dart';
+import '../../../core/widgets/confirm_delete_dialog.dart';
+import '../../../core/widgets/empty_state.dart';
+import '../../../models/giving_record.dart';
+import '../../../repositories/repository_providers.dart';
+
+String formatZmw(double value) => 'ZMW ${value.toStringAsFixed(2)}';
+
+class GivingScreen extends ConsumerStatefulWidget {
   const GivingScreen({super.key});
 
   @override
-  State<GivingScreen> createState() => _GivingScreenState();
+  ConsumerState<GivingScreen> createState() => _GivingScreenState();
 }
 
-class _GivingScreenState extends State<GivingScreen> {
-  String userRole = 'member';
-  final TextEditingController _memberNameController = TextEditingController();
-  final TextEditingController _amountController = TextEditingController();
+class _GivingScreenState extends ConsumerState<GivingScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _memberNameController = TextEditingController();
+  final _amountController = TextEditingController();
 
   @override
-  void initState() {
-    super.initState();
-    _loadUserRole();
+  void dispose() {
+    _memberNameController.dispose();
+    _amountController.dispose();
+    super.dispose();
   }
-
-  Future<void> _loadUserRole() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
-      if (doc.exists && mounted) {
-        setState(() {
-          userRole = doc['role'] ?? 'member';
-        });
-      }
-    }
-  }
-
-  bool get canEdit => ['admin', 'secretariat'].contains(userRole);
 
   Future<void> _addGiving() async {
-    final name = _memberNameController.text.trim();
-    final amount = _amountController.text.trim();
-    if (name.isEmpty || amount.isEmpty) return;
+    if (!_formKey.currentState!.validate()) return;
 
-    await FirebaseFirestore.instance.collection('giving').add({
-      'memberName': name,
-      'amount': amount,
-      'date': DateTime.now().toIso8601String(),
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+    final record = GivingRecord(
+      id: '',
+      memberName: _memberNameController.text.trim(),
+      amount: double.parse(_amountController.text.trim()),
+      date: DateTime.now(),
+    );
+    await ref.read(givingRepositoryProvider).add(record);
+
     if (!mounted) return;
     _memberNameController.clear();
     _amountController.clear();
@@ -60,17 +52,29 @@ class _GivingScreenState extends State<GivingScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Record Contribution'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
+        content: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
                 controller: _memberNameController,
-                decoration: const InputDecoration(labelText: 'Member Name')),
-            TextField(
+                decoration: const InputDecoration(labelText: 'Member Name'),
+                validator: (val) =>
+                    (val == null || val.trim().isEmpty) ? 'Required' : null,
+              ),
+              TextFormField(
                 controller: _amountController,
-                decoration:
-                    const InputDecoration(labelText: 'Amount (e.g., 200 ZMW)')),
-          ],
+                decoration: const InputDecoration(labelText: 'Amount (ZMW)'),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                validator: (val) {
+                  final amount = double.tryParse((val ?? '').trim());
+                  if (amount == null || amount <= 0) return 'Enter a valid amount';
+                  return null;
+                },
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -83,53 +87,122 @@ class _GivingScreenState extends State<GivingScreen> {
   }
 
   Future<void> _deleteGiving(String docId) async {
-    await FirebaseFirestore.instance.collection('giving').doc(docId).delete();
+    if (!await confirmDelete(context, itemLabel: 'giving record')) return;
+    await ref.read(givingRepositoryProvider).delete(docId);
   }
 
   @override
   Widget build(BuildContext context) {
+    final canEdit = ref.watch(userRoleProvider).maybeWhen(
+          data: (role) => role.canManageGiving,
+          orElse: () => false,
+        );
+    final recordsAsync = ref.watch(givingRecordsProvider);
+    final totalThisMonth = ref.watch(givingTotalThisMonthProvider);
+    final totalAllTime = ref.watch(givingTotalAllTimeProvider);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Giving & Tithes')),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('giving')
-            .orderBy('createdAt', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError)
-            return Center(child: Text('Error: ${snapshot.error}'));
-          if (snapshot.connectionState == ConnectionState.waiting)
-            return const Center(child: CircularProgressIndicator());
-          final docs = snapshot.data!.docs;
-          if (docs.isEmpty)
-            return const Center(child: Text('No giving records yet.'));
-
-          return ListView.builder(
-            itemCount: docs.length,
-            itemBuilder: (context, index) {
-              final data = docs[index].data() as Map<String, dynamic>;
-              final docId = docs[index].id;
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                child: ListTile(
-                  title: Text(data['memberName'] ?? 'Unknown'),
-                  subtitle: Text(
-                      'Amount: ${data['amount']} • ${data['date']?.toString().substring(0, 10) ?? 'recent'}'),
-                  trailing: canEdit
-                      ? IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () => _deleteGiving(docId))
-                      : null,
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _TotalCard(label: 'This Month', value: totalThisMonth),
                 ),
-              );
-            },
-          );
-        },
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _TotalCard(label: 'All Time', value: totalAllTime),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: recordsAsync.when(
+              data: (docs) {
+                if (docs.isEmpty) {
+                  return const EmptyState(
+                    icon: Icons.account_balance_wallet_outlined,
+                    message: 'No giving records yet.\nRecorded contributions will appear here.',
+                  );
+                }
+                return ListView.builder(
+                  itemCount: docs.length,
+                  itemBuilder: (context, index) {
+                    final record = docs[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 6),
+                      child: ListTile(
+                        leading: const CircleAvatar(
+                          backgroundColor: Color(0x1F00796B),
+                          child: Icon(Icons.savings_outlined, color: AppColors.finance),
+                        ),
+                        title: Text(record.memberName),
+                        subtitle: Text(
+                            '${formatZmw(record.amount)} • ${formatDate(record.date)}'),
+                        trailing: canEdit
+                            ? IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () => _deleteGiving(record.id))
+                            : null,
+                      ),
+                    );
+                  },
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => Center(child: Text('Error: $error')),
+            ),
+          ),
+        ],
       ),
       floatingActionButton: canEdit
           ? FloatingActionButton(
               onPressed: _showAddDialog, child: const Icon(Icons.add))
           : null,
+    );
+  }
+}
+
+class _TotalCard extends StatelessWidget {
+  const _TotalCard({required this.label, required this.value});
+
+  final String label;
+  final double value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Container(
+        decoration: const BoxDecoration(
+          border: Border(left: BorderSide(color: AppColors.finance, width: 4)),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.savings_outlined, size: 14, color: AppColors.finance),
+                const SizedBox(width: 4),
+                Text(label, style: Theme.of(context).textTheme.bodyMedium),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              formatZmw(value),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.finance,
+                  ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
