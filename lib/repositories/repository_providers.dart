@@ -8,6 +8,7 @@ import '../models/church_event.dart';
 import '../models/giving_record.dart';
 import '../models/member.dart';
 import '../models/prayer_request.dart';
+import '../models/week_summary.dart';
 import 'announcements_repository.dart';
 import 'attendance_repository.dart';
 import 'events_repository.dart';
@@ -44,6 +45,13 @@ final givingTotalThisMonthProvider = Provider<double>((ref) {
             .fold<double>(0, (sum, r) => sum + r.amount),
         orElse: () => 0,
       );
+});
+final weekSummaryProvider = Provider.family<WeekSummary, DateTime>((ref, sunday) {
+  final records = ref.watch(givingRecordsProvider).maybeWhen(
+        data: (r) => r,
+        orElse: () => <GivingRecord>[],
+      );
+  return WeekSummary.compute(sunday, records);
 });
 
 // Attendance
