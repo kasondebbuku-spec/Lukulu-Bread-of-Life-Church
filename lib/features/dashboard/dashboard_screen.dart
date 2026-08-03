@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/constants/social_links.dart';
 import '../../core/providers/firebase_providers.dart';
 import '../../core/providers/user_role_provider.dart';
 import '../../core/theme/app_theme.dart';
@@ -172,7 +174,30 @@ class DashboardScreen extends ConsumerWidget {
       onTap: () => openScreen(const PrayerScreen()),
     ));
 
+    cards.add(_DashboardCard(
+      title: 'Join WhatsApp Group',
+      subtitle: 'Chat with the branch community',
+      count: 'Open',
+      icon: Icons.chat_bubble_outline,
+      accentColor: AppColors.blue,
+      onTap: () => _openWhatsAppGroup(context),
+    ));
+
     return cards;
+  }
+
+  Future<void> _openWhatsAppGroup(BuildContext context) async {
+    final uri = Uri.parse(SocialLinks.whatsAppGroup);
+    final launched = await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+      webOnlyWindowName: '_blank',
+    );
+    if (!launched && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open WhatsApp. Is it installed?')),
+      );
+    }
   }
 }
 
