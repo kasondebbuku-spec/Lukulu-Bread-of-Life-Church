@@ -154,7 +154,7 @@ class _PrayerCard extends StatelessWidget {
         decoration: BoxDecoration(
           border: Border(
             left: BorderSide(
-              color: request.isAnswered ? Colors.green : AppColors.primary,
+              color: request.isAnswered ? AppColors.blue : AppColors.primary,
               width: 4,
             ),
           ),
@@ -165,7 +165,7 @@ class _PrayerCard extends StatelessWidget {
           children: [
             Icon(
               request.isAnswered ? Icons.check_circle_outline : Icons.volunteer_activism,
-              color: request.isAnswered ? Colors.green : AppColors.primary,
+              color: request.isAnswered ? AppColors.blue : AppColors.primary,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -181,7 +181,7 @@ class _PrayerCard extends StatelessWidget {
                     children: [
                       TagChip(
                         label: request.isAnswered ? 'Answered' : 'Pending',
-                        color: request.isAnswered ? Colors.green : AppColors.secondaryDark,
+                        color: request.isAnswered ? AppColors.blue : AppColors.secondaryDark,
                         icon: request.isAnswered ? Icons.check : Icons.hourglass_empty,
                       ),
                       if (showRequester)

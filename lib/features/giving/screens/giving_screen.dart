@@ -136,9 +136,9 @@ class _GivingScreenState extends ConsumerState<GivingScreen> {
                       margin: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 6),
                       child: ListTile(
-                        leading: const CircleAvatar(
-                          backgroundColor: Color(0x1F00796B),
-                          child: Icon(Icons.savings_outlined, color: AppColors.finance),
+                        leading: CircleAvatar(
+                          backgroundColor: AppColors.secondaryDark.withValues(alpha: 0.12),
+                          child: const Icon(Icons.savings_outlined, color: AppColors.secondaryDark),
                         ),
                         title: Text(record.memberName),
                         subtitle: Text(
@@ -179,7 +179,7 @@ class _TotalCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: Container(
         decoration: const BoxDecoration(
-          border: Border(left: BorderSide(color: AppColors.finance, width: 4)),
+          border: Border(left: BorderSide(color: AppColors.secondaryDark, width: 4)),
         ),
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -187,7 +187,7 @@ class _TotalCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.savings_outlined, size: 14, color: AppColors.finance),
+                const Icon(Icons.savings_outlined, size: 14, color: AppColors.secondaryDark),
                 const SizedBox(width: 4),
                 Text(label, style: Theme.of(context).textTheme.bodyMedium),
               ],
@@ -197,7 +197,7 @@ class _TotalCard extends StatelessWidget {
               formatZmw(value),
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: AppColors.finance,
+                    color: AppColors.secondaryDark,
                   ),
             ),
           ],

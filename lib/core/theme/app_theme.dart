@@ -11,15 +11,17 @@ class AppColors {
   static const Color secondaryLight = Color(0xFFFFD54F);
   static const Color secondaryDark = Color(0xFFFF8F00);
 
+  // Tertiary - Blue
+  static const Color blue = Color(0xFF1565C0);
+  static const Color blueLight = Color(0xFF42A5F5);
+  static const Color blueDark = Color(0xFF0D47A1);
+
   // Neutral
   static const Color background = Color(0xFFF8F5FF);
   static const Color surface = Color(0xFFFFFFFF);
   static const Color textPrimary = Color(0xFF1A1A2E);
   static const Color textSecondary = Color(0xFF6B6B8A);
   static const Color divider = Color(0xFFE0D7F5);
-
-  // Accent used for financial / giving-related UI
-  static const Color finance = Color(0xFF00796B);
 }
 
 class AppTheme {

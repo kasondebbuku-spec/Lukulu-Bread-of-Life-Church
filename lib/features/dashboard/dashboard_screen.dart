@@ -5,7 +5,12 @@ import '../../core/providers/firebase_providers.dart';
 import '../../core/providers/user_role_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../repositories/repository_providers.dart';
-import '../giving/screens/giving_screen.dart' show formatZmw;
+import '../announcements/screens/announcements_screen.dart';
+import '../attendance/screens/attendance_screen.dart';
+import '../events/screens/events_screen.dart';
+import '../giving/screens/giving_screen.dart';
+import '../members/screens/members_screen.dart';
+import '../prayer/screens/prayer_screen.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -19,7 +24,7 @@ class DashboardScreen extends ConsumerWidget {
         );
     final userName = user?.displayName ?? user?.email?.split('@').first ?? 'User';
 
-    final cards = _buildCards(ref, role);
+    final cards = _buildCards(context, ref, role);
 
     return Scaffold(
       appBar: AppBar(
@@ -62,21 +67,25 @@ class DashboardScreen extends ConsumerWidget {
             const SizedBox(height: 8),
             _RoleBadge(role: role),
             const SizedBox(height: 32),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: cards.length,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: MediaQuery.of(context).size.width >= 900
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final crossAxisCount = constraints.maxWidth >= 900
                     ? 3
-                    : MediaQuery.of(context).size.width >= 600
+                    : constraints.maxWidth >= 600
                         ? 2
-                        : 1,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 2.2,
-              ),
-              itemBuilder: (context, index) => cards[index],
+                        : 1;
+                const spacing = 16.0;
+                final cardWidth =
+                    (constraints.maxWidth - spacing * (crossAxisCount - 1)) /
+                        crossAxisCount;
+                return Wrap(
+                  spacing: spacing,
+                  runSpacing: spacing,
+                  children: cards
+                      .map((card) => SizedBox(width: cardWidth, child: card))
+                      .toList(),
+                );
+              },
             ),
           ],
         ),
@@ -84,8 +93,12 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  List<Widget> _buildCards(WidgetRef ref, UserRole role) {
+  List<Widget> _buildCards(BuildContext context, WidgetRef ref, UserRole role) {
     final cards = <Widget>[];
+
+    void openScreen(Widget screen) {
+      Navigator.push(context, MaterialPageRoute(builder: (context) => screen));
+    }
 
     if (role.canManageMembers) {
       final members = ref.watch(membersProvider);
@@ -95,6 +108,7 @@ class DashboardScreen extends ConsumerWidget {
         count: members.maybeWhen(data: (m) => '${m.length}', orElse: () => '…'),
         icon: Icons.people,
         accentColor: AppColors.primary,
+        onTap: () => openScreen(const MembersScreen()),
       ));
     }
 
@@ -109,7 +123,8 @@ class DashboardScreen extends ConsumerWidget {
           orElse: () => '…',
         ),
         icon: Icons.how_to_reg,
-        accentColor: AppColors.primaryLight,
+        accentColor: AppColors.blue,
+        onTap: () => openScreen(const AttendanceScreen()),
       ));
     }
 
@@ -120,7 +135,8 @@ class DashboardScreen extends ConsumerWidget {
         subtitle: 'This month\'s total',
         count: formatZmw(totalThisMonth),
         icon: Icons.account_balance_wallet,
-        accentColor: AppColors.finance,
+        accentColor: AppColors.secondaryDark,
+        onTap: () => openScreen(const GivingScreen()),
       ));
     }
 
@@ -130,7 +146,8 @@ class DashboardScreen extends ConsumerWidget {
       subtitle: 'Services & church calendar',
       count: events.maybeWhen(data: (e) => '${e.length}', orElse: () => '…'),
       icon: Icons.event,
-      accentColor: AppColors.secondaryDark,
+      accentColor: AppColors.blueLight,
+      onTap: () => openScreen(const EventsScreen()),
     ));
 
     final announcements = ref.watch(announcementsProvider);
@@ -139,7 +156,8 @@ class DashboardScreen extends ConsumerWidget {
       subtitle: 'Broadcasts to branch app',
       count: announcements.maybeWhen(data: (a) => '${a.length}', orElse: () => '…'),
       icon: Icons.campaign,
-      accentColor: AppColors.primary,
+      accentColor: AppColors.primaryLight,
+      onTap: () => openScreen(const AnnouncementsScreen()),
     ));
 
     final prayerRequests = ref.watch(prayerRequestsProvider);
@@ -151,6 +169,7 @@ class DashboardScreen extends ConsumerWidget {
       count: prayerRequests.maybeWhen(data: (p) => '${p.length}', orElse: () => '…'),
       icon: Icons.volunteer_activism,
       accentColor: AppColors.secondary,
+      onTap: () => openScreen(const PrayerScreen()),
     ));
 
     return cards;
@@ -164,6 +183,7 @@ class _DashboardCard extends StatelessWidget {
     required this.count,
     required this.icon,
     required this.accentColor,
+    required this.onTap,
   });
 
   final String title;
@@ -171,71 +191,68 @@ class _DashboardCard extends StatelessWidget {
   final String count;
   final IconData icon;
   final Color accentColor;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Card(
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(icon, color: accentColor, size: 24),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    count,
-                    style: TextStyle(
-                      color: accentColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 11,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            Padding(
-              padding: const EdgeInsets.only(top: 12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(18.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    title,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.bold),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: accentColor.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(icon, color: accentColor, size: 22),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: Theme.of(context).textTheme.bodySmall,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: accentColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      count,
+                      style: TextStyle(
+                        color: accentColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                      ),
+                    ),
                   ),
                 ],
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: Theme.of(context).textTheme.bodySmall,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -252,7 +269,7 @@ class _RoleBadge extends StatelessWidget {
       case UserRole.admin:
         return AppColors.secondaryDark;
       case UserRole.finance:
-        return AppColors.finance;
+        return AppColors.blue;
       case UserRole.secretariat:
       case UserRole.elder:
       case UserRole.deacon:
