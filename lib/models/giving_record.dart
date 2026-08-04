@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+enum GivingCategory { tithe, offering, specialOffering }
+
 class GivingRecord {
   final String id;
   final String memberName;
@@ -7,12 +9,22 @@ class GivingRecord {
   final String currency;
   final DateTime date;
 
+  /// Null means legacy/uncategorized — records written before categories
+  /// were introduced have no `category` field in Firestore at all.
+  final GivingCategory? category;
+
+  /// Only present for cash-counted entries (e.g. a Sunday offering tally).
+  /// Denomination value (e.g. "100", "0.5") -> count.
+  final Map<String, int>? denominationBreakdown;
+
   const GivingRecord({
     required this.id,
     required this.memberName,
     required this.amount,
     this.currency = 'ZMW',
     required this.date,
+    this.category,
+    this.denominationBreakdown,
   });
 
   factory GivingRecord.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -25,12 +37,30 @@ class GivingRecord {
     final date = rawDate is Timestamp
         ? rawDate.toDate()
         : DateTime.tryParse(rawDate?.toString() ?? '') ?? DateTime.now();
+
+    final rawCategory = data['category'] as String?;
+    GivingCategory? category;
+    for (final c in GivingCategory.values) {
+      if (c.name == rawCategory) {
+        category = c;
+        break;
+      }
+    }
+
+    final rawBreakdown = data['denominationBreakdown'];
+    final denominationBreakdown = rawBreakdown is Map
+        ? Map<String, int>.from(
+            rawBreakdown.map((k, v) => MapEntry(k.toString(), (v as num).toInt())))
+        : null;
+
     return GivingRecord(
       id: doc.id,
       memberName: data['memberName'] as String? ?? 'Unknown',
       amount: amount,
       currency: data['currency'] as String? ?? 'ZMW',
       date: date,
+      category: category,
+      denominationBreakdown: denominationBreakdown,
     );
   }
 
@@ -40,5 +70,8 @@ class GivingRecord {
         'currency': currency,
         'date': Timestamp.fromDate(date),
         'createdAt': FieldValue.serverTimestamp(),
+        if (category != null) 'category': category!.name,
+        if (denominationBreakdown != null)
+          'denominationBreakdown': denominationBreakdown,
       };
 }
