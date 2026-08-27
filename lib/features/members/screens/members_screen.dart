@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/user_role_provider.dart';
-import '../../../core/widgets/confirm_delete_dialog.dart';
-import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/async_list_view.dart';
+import '../../../core/widgets/delete_icon_button.dart';
 import '../../../models/member.dart';
 import '../../../repositories/repository_providers.dart';
 
@@ -106,11 +106,6 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
     );
   }
 
-  Future<void> _deleteMember(String docId) async {
-    if (!await confirmDelete(context, itemLabel: 'member')) return;
-    await ref.read(membersRepositoryProvider).delete(docId);
-  }
-
   @override
   Widget build(BuildContext context) {
     final canEdit = ref.watch(userRoleProvider).maybeWhen(
@@ -121,48 +116,38 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Members Directory')),
-      body: membersAsync.when(
-        data: (members) {
-          if (members.isEmpty) {
-            return const EmptyState(
-              icon: Icons.people_outline,
-              message: 'No members yet.\nAdd your first member with the + button.',
-            );
-          }
-          return ListView.builder(
-            itemCount: members.length,
-            itemBuilder: (context, index) {
-              final member = members[index];
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                child: ListTile(
-                  leading: const CircleAvatar(child: Icon(Icons.person)),
-                  title: Text(member.name),
-                  subtitle: Text('${member.email}\n${member.phone}'),
-                  isThreeLine: true,
-                  trailing: canEdit
-                      ? Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit, color: Colors.blue),
-                              onPressed: () =>
-                                  _showMemberDialog(member: member),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () => _deleteMember(member.id),
-                            ),
-                          ],
-                        )
-                      : null,
-                ),
-              );
-            },
+      body: AsyncListView<Member>(
+        asyncValue: membersAsync,
+        emptyIcon: Icons.people_outline,
+        emptyMessage: 'No members yet.\nAdd your first member with the + button.',
+        itemBuilder: (context, member, index) {
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            child: ListTile(
+              leading: const CircleAvatar(child: Icon(Icons.person)),
+              title: Text(member.name),
+              subtitle: Text('${member.email}\n${member.phone}'),
+              isThreeLine: true,
+              trailing: canEdit
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit, color: Colors.blue),
+                          onPressed: () => _showMemberDialog(member: member),
+                        ),
+                        DeleteIconButton(
+                          itemLabel: 'member',
+                          onConfirmed: () => ref
+                              .read(membersRepositoryProvider)
+                              .delete(member.id),
+                        ),
+                      ],
+                    )
+                  : null,
+            ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error: $error')),
       ),
       floatingActionButton: canEdit
           ? FloatingActionButton(

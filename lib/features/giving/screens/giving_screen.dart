@@ -5,8 +5,8 @@ import '../../../core/providers/user_role_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../core/utils/week_utils.dart';
-import '../../../core/widgets/confirm_delete_dialog.dart';
-import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/async_list_view.dart';
+import '../../../core/widgets/delete_icon_button.dart';
 import '../../../core/widgets/tag_chip.dart';
 import '../../../models/giving_record.dart';
 import '../../../repositories/repository_providers.dart';
@@ -291,11 +291,6 @@ class _GivingScreenState extends ConsumerState<GivingScreen> {
     );
   }
 
-  Future<void> _deleteGiving(String docId) async {
-    if (!await confirmDelete(context, itemLabel: 'giving record')) return;
-    await ref.read(givingRepositoryProvider).delete(docId);
-  }
-
   @override
   Widget build(BuildContext context) {
     final canEdit = ref.watch(userRoleProvider).maybeWhen(
@@ -337,83 +332,73 @@ class _GivingScreenState extends ConsumerState<GivingScreen> {
             ),
           ),
           Expanded(
-            child: recordsAsync.when(
-              data: (docs) {
-                if (docs.isEmpty) {
-                  return const EmptyState(
-                    icon: Icons.account_balance_wallet_outlined,
-                    message: 'No giving records yet.\nRecorded contributions will appear here.',
+            child: AsyncListView<GivingRecord>(
+              asyncValue: recordsAsync,
+              emptyIcon: Icons.account_balance_wallet_outlined,
+              emptyMessage:
+                  'No giving records yet.\nRecorded contributions will appear here.',
+              itemBuilder: (context, record, index) {
+                final trailing = Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (record.category != null)
+                      TagChip(
+                        label: categoryLabel(record.category!),
+                        color: categoryColor(record.category!),
+                      ),
+                    if (canEdit)
+                      DeleteIconButton(
+                        itemLabel: 'giving record',
+                        onConfirmed: () =>
+                            ref.read(givingRepositoryProvider).delete(record.id),
+                      ),
+                  ],
+                );
+
+                if (record.denominationBreakdown != null) {
+                  final nonZero = record.denominationBreakdown!.entries
+                      .where((e) => e.value > 0)
+                      .toList();
+                  return Card(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    clipBehavior: Clip.antiAlias,
+                    child: ExpansionTile(
+                      leading: CircleAvatar(
+                        backgroundColor: AppColors.blue.withValues(alpha: 0.12),
+                        child: const Icon(Icons.savings_outlined, color: AppColors.blue),
+                      ),
+                      title: Text(record.memberName),
+                      subtitle: Text(
+                          '${formatZmw(record.amount)} • ${formatDate(record.date)}'),
+                      trailing: trailing,
+                      children: nonZero.map((e) {
+                        final denom =
+                            zmwDenominations.firstWhere((d) => d.key == e.key);
+                        return ListTile(
+                          dense: true,
+                          title: Text('${denom.label} × ${e.value}'),
+                          trailing: Text(formatZmw(denom.value * e.value)),
+                        );
+                      }).toList(),
+                    ),
                   );
                 }
-                return ListView.builder(
-                  itemCount: docs.length,
-                  itemBuilder: (context, index) {
-                    final record = docs[index];
-                    final trailing = Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (record.category != null)
-                          TagChip(
-                            label: categoryLabel(record.category!),
-                            color: categoryColor(record.category!),
-                          ),
-                        if (canEdit)
-                          IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () => _deleteGiving(record.id),
-                          ),
-                      ],
-                    );
 
-                    if (record.denominationBreakdown != null) {
-                      final nonZero = record.denominationBreakdown!.entries
-                          .where((e) => e.value > 0)
-                          .toList();
-                      return Card(
-                        margin: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 6),
-                        clipBehavior: Clip.antiAlias,
-                        child: ExpansionTile(
-                          leading: CircleAvatar(
-                            backgroundColor: AppColors.blue.withValues(alpha: 0.12),
-                            child: const Icon(Icons.savings_outlined, color: AppColors.blue),
-                          ),
-                          title: Text(record.memberName),
-                          subtitle: Text(
-                              '${formatZmw(record.amount)} • ${formatDate(record.date)}'),
-                          trailing: trailing,
-                          children: nonZero.map((e) {
-                            final denom = zmwDenominations
-                                .firstWhere((d) => d.key == e.key);
-                            return ListTile(
-                              dense: true,
-                              title: Text('${denom.label} × ${e.value}'),
-                              trailing: Text(formatZmw(denom.value * e.value)),
-                            );
-                          }).toList(),
-                        ),
-                      );
-                    }
-
-                    return Card(
-                      margin: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 6),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: AppColors.secondaryDark.withValues(alpha: 0.12),
-                          child: const Icon(Icons.savings_outlined, color: AppColors.secondaryDark),
-                        ),
-                        title: Text(record.memberName),
-                        subtitle: Text(
-                            '${formatZmw(record.amount)} • ${formatDate(record.date)}'),
-                        trailing: trailing,
-                      ),
-                    );
-                  },
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: AppColors.secondaryDark.withValues(alpha: 0.12),
+                      child: const Icon(Icons.savings_outlined,
+                          color: AppColors.secondaryDark),
+                    ),
+                    title: Text(record.memberName),
+                    subtitle: Text(
+                        '${formatZmw(record.amount)} • ${formatDate(record.date)}'),
+                    trailing: trailing,
+                  ),
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(child: Text('Error: $error')),
             ),
           ),
         ],

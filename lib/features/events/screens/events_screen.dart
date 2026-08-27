@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/user_role_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_format.dart';
-import '../../../core/widgets/confirm_delete_dialog.dart';
+import '../../../core/widgets/delete_icon_button.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../models/church_event.dart';
 import '../../../repositories/repository_providers.dart';
@@ -103,11 +103,6 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
     );
   }
 
-  Future<void> _deleteEvent(String docId) async {
-    if (!await confirmDelete(context, itemLabel: 'event')) return;
-    await ref.read(eventsRepositoryProvider).delete(docId);
-  }
-
   @override
   Widget build(BuildContext context) {
     final canEdit = ref.watch(userRoleProvider).maybeWhen(
@@ -146,7 +141,8 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
                       event: e,
                       isPast: false,
                       canEdit: canEdit,
-                      onDelete: () => _deleteEvent(e.id),
+                      onDelete: () =>
+                          ref.read(eventsRepositoryProvider).delete(e.id),
                     )),
               if (past.isNotEmpty) ...[
                 Padding(
@@ -161,7 +157,8 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
                       event: e,
                       isPast: true,
                       canEdit: canEdit,
-                      onDelete: () => _deleteEvent(e.id),
+                      onDelete: () =>
+                          ref.read(eventsRepositoryProvider).delete(e.id),
                     )),
               ],
             ],
@@ -262,10 +259,7 @@ class _EventCard extends StatelessWidget {
                 ),
               ),
               if (canEdit)
-                IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-                  onPressed: onDelete,
-                ),
+                DeleteIconButton(itemLabel: 'event', onConfirmed: onDelete),
             ],
           ),
         ),

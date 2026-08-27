@@ -5,8 +5,8 @@ import '../../../core/providers/firebase_providers.dart';
 import '../../../core/providers/user_role_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_format.dart';
-import '../../../core/widgets/confirm_delete_dialog.dart';
-import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/async_list_view.dart';
+import '../../../core/widgets/delete_icon_button.dart';
 import '../../../core/widgets/tag_chip.dart';
 import '../../../models/announcement.dart';
 import '../../../repositories/repository_providers.dart';
@@ -111,11 +111,6 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
     );
   }
 
-  Future<void> _deleteAnnouncement(String docId) async {
-    if (!await confirmDelete(context, itemLabel: 'announcement')) return;
-    await ref.read(announcementsRepositoryProvider).delete(docId);
-  }
-
   @override
   Widget build(BuildContext context) {
     final canWrite = ref.watch(userRoleProvider).maybeWhen(
@@ -126,29 +121,20 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Announcements')),
-      body: announcementsAsync.when(
-        data: (announcements) {
-          if (announcements.isEmpty) {
-            return const EmptyState(
-              icon: Icons.campaign_outlined,
-              message: 'No announcements yet.\nBranch-wide updates will appear here.',
-            );
-          }
-          return ListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: announcements.length,
-            itemBuilder: (context, index) {
-              final announcement = announcements[index];
-              return _AnnouncementCard(
-                announcement: announcement,
-                canWrite: canWrite,
-                onDelete: () => _deleteAnnouncement(announcement.id),
-              );
-            },
+      body: AsyncListView<Announcement>(
+        asyncValue: announcementsAsync,
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        emptyIcon: Icons.campaign_outlined,
+        emptyMessage: 'No announcements yet.\nBranch-wide updates will appear here.',
+        itemBuilder: (context, announcement, index) {
+          return _AnnouncementCard(
+            announcement: announcement,
+            canWrite: canWrite,
+            onDelete: () => ref
+                .read(announcementsRepositoryProvider)
+                .delete(announcement.id),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error: $error')),
       ),
       floatingActionButton: canWrite
           ? FloatingActionButton(
@@ -201,12 +187,7 @@ class _AnnouncementCard extends StatelessWidget {
                   ),
                 ),
                 if (canWrite)
-                  IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-                    onPressed: onDelete,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
+                  DeleteIconButton(itemLabel: 'announcement', onConfirmed: onDelete),
               ],
             ),
             const SizedBox(height: 8),

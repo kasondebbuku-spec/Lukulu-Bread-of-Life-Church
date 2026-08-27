@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/user_role_provider.dart';
 import '../../../core/utils/date_format.dart';
-import '../../../core/widgets/confirm_delete_dialog.dart';
-import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/async_list_view.dart';
+import '../../../core/widgets/delete_icon_button.dart';
 import '../../../models/attendance_record.dart';
 import '../../../repositories/repository_providers.dart';
 
@@ -103,11 +103,6 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     );
   }
 
-  Future<void> _deleteAttendance(String docId) async {
-    if (!await confirmDelete(context, itemLabel: 'attendance record')) return;
-    await ref.read(attendanceRepositoryProvider).delete(docId);
-  }
-
   @override
   Widget build(BuildContext context) {
     final canEdit = ref.watch(userRoleProvider).maybeWhen(
@@ -118,37 +113,29 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Attendance Tracker')),
-      body: recordsAsync.when(
-        data: (docs) {
-          if (docs.isEmpty) {
-            return const EmptyState(
-              icon: Icons.how_to_reg_outlined,
-              message: 'No attendance records yet.\nLog a service to get started.',
-            );
-          }
-          return ListView.builder(
-            itemCount: docs.length,
-            itemBuilder: (context, index) {
-              final record = docs[index];
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                child: ListTile(
-                  leading: const CircleAvatar(child: Icon(Icons.how_to_reg)),
-                  title: Text(formatDate(record.date)),
-                  subtitle: Text(
-                      'Attended: ${record.count}  •  New: ${record.newVisitors}'),
-                  trailing: canEdit
-                      ? IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () => _deleteAttendance(record.id))
-                      : null,
-                ),
-              );
-            },
+      body: AsyncListView<AttendanceRecord>(
+        asyncValue: recordsAsync,
+        emptyIcon: Icons.how_to_reg_outlined,
+        emptyMessage: 'No attendance records yet.\nLog a service to get started.',
+        itemBuilder: (context, record, index) {
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            child: ListTile(
+              leading: const CircleAvatar(child: Icon(Icons.how_to_reg)),
+              title: Text(formatDate(record.date)),
+              subtitle:
+                  Text('Attended: ${record.count}  •  New: ${record.newVisitors}'),
+              trailing: canEdit
+                  ? DeleteIconButton(
+                      itemLabel: 'attendance record',
+                      onConfirmed: () => ref
+                          .read(attendanceRepositoryProvider)
+                          .delete(record.id),
+                    )
+                  : null,
+            ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error: $error')),
       ),
       floatingActionButton: canEdit
           ? FloatingActionButton(
