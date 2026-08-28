@@ -17,13 +17,17 @@ class AttendanceScreen extends ConsumerStatefulWidget {
 
 class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _countController = TextEditingController();
+  final _menController = TextEditingController();
+  final _womenController = TextEditingController();
+  final _childrenController = TextEditingController();
   final _newVisitorsController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
 
   @override
   void dispose() {
-    _countController.dispose();
+    _menController.dispose();
+    _womenController.dispose();
+    _childrenController.dispose();
     _newVisitorsController.dispose();
     super.dispose();
   }
@@ -43,16 +47,25 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   Future<void> _addAttendance() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final men = int.parse(_menController.text.trim());
+    final women = int.parse(_womenController.text.trim());
+    final children = int.parse(_childrenController.text.trim());
+
     final record = AttendanceRecord(
       id: '',
       date: _selectedDate,
-      count: int.parse(_countController.text.trim()),
+      count: men + women + children,
       newVisitors: int.parse(_newVisitorsController.text.trim()),
+      men: men,
+      women: women,
+      children: children,
     );
     await ref.read(attendanceRepositoryProvider).add(record);
 
     if (!mounted) return;
-    _countController.clear();
+    _menController.clear();
+    _womenController.clear();
+    _childrenController.clear();
     _newVisitorsController.clear();
     _selectedDate = DateTime.now();
     Navigator.pop(context);
@@ -64,32 +77,48 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: const Text('Add Attendance Record'),
-          content: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(formatDate(_selectedDate)),
-                  trailing: const Icon(Icons.calendar_today),
-                  onTap: () => _pickDate(setDialogState),
-                ),
-                TextFormField(
-                  controller: _countController,
-                  decoration: const InputDecoration(labelText: 'Total Attendance'),
-                  keyboardType: TextInputType.number,
-                  validator: (val) =>
-                      int.tryParse((val ?? '').trim()) == null ? 'Enter a number' : null,
-                ),
-                TextFormField(
-                  controller: _newVisitorsController,
-                  decoration: const InputDecoration(labelText: 'New Visitors'),
-                  keyboardType: TextInputType.number,
-                  validator: (val) =>
-                      int.tryParse((val ?? '').trim()) == null ? 'Enter a number' : null,
-                ),
-              ],
+          content: SingleChildScrollView(
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(formatDate(_selectedDate)),
+                    trailing: const Icon(Icons.calendar_today),
+                    onTap: () => _pickDate(setDialogState),
+                  ),
+                  TextFormField(
+                    controller: _menController,
+                    decoration: const InputDecoration(labelText: 'Men'),
+                    keyboardType: TextInputType.number,
+                    validator: (val) =>
+                        int.tryParse((val ?? '').trim()) == null ? 'Enter a number' : null,
+                  ),
+                  TextFormField(
+                    controller: _womenController,
+                    decoration: const InputDecoration(labelText: 'Women'),
+                    keyboardType: TextInputType.number,
+                    validator: (val) =>
+                        int.tryParse((val ?? '').trim()) == null ? 'Enter a number' : null,
+                  ),
+                  TextFormField(
+                    controller: _childrenController,
+                    decoration: const InputDecoration(labelText: 'Children'),
+                    keyboardType: TextInputType.number,
+                    validator: (val) =>
+                        int.tryParse((val ?? '').trim()) == null ? 'Enter a number' : null,
+                  ),
+                  TextFormField(
+                    controller: _newVisitorsController,
+                    decoration: const InputDecoration(labelText: 'New Visitors'),
+                    keyboardType: TextInputType.number,
+                    validator: (val) =>
+                        int.tryParse((val ?? '').trim()) == null ? 'Enter a number' : null,
+                  ),
+                ],
+              ),
             ),
           ),
           actions: [

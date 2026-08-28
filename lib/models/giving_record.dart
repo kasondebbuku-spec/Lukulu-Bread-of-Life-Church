@@ -1,6 +1,23 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-enum GivingCategory { tithe, offering, specialOffering }
+enum GivingCategory { tithe, offering, seed, thanksgiving, pledge }
+
+extension GivingCategoryX on GivingCategory {
+  String get label {
+    switch (this) {
+      case GivingCategory.tithe:
+        return 'Tithe';
+      case GivingCategory.offering:
+        return 'Offering';
+      case GivingCategory.seed:
+        return 'Seed';
+      case GivingCategory.thanksgiving:
+        return 'Thanksgiving';
+      case GivingCategory.pledge:
+        return 'Pledge';
+    }
+  }
+}
 
 class GivingRecord {
   final String id;

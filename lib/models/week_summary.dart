@@ -4,17 +4,15 @@ import 'giving_record.dart';
 class WeekSummary {
   const WeekSummary({
     required this.sunday,
-    required this.titheTotal,
-    required this.offeringTotal,
-    required this.specialOfferingTotal,
+    required this.categoryTotals,
     required this.otherTotal,
     required this.denominationCounts,
   });
 
   final DateTime sunday;
-  final double titheTotal;
-  final double offeringTotal;
-  final double specialOfferingTotal;
+
+  /// One entry per GivingCategory value.
+  final Map<GivingCategory, double> categoryTotals;
 
   /// Legacy/uncategorized records dated into this week — kept separate so
   /// the grand total can never silently drop money that lacks a category.
@@ -23,26 +21,24 @@ class WeekSummary {
   /// Merged denomination counts across every cash-count entry this week.
   final Map<String, int> denominationCounts;
 
-  double get grandTotal => titheTotal + offeringTotal + specialOfferingTotal + otherTotal;
+  double get grandTotal =>
+      categoryTotals.values.fold(0.0, (sum, v) => sum + v) + otherTotal;
 
   bool get hasDenominationData => denominationCounts.values.any((c) => c > 0);
 
   factory WeekSummary.compute(DateTime sunday, List<GivingRecord> allRecords) {
-    double tithe = 0, offering = 0, special = 0, other = 0;
+    final totals = {for (final c in GivingCategory.values) c: 0.0};
+    double other = 0;
     final denomCounts = <String, int>{};
 
     for (final r in allRecords) {
       if (sundayOnOrBefore(r.date) != sunday) continue;
 
-      switch (r.category) {
-        case GivingCategory.tithe:
-          tithe += r.amount;
-        case GivingCategory.offering:
-          offering += r.amount;
-        case GivingCategory.specialOffering:
-          special += r.amount;
-        case null:
-          other += r.amount;
+      final category = r.category;
+      if (category != null) {
+        totals[category] = totals[category]! + r.amount;
+      } else {
+        other += r.amount;
       }
 
       r.denominationBreakdown?.forEach((key, count) {
@@ -52,9 +48,7 @@ class WeekSummary {
 
     return WeekSummary(
       sunday: sunday,
-      titheTotal: tithe,
-      offeringTotal: offering,
-      specialOfferingTotal: special,
+      categoryTotals: totals,
       otherTotal: other,
       denominationCounts: denomCounts,
     );

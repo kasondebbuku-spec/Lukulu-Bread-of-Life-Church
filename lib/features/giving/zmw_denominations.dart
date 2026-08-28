@@ -23,4 +23,6 @@ const zmwDenominations = [
   ZmwDenomination(key: '2', value: 2, label: 'K2'),
   ZmwDenomination(key: '1', value: 1, label: 'K1', isCoin: true),
   ZmwDenomination(key: '0.5', value: 0.5, label: '50 ngwee', isCoin: true),
+  ZmwDenomination(key: '0.1', value: 0.1, label: '10 ngwee', isCoin: true),
+  ZmwDenomination(key: '0.05', value: 0.05, label: '5 ngwee', isCoin: true),
 ];

@@ -8,11 +8,13 @@ import '../models/church_event.dart';
 import '../models/giving_record.dart';
 import '../models/member.dart';
 import '../models/prayer_request.dart';
+import '../models/sunday_income_form.dart';
 import '../models/week_summary.dart';
 import 'announcements_repository.dart';
 import 'attendance_repository.dart';
 import 'events_repository.dart';
 import 'giving_repository.dart';
+import 'income_form_repository.dart';
 import 'members_repository.dart';
 import 'prayer_repository.dart';
 
@@ -53,6 +55,18 @@ final weekSummaryProvider = Provider.family<WeekSummary, DateTime>((ref, sunday)
       );
   return WeekSummary.compute(sunday, records);
 });
+
+// Sunday Income Forms
+final incomeFormRepositoryProvider = Provider<IncomeFormRepository>(
+  (ref) => IncomeFormRepository(
+    ref.watch(firestoreProvider),
+    ref.watch(givingRepositoryProvider),
+    ref.watch(attendanceRepositoryProvider),
+  ),
+);
+final incomeFormsProvider = StreamProvider<List<SundayIncomeForm>>(
+  (ref) => ref.watch(incomeFormRepositoryProvider).watchAll(),
+);
 
 // Attendance
 final attendanceRepositoryProvider = Provider<AttendanceRepository>(

@@ -21,19 +21,12 @@ Color categoryColor(GivingCategory category) {
       return AppColors.secondaryDark;
     case GivingCategory.offering:
       return AppColors.blue;
-    case GivingCategory.specialOffering:
-      return AppColors.primary;
-  }
-}
-
-String categoryLabel(GivingCategory category) {
-  switch (category) {
-    case GivingCategory.tithe:
-      return 'Tithe';
-    case GivingCategory.offering:
-      return 'Offering';
-    case GivingCategory.specialOffering:
-      return 'Special Offering';
+    case GivingCategory.seed:
+      return AppColors.primaryLight;
+    case GivingCategory.thanksgiving:
+      return AppColors.blueLight;
+    case GivingCategory.pledge:
+      return AppColors.secondary;
   }
 }
 
@@ -149,9 +142,10 @@ class _GivingScreenState extends ConsumerState<GivingScreen> {
                     DropdownMenuItem(value: GivingCategory.tithe, child: Text('Tithe')),
                     DropdownMenuItem(
                         value: GivingCategory.offering, child: Text('Offering')),
+                    DropdownMenuItem(value: GivingCategory.seed, child: Text('Seed')),
                     DropdownMenuItem(
-                        value: GivingCategory.specialOffering,
-                        child: Text('Special Offering')),
+                        value: GivingCategory.thanksgiving, child: Text('Thanksgiving')),
+                    DropdownMenuItem(value: GivingCategory.pledge, child: Text('Pledge')),
                   ],
                   onChanged: (v) => setDialogState(() => _selectedCategory = v!),
                 ),
@@ -354,7 +348,7 @@ class _GivingScreenState extends ConsumerState<GivingScreen> {
                       children: [
                         if (record.category != null)
                           TagChip(
-                            label: categoryLabel(record.category!),
+                            label: record.category!.label,
                             color: categoryColor(record.category!),
                           ),
                         if (canEdit)

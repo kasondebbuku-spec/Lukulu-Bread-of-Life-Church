@@ -4,9 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../core/utils/week_utils.dart';
+import '../../../models/giving_record.dart';
 import '../../../repositories/repository_providers.dart';
 import '../zmw_denominations.dart';
-import 'giving_screen.dart' show formatZmw;
+import 'giving_screen.dart' show categoryColor, formatZmw;
 
 class WeeklyStatementScreen extends ConsumerStatefulWidget {
   const WeeklyStatementScreen({super.key});
@@ -51,12 +52,12 @@ class _WeeklyStatementScreenState extends ConsumerState<WeeklyStatementScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              _StatRow(label: 'Tithe', value: summary.titheTotal, color: AppColors.secondaryDark),
-              _StatRow(label: 'Offering', value: summary.offeringTotal, color: AppColors.blue),
-              _StatRow(
-                  label: 'Special Offering',
-                  value: summary.specialOfferingTotal,
-                  color: AppColors.primary),
+              for (final c in GivingCategory.values)
+                _StatRow(
+                  label: c.label,
+                  value: summary.categoryTotals[c] ?? 0,
+                  color: categoryColor(c),
+                ),
               if (summary.otherTotal > 0)
                 _StatRow(
                     label: 'Uncategorized',
