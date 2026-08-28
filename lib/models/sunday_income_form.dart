@@ -98,6 +98,24 @@ class SundayIncomeForm {
   double twentyPercentOfTithe(Map<String, double> valuesByKey) =>
       categoryAmount(GivingCategory.tithe, valuesByKey) * 0.20;
 
+  /// Returns a copy with a different id — used once the server assigns one
+  /// on save, so the caller doesn't have to rebuild the whole object by hand.
+  SundayIncomeForm copyWithId(String newId) => SundayIncomeForm(
+        id: newId,
+        date: date,
+        service: service,
+        categoryBlocks: categoryBlocks,
+        forexEntries: forexEntries,
+        chequeEntries: chequeEntries,
+        men: men,
+        women: women,
+        children: children,
+        preparedBy: preparedBy,
+        checkedBy: checkedBy,
+        collectedBy: collectedBy,
+        createdAt: createdAt,
+      );
+
   factory SundayIncomeForm.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? const {};
     final rawDate = data['date'];

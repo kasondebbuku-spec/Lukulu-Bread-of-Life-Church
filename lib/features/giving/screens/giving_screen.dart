@@ -4,13 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/user_role_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_format.dart';
-import '../../../core/utils/week_utils.dart';
 import '../../../core/widgets/confirm_delete_dialog.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/tag_chip.dart';
 import '../../../models/giving_record.dart';
 import '../../../repositories/repository_providers.dart';
 import '../zmw_denominations.dart';
+import 'income_forms_list_screen.dart';
+import 'sunday_income_form_screen.dart';
 import 'weekly_statement_screen.dart';
 
 String formatZmw(double value) => 'ZMW ${value.toStringAsFixed(2)}';
@@ -43,18 +44,10 @@ class _GivingScreenState extends ConsumerState<GivingScreen> {
   final _amountController = TextEditingController();
   GivingCategory _selectedCategory = GivingCategory.tithe;
 
-  final _denomControllers = {
-    for (final d in zmwDenominations) d.key: TextEditingController(),
-  };
-  DateTime _serviceDate = sundayOnOrBefore(DateTime.now());
-
   @override
   void dispose() {
     _memberNameController.dispose();
     _amountController.dispose();
-    for (final c in _denomControllers.values) {
-      c.dispose();
-    }
     super.dispose();
   }
 
@@ -92,12 +85,16 @@ class _GivingScreenState extends ConsumerState<GivingScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.calculate_outlined, color: AppColors.blue),
-              title: const Text('Count Sunday Offering'),
-              subtitle: const Text('Tally the basket by denomination'),
+              leading: const Icon(Icons.receipt_long_outlined, color: AppColors.blue),
+              title: const Text('Sunday Income Form'),
+              subtitle: const Text('Full cash count, forex, cheques & attendance'),
               onTap: () {
                 Navigator.pop(context);
-                _showCountOfferingDialog();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const SundayIncomeFormScreen()),
+                );
               },
             ),
           ],
@@ -163,128 +160,6 @@ class _GivingScreenState extends ConsumerState<GivingScreen> {
     );
   }
 
-  double _computeOfferingTotal() {
-    double total = 0;
-    for (final d in zmwDenominations) {
-      final count = int.tryParse(_denomControllers[d.key]!.text.trim()) ?? 0;
-      total += count * d.value;
-    }
-    return total;
-  }
-
-  Future<void> _saveCountedOffering() async {
-    final total = _computeOfferingTotal();
-    if (total <= 0) return;
-
-    final breakdown = {
-      for (final d in zmwDenominations)
-        d.key: int.tryParse(_denomControllers[d.key]!.text.trim()) ?? 0,
-    };
-
-    final record = GivingRecord(
-      id: '',
-      memberName: 'Sunday Offering',
-      amount: total,
-      date: _serviceDate,
-      category: GivingCategory.offering,
-      denominationBreakdown: breakdown,
-    );
-    await ref.read(givingRepositoryProvider).add(record);
-
-    if (!mounted) return;
-    for (final c in _denomControllers.values) {
-      c.clear();
-    }
-    _serviceDate = sundayOnOrBefore(DateTime.now());
-    Navigator.pop(context);
-  }
-
-  void _showCountOfferingDialog() {
-    for (final c in _denomControllers.values) {
-      c.clear();
-    }
-    _serviceDate = sundayOnOrBefore(DateTime.now());
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          Future<void> pickDate() async {
-            final picked = await showDatePicker(
-              context: context,
-              initialDate: _serviceDate,
-              firstDate: DateTime(2000),
-              lastDate: DateTime(2100),
-              selectableDayPredicate: (d) => d.weekday == DateTime.sunday,
-            );
-            if (picked != null) setDialogState(() => _serviceDate = picked);
-          }
-
-          final total = _computeOfferingTotal();
-
-          return AlertDialog(
-            title: const Text('Count Sunday Offering'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text('Service Sunday: ${formatDate(_serviceDate)}'),
-                    trailing: const Icon(Icons.calendar_today),
-                    onTap: pickDate,
-                  ),
-                  const Divider(),
-                  for (final d in zmwDenominations)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        children: [
-                          SizedBox(width: 72, child: Text(d.label)),
-                          Expanded(
-                            child: TextFormField(
-                              controller: _denomControllers[d.key],
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                isDense: true,
-                                hintText: '0',
-                              ),
-                              onChanged: (_) => setDialogState(() {}),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  const Divider(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Total', style: TextStyle(fontWeight: FontWeight.bold)),
-                      Text(
-                        formatZmw(total),
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, color: AppColors.blue),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel')),
-              ElevatedButton(
-                onPressed: total > 0 ? _saveCountedOffering : null,
-                child: const Text('Save'),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
   Future<void> _deleteGiving(String docId) async {
     if (!await confirmDelete(context, itemLabel: 'giving record')) return;
     await ref.read(givingRepositoryProvider).delete(docId);
@@ -310,6 +185,14 @@ class _GivingScreenState extends ConsumerState<GivingScreen> {
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const WeeklyStatementScreen()),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.receipt_long_outlined),
+            tooltip: 'Sunday Income Forms',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const IncomeFormsListScreen()),
             ),
           ),
         ],
