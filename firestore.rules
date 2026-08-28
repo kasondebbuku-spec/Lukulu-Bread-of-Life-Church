@@ -58,6 +58,13 @@ service cloud.firestore {
       allow read, write: if canManageGiving();
     }
 
+    // Sunday Income Analysis form — same sensitivity as `giving`, since it
+    // holds the raw cash counts that giving/attendance records are derived
+    // from (Prepared/Checked/Collected By names included).
+    match /income_forms/{id} {
+      allow read, write: if canManageGiving();
+    }
+
     match /attendance/{id} {
       allow read, write: if canManageAttendance();
     }
