@@ -6,6 +6,8 @@ import '../../core/constants/social_links.dart';
 import '../../core/providers/firebase_providers.dart';
 import '../../core/providers/user_role_provider.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/currency_format.dart';
+import '../../core/widgets/role_badge.dart';
 import '../../repositories/repository_providers.dart';
 import '../announcements/screens/announcements_screen.dart';
 import '../attendance/screens/attendance_screen.dart';
@@ -22,9 +24,10 @@ class DashboardScreen extends ConsumerWidget {
     final user = ref.watch(authStateChangesProvider).value;
     final role = ref.watch(userRoleProvider).maybeWhen(
           data: (r) => r,
-          orElse: () => UserRole.member,
+          orElse: () => UserAccess.member,
         );
-    final userName = user?.displayName ?? user?.email?.split('@').first ?? 'User';
+    final userName =
+        user?.displayName ?? user?.email?.split('@').first ?? 'User';
 
     final cards = _buildCards(context, ref, role);
 
@@ -48,7 +51,7 @@ class DashboardScreen extends ConsumerWidget {
                     Text(userName,
                         style: const TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
-                    _RoleBadge(role: role),
+                    RoleBadge(role: role),
                   ],
                 ),
               ),
@@ -62,13 +65,53 @@ class DashboardScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Welcome, $userName',
-              style: Theme.of(context).textTheme.headlineLarge,
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [
+                    AppColors.primaryDark,
+                    AppColors.primary,
+                    AppColors.blueDark
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.church_outlined,
+                      color: AppColors.secondaryLight, size: 36),
+                  const SizedBox(height: 20),
+                  const Text('BREAD OF LIFE • LUKULU',
+                      style: TextStyle(
+                        color: AppColors.secondaryLight,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.5,
+                      )),
+                  const SizedBox(height: 12),
+                  Text('Welcome, $userName',
+                      style: Theme.of(context)
+                          .textTheme
+                          .headlineLarge
+                          ?.copyWith(color: Colors.white)),
+                  const SizedBox(height: 8),
+                  const Text('Growing in faith. Serving together.',
+                      style: TextStyle(color: Colors.white, fontSize: 16)),
+                  const SizedBox(height: 20),
+                  RoleBadge(role: role),
+                ],
+              ),
             ),
+            const SizedBox(height: 28),
+            Text('Your church community',
+                style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: 8),
-            _RoleBadge(role: role),
-            const SizedBox(height: 32),
+            const Text('Stay connected and manage your church activities.'),
+            const SizedBox(height: 20),
             LayoutBuilder(
               builder: (context, constraints) {
                 final crossAxisCount = constraints.maxWidth >= 900
@@ -95,7 +138,8 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  List<Widget> _buildCards(BuildContext context, WidgetRef ref, UserRole role) {
+  List<Widget> _buildCards(
+      BuildContext context, WidgetRef ref, UserAccess role) {
     final cards = <Widget>[];
 
     void openScreen(Widget screen) {
@@ -130,25 +174,34 @@ class DashboardScreen extends ConsumerWidget {
       ));
     }
 
-    if (role.canManageGiving) {
+    if (role.canViewGiving) {
+      final giving = ref.watch(givingRecordsProvider);
       final totalThisMonth = ref.watch(givingTotalThisMonthProvider);
       cards.add(_DashboardCard(
         title: 'Giving & Tithes',
         subtitle: 'This month\'s total',
-        count: formatZmw(totalThisMonth),
+        count: giving.when(
+          data: (_) => formatZmw(totalThisMonth),
+          loading: () => 'Loading…',
+          error: (error, stack) => 'Unavailable',
+        ),
         icon: Icons.account_balance_wallet,
-        accentColor: AppColors.secondaryDark,
+        accentColor: AppColors.goldInk,
         onTap: () => openScreen(const GivingScreen()),
       ));
     }
 
-    final events = ref.watch(eventsProvider);
+    final events = ref.watch(upcomingEventsProvider);
     cards.add(_DashboardCard(
       title: 'Upcoming Events',
       subtitle: 'Services & church calendar',
-      count: events.maybeWhen(data: (e) => '${e.length}', orElse: () => '…'),
+      count: events.when(
+        data: (e) => '${e.length}',
+        loading: () => 'Loading…',
+        error: (error, stack) => 'Unavailable',
+      ),
       icon: Icons.event,
-      accentColor: AppColors.blueLight,
+      accentColor: AppColors.blue,
       onTap: () => openScreen(const EventsScreen()),
     ));
 
@@ -156,7 +209,8 @@ class DashboardScreen extends ConsumerWidget {
     cards.add(_DashboardCard(
       title: 'Announcements',
       subtitle: 'Broadcasts to branch app',
-      count: announcements.maybeWhen(data: (a) => '${a.length}', orElse: () => '…'),
+      count: announcements.maybeWhen(
+          data: (a) => '${a.length}', orElse: () => '…'),
       icon: Icons.campaign,
       accentColor: AppColors.primaryLight,
       onTap: () => openScreen(const AnnouncementsScreen()),
@@ -168,9 +222,10 @@ class DashboardScreen extends ConsumerWidget {
       subtitle: role.canSeeAllPrayerRequests
           ? 'Review intercessory wall'
           : 'Your submitted requests',
-      count: prayerRequests.maybeWhen(data: (p) => '${p.length}', orElse: () => '…'),
+      count: prayerRequests.maybeWhen(
+          data: (p) => '${p.length}', orElse: () => '…'),
       icon: Icons.volunteer_activism,
-      accentColor: AppColors.secondary,
+      accentColor: AppColors.goldInk,
       onTap: () => openScreen(const PrayerScreen()),
     ));
 
@@ -188,14 +243,20 @@ class DashboardScreen extends ConsumerWidget {
 
   Future<void> _openWhatsAppGroup(BuildContext context) async {
     final uri = Uri.parse(SocialLinks.whatsAppGroup);
-    final launched = await launchUrl(
-      uri,
-      mode: LaunchMode.externalApplication,
-      webOnlyWindowName: '_blank',
-    );
+    var launched = false;
+    try {
+      launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+        webOnlyWindowName: '_blank',
+      );
+    } catch (_) {
+      launched = false;
+    }
     if (!launched && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open WhatsApp. Is it installed?')),
+        const SnackBar(
+            content: Text('Could not open WhatsApp. Is it installed?')),
       );
     }
   }
@@ -243,7 +304,8 @@ class _DashboardCard extends StatelessWidget {
                     child: Icon(icon, color: accentColor, size: 22),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: accentColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
@@ -279,71 +341,6 @@ class _DashboardCard extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _RoleBadge extends StatelessWidget {
-  const _RoleBadge({required this.role});
-
-  final UserRole role;
-
-  Color get _color {
-    switch (role) {
-      case UserRole.admin:
-        return AppColors.secondaryDark;
-      case UserRole.finance:
-        return AppColors.blue;
-      case UserRole.secretariat:
-      case UserRole.elder:
-      case UserRole.deacon:
-      case UserRole.deaconess:
-      case UserRole.pastor:
-        return AppColors.primary;
-      case UserRole.member:
-        return AppColors.textSecondary;
-    }
-  }
-
-  IconData get _icon {
-    switch (role) {
-      case UserRole.admin:
-        return Icons.shield_outlined;
-      case UserRole.finance:
-        return Icons.account_balance_wallet_outlined;
-      case UserRole.secretariat:
-        return Icons.badge_outlined;
-      case UserRole.elder:
-      case UserRole.deacon:
-      case UserRole.deaconess:
-      case UserRole.pastor:
-        return Icons.church_outlined;
-      case UserRole.member:
-        return Icons.person_outline;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final color = _color;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(_icon, size: 13, color: color),
-          const SizedBox(width: 5),
-          Text(
-            role.label,
-            style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 12),
-          ),
-        ],
       ),
     );
   }

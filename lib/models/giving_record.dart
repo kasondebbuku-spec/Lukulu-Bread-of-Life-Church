@@ -22,6 +22,8 @@ extension GivingCategoryX on GivingCategory {
 class GivingRecord {
   final String id;
   final String memberName;
+  final String? memberUserId;
+  final String? recordedBy;
   final double amount;
   final String currency;
   final DateTime date;
@@ -37,6 +39,8 @@ class GivingRecord {
   const GivingRecord({
     required this.id,
     required this.memberName,
+    this.memberUserId,
+    this.recordedBy,
     required this.amount,
     this.currency = 'ZMW',
     required this.date,
@@ -66,13 +70,15 @@ class GivingRecord {
 
     final rawBreakdown = data['denominationBreakdown'];
     final denominationBreakdown = rawBreakdown is Map
-        ? Map<String, int>.from(
-            rawBreakdown.map((k, v) => MapEntry(k.toString(), (v as num).toInt())))
+        ? Map<String, int>.from(rawBreakdown
+            .map((k, v) => MapEntry(k.toString(), (v as num).toInt())))
         : null;
 
     return GivingRecord(
       id: doc.id,
       memberName: data['memberName'] as String? ?? 'Unknown',
+      memberUserId: data['memberUserId'] as String?,
+      recordedBy: data['recordedBy'] as String?,
       amount: amount,
       currency: data['currency'] as String? ?? 'ZMW',
       date: date,
@@ -83,6 +89,8 @@ class GivingRecord {
 
   Map<String, dynamic> toMap() => {
         'memberName': memberName,
+        if (memberUserId != null) 'memberUserId': memberUserId,
+        if (recordedBy != null) 'recordedBy': recordedBy,
         'amount': amount,
         'currency': currency,
         'date': Timestamp.fromDate(date),

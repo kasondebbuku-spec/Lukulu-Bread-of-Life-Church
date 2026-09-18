@@ -10,6 +10,7 @@ class AppColors {
   static const Color secondary = Color(0xFFFFB300);
   static const Color secondaryLight = Color(0xFFFFD54F);
   static const Color secondaryDark = Color(0xFFFF8F00);
+  static const Color goldInk = Color(0xFF805800);
 
   // Tertiary - Blue
   static const Color blue = Color(0xFF1565C0);
@@ -31,7 +32,15 @@ class AppTheme {
       colorScheme: const ColorScheme.light(
         primary: AppColors.primary,
         secondary: AppColors.secondary,
-        surface: AppColors.background,
+        tertiary: AppColors.blue,
+        onTertiary: Colors.white,
+        primaryContainer: Color(0xFFEDE3F7),
+        onPrimaryContainer: AppColors.primaryDark,
+        secondaryContainer: Color(0xFFFFF2C6),
+        onSecondaryContainer: AppColors.goldInk,
+        tertiaryContainer: Color(0xFFE3EFFD),
+        onTertiaryContainer: AppColors.blueDark,
+        surface: AppColors.surface,
         onPrimary: Colors.white,
         onSecondary: AppColors.textPrimary,
       ),
@@ -95,7 +104,6 @@ class AppTheme {
 
       // Cards
       cardTheme: const CardThemeData(
-        // <-- Fixed here
         color: AppColors.surface,
         elevation: 2,
         shadowColor: Color(0x1A4A148C), // 10% opacity of primary
@@ -105,6 +113,36 @@ class AppTheme {
       ),
 
       // Bottom navigation
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: AppColors.surface,
+        indicatorColor: AppColors.secondaryLight,
+        iconTheme: WidgetStateProperty.resolveWith((states) => IconThemeData(
+              color: states.contains(WidgetState.selected)
+                  ? AppColors.primaryDark
+                  : AppColors.textSecondary,
+            )),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
+              color: states.contains(WidgetState.selected)
+                  ? AppColors.primary
+                  : AppColors.textSecondary,
+              fontSize: 12,
+              fontWeight: states.contains(WidgetState.selected)
+                  ? FontWeight.w700
+                  : FontWeight.w500,
+            )),
+      ),
+      navigationRailTheme: const NavigationRailThemeData(
+        backgroundColor: AppColors.surface,
+        indicatorColor: AppColors.secondaryLight,
+        selectedIconTheme: IconThemeData(color: AppColors.primaryDark),
+        unselectedIconTheme: IconThemeData(color: AppColors.textSecondary),
+        selectedLabelTextStyle:
+            TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700),
+      ),
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        backgroundColor: AppColors.blue,
+        foregroundColor: Colors.white,
+      ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: Colors.white,
         selectedItemColor: AppColors.primary,

@@ -1,3 +1,5 @@
+import '../features/giving/screens/my_giving_screen.dart';
+import '../features/members/screens/account_roles_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -14,7 +16,7 @@ import 'nav_destination.dart';
 
 const _wideBreakpoint = 600.0;
 
-List<NavDestination> _destinationsForRole(UserRole role) {
+List<NavDestination> _destinationsForRole(UserAccess role) {
   final home = NavDestination(
     label: 'Home',
     icon: Icons.home,
@@ -51,20 +53,24 @@ List<NavDestination> _destinationsForRole(UserRole role) {
     builder: () => const PrayerScreen(),
   );
 
-  switch (role) {
-    case UserRole.member:
-      return [home, events, announcements, prayer];
-    case UserRole.deacon:
-    case UserRole.deaconess:
-    case UserRole.elder:
-    case UserRole.pastor:
-      return [home, attendance, events, announcements, prayer];
-    case UserRole.finance:
-      return [home, giving, events, announcements, prayer];
-    case UserRole.secretariat:
-    case UserRole.admin:
-      return [home, members, giving, attendance, events, announcements, prayer];
-  }
+  return [
+    home,
+    if (role.canManageMembers) members,
+    if (role.canViewGiving) giving,
+    NavDestination(
+        label: 'My Giving',
+        icon: Icons.favorite_outline,
+        builder: () => const MyGivingScreen()),
+    if (role.canManageAttendance) attendance,
+    events,
+    announcements,
+    prayer,
+    if (role.isAdmin)
+      NavDestination(
+          label: 'Account Roles',
+          icon: Icons.admin_panel_settings_outlined,
+          builder: () => const AccountRolesScreen()),
+  ];
 }
 
 /// Persistent navigation shell: bottom nav bar on phones, a side rail on
@@ -92,7 +98,7 @@ class _AppShellState extends ConsumerState<AppShell> {
     );
   }
 
-  Widget _buildShell(BuildContext context, UserRole role) {
+  Widget _buildShell(BuildContext context, UserAccess role) {
     final allDestinations = _destinationsForRole(role);
 
     return LayoutBuilder(
@@ -104,17 +110,24 @@ class _AppShellState extends ConsumerState<AppShell> {
           return Scaffold(
             body: Row(
               children: [
-                NavigationRail(
-                  selectedIndex: index,
-                  onDestinationSelected: (i) => setState(() => _selectedIndex = i),
-                  labelType: NavigationRailLabelType.all,
-                  destinations: allDestinations
-                      .map((d) => NavigationRailDestination(
-                            icon: Icon(d.icon),
-                            label: Text(d.label),
-                          ))
-                      .toList(),
-                ),
+                SizedBox(
+                    width: 132,
+                    child: SingleChildScrollView(
+                        child: SizedBox(
+                            height: (allDestinations.length * 88.0 + 32)
+                                .clamp(constraints.maxHeight, double.infinity),
+                            child: NavigationRail(
+                              selectedIndex: index,
+                              onDestinationSelected: (i) =>
+                                  setState(() => _selectedIndex = i),
+                              labelType: NavigationRailLabelType.all,
+                              destinations: allDestinations
+                                  .map((d) => NavigationRailDestination(
+                                        icon: Icon(d.icon),
+                                        label: Text(d.label),
+                                      ))
+                                  .toList(),
+                            )))),
                 const VerticalDivider(width: 1),
                 Expanded(child: allDestinations[index].builder()),
               ],
@@ -124,11 +137,11 @@ class _AppShellState extends ConsumerState<AppShell> {
 
         // Narrow layout: cap the bottom bar at 5 items, tuck the rest under "More".
         final overflowing = allDestinations.length > 5;
-        final barDestinations = overflowing
-            ? allDestinations.take(4).toList()
-            : allDestinations;
-        final moreDestinations =
-            overflowing ? allDestinations.skip(4).toList() : const <NavDestination>[];
+        final barDestinations =
+            overflowing ? allDestinations.take(4).toList() : allDestinations;
+        final moreDestinations = overflowing
+            ? allDestinations.skip(4).toList()
+            : const <NavDestination>[];
 
         final barLength = barDestinations.length + (overflowing ? 1 : 0);
         final index = _selectedIndex.clamp(0, barLength - 1);

@@ -11,41 +11,50 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(uid)).data;
     }
 
-    function myRole() {
-      return isSignedIn() ? userData(request.auth.uid).role : 'member';
+    function hasRole(role) {
+      let profile = isSignedIn() ? userData(request.auth.uid) : {};
+      return isSignedIn() && (('roles' in profile)
+        ? (profile.roles is list && role in profile.roles)
+        : profile.get('role', 'member') == role);
     }
-
-    function isAdmin() { return myRole() == 'admin'; }
-    function isSecretariat() { return myRole() == 'secretariat'; }
-    function isFinance() { return myRole() == 'finance'; }
+    function isAdmin() { return hasRole('admin'); }
+    function isSecretariat() { return hasRole('secretariat'); }
+    function isFinance() { return hasRole('finance'); }
     function isLeadership() {
-      return myRole() in ['elder', 'deacon', 'deaconess', 'pastor'];
+      return hasRole('elder') || hasRole('deacon') || hasRole('deaconess') || hasRole('pastor');
     }
-
+    function canViewGiving() { return isAdmin() || isFinance() || hasRole('oversight'); }
+    function validRoles(data) {
+      return !('roles' in data) || (data.roles is list && data.roles.size() > 0
+        && data.roles.hasOnly(['member', 'deacon', 'deaconess', 'elder', 'pastor', 'finance', 'secretariat', 'hospitality', 'oversight', 'admin']));
+    }
+    function validGivingLink(data) {
+      return !('memberUserId' in data) || (data.memberUserId is string
+        && data.memberUserId != ''
+        && !('denominationBreakdown' in data) && !('incomeFormId' in data)
+        && exists(/databases/$(database)/documents/users/$(data.memberUserId)));
+    }
     // Mirrors lib/core/providers/user_role_provider.dart — keep in sync.
-    function canManageMembers() { return isAdmin() || isSecretariat(); }
+    function canManageMembers() { return isAdmin() || isSecretariat() || hasRole('hospitality'); }
     function canManageGiving() { return isAdmin() || isFinance(); }
     function canManageAttendance() { return isAdmin() || isSecretariat() || isLeadership(); }
     function canManageEvents() { return isAdmin() || isSecretariat(); }
     function canPostAnnouncements() { return isAdmin() || isSecretariat() || isLeadership(); }
     function canSeeAllPrayer() { return isAdmin() || isSecretariat() || isLeadership(); }
 
-    // Each signed-up user gets exactly one profile doc holding their role.
-    // Self-signup can only ever create a 'member' doc — any other role
-    // (elder, finance, admin, ...) must be granted by an admin editing
-    // Firestore directly (client SDK writes are still bound by these rules,
-    // the Firebase Console/Admin SDK are not).
+    // Self-service profile edits cannot add or change permissions.
     match /users/{uid} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn()
-                    && request.auth.uid == uid
-                    && request.resource.data.role == 'member';
-      allow update: if isAdmin()
-                    || (isSignedIn() && request.auth.uid == uid
-                        && request.resource.data.role == resource.data.role);
-      allow delete: if isAdmin();
+      allow read: if isSignedIn() && (request.auth.uid == uid || canManageGiving());
+      allow create: if isSignedIn() && request.auth.uid == uid
+        && request.resource.data.role == 'member'
+        && request.resource.data.email == request.auth.token.email
+        && (!('roles' in request.resource.data) || request.resource.data.roles == ['member']);
+      allow update: if (isAdmin() && validRoles(request.resource.data)
+        && (request.auth.uid != uid || ('admin' in request.resource.data.get('roles', [request.resource.data.get('role', 'member')]))))
+        || (isSignedIn() && request.auth.uid == uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name']));
+      allow delete: if isAdmin() && request.auth.uid != uid;
     }
-
     // Congregation directory holds personal contact info (email, phone) —
     // readable only by the roles that have a Members tab in the app.
     match /members/{id} {
@@ -55,18 +64,28 @@ service cloud.firestore {
     // Financial records — the whole point of this rule set: only Admin and
     // Finance can touch this collection, regardless of any other seniority.
     match /giving/{id} {
-      allow read, write: if canManageGiving();
+      allow read: if canViewGiving() || (isSignedIn() && resource.data.get('memberUserId', '') == request.auth.uid);
+      allow create, update: if canManageGiving() && validGivingLink(request.resource.data);
+      allow delete: if canManageGiving();
     }
 
     // Sunday Income Analysis form — same sensitivity as `giving`, since it
     // holds the raw cash counts that giving/attendance records are derived
     // from (Prepared/Checked/Collected By names included).
     match /income_forms/{id} {
-      allow read, write: if canManageGiving();
+      allow read: if canViewGiving();
+      allow write: if canManageGiving();
     }
 
     match /attendance/{id} {
-      allow read, write: if canManageAttendance();
+      allow read, update, delete: if canManageAttendance();
+      // A finance officer can save attendance only with a new income form
+      // in the same atomic batch, without gaining general attendance access.
+      allow create: if canManageAttendance() || (canManageGiving()
+        && request.resource.data.get('incomeFormId', '') is string
+        && request.resource.data.get('incomeFormId', '') != ''
+        && !exists(/databases/$(database)/documents/income_forms/$(request.resource.data.incomeFormId))
+        && existsAfter(/databases/$(database)/documents/income_forms/$(request.resource.data.incomeFormId)));
     }
 
     // Events are public to every signed-in member; only certain roles edit them.

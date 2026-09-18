@@ -7,7 +7,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../models/sunday_income_form.dart';
 import '../../../repositories/repository_providers.dart';
 import '../zmw_denominations.dart';
-import 'giving_screen.dart' show formatZmw;
+import '../../../core/utils/currency_format.dart';
 import 'income_form_detail_screen.dart';
 
 class IncomeFormsListScreen extends ConsumerWidget {

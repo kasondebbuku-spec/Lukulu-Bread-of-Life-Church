@@ -7,7 +7,8 @@ import '../../../core/utils/week_utils.dart';
 import '../../../models/giving_record.dart';
 import '../../../repositories/repository_providers.dart';
 import '../zmw_denominations.dart';
-import 'giving_screen.dart' show categoryColor, formatZmw;
+import '../../../core/utils/currency_format.dart';
+import '../giving_theme.dart';
 
 class WeeklyStatementScreen extends ConsumerStatefulWidget {
   const WeeklyStatementScreen({super.key});

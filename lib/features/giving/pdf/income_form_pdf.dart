@@ -7,7 +7,7 @@ import '../../../core/utils/date_format.dart';
 import '../../../models/forex_entry.dart';
 import '../../../models/giving_record.dart';
 import '../../../models/sunday_income_form.dart';
-import '../screens/giving_screen.dart' show formatZmw;
+import '../../../core/utils/currency_format.dart';
 import '../zmw_denominations.dart';
 
 /// Builds a clean, paginated PDF replica of the church's "Income Analysis

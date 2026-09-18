@@ -1,33 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../core/theme/app_theme.dart';
-import '../services/auth_service.dart';
 
-class AuthScreen extends StatefulWidget {
-  const AuthScreen({super.key}); // keep const constructor
+import '../core/providers/auth_providers.dart';
+import '../core/theme/app_theme.dart';
+
+class AuthScreen extends ConsumerStatefulWidget {
+  const AuthScreen({super.key});
 
   @override
-  State<AuthScreen> createState() => _AuthScreenState();
+  ConsumerState<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends State<AuthScreen> {
-  final AuthService _auth = AuthService();
+class _AuthScreenState extends ConsumerState<AuthScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isLogin = true;
   bool _isSubmitting = false;
   bool _obscurePassword = true;
-  String _email = '', _password = '', _name = '', _role = 'member';
+  String _email = '', _password = '', _name = '';
 
   Future<void> _submit() async {
+    if (_isSubmitting) return;
     if (!_formKey.currentState!.validate()) return;
     _formKey.currentState!.save();
 
     setState(() => _isSubmitting = true);
     try {
+      final auth = ref.read(authServiceProvider);
       if (_isLogin) {
-        await _auth.signIn(_email, _password);
+        await auth.signIn(_email, _password);
       } else {
-        await _auth.signUp(_email, _password, _name, _role);
+        await auth.signUp(_email, _password, _name);
       }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -36,7 +39,14 @@ class _AuthScreenState extends State<AuthScreen> {
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message ?? 'Authentication failed (${e.code})')),
+        SnackBar(
+            content: Text(e.message ?? 'Authentication failed (${e.code})')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Unable to sign in right now. Please try again.')),
       );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -51,7 +61,11 @@ class _AuthScreenState extends State<AuthScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [AppColors.primaryDark, AppColors.primary],
+            colors: [
+              AppColors.primaryDark,
+              AppColors.primary,
+              AppColors.blueDark
+            ],
           ),
         ),
         child: Center(
@@ -68,7 +82,8 @@ class _AuthScreenState extends State<AuthScreen> {
                       color: Colors.white.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.church, color: AppColors.secondary, size: 40),
+                    child: const Icon(Icons.church,
+                        color: AppColors.secondary, size: 40),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -107,9 +122,11 @@ class _AuthScreenState extends State<AuthScreen> {
                                   labelText: 'Full Name',
                                   prefixIcon: Icon(Icons.person_outline),
                                 ),
-                                onSaved: (val) => _name = val!,
+                                onSaved: (val) => _name = val!.trim(),
                                 validator: (val) =>
-                                    (val == null || val.trim().isEmpty) ? 'Required' : null,
+                                    (val == null || val.trim().isEmpty)
+                                        ? 'Required'
+                                        : null,
                               ),
                               const SizedBox(height: 14),
                             ],
@@ -119,9 +136,11 @@ class _AuthScreenState extends State<AuthScreen> {
                                 prefixIcon: Icon(Icons.email_outlined),
                               ),
                               keyboardType: TextInputType.emailAddress,
-                              onSaved: (val) => _email = val!,
+                              onSaved: (val) => _email = val!.trim(),
                               validator: (val) =>
-                                  (val != null && val.contains('@')) ? null : 'Invalid email',
+                                  (val != null && val.contains('@'))
+                                      ? null
+                                      : 'Invalid email',
                             ),
                             const SizedBox(height: 14),
                             TextFormField(
@@ -132,38 +151,24 @@ class _AuthScreenState extends State<AuthScreen> {
                                   icon: Icon(_obscurePassword
                                       ? Icons.visibility_outlined
                                       : Icons.visibility_off_outlined),
-                                  onPressed: () =>
-                                      setState(() => _obscurePassword = !_obscurePassword),
+                                  onPressed: () => setState(() =>
+                                      _obscurePassword = !_obscurePassword),
                                 ),
                               ),
                               obscureText: _obscurePassword,
                               onSaved: (val) => _password = val!,
                               validator: (val) =>
-                                  (val != null && val.length >= 6) ? null : 'Min 6 chars',
+                                  (val != null && val.length >= 6)
+                                      ? null
+                                      : 'Min 6 chars',
                             ),
                             if (!_isLogin) ...[
                               const SizedBox(height: 14),
-                              DropdownButtonFormField<String>(
-                                decoration: const InputDecoration(
-                                  labelText: 'Role',
-                                  prefixIcon: Icon(Icons.badge_outlined),
-                                ),
-                                initialValue: _role,
-                                items: const [
-                                  DropdownMenuItem(value: 'member', child: Text('Member')),
-                                  DropdownMenuItem(value: 'deacon', child: Text('Deacon')),
-                                  DropdownMenuItem(
-                                      value: 'deaconess', child: Text('Deaconess')),
-                                  DropdownMenuItem(value: 'elder', child: Text('Elder')),
-                                  DropdownMenuItem(value: 'pastor', child: Text('Pastor')),
-                                  DropdownMenuItem(
-                                      value: 'finance', child: Text('Finance Officer')),
-                                  DropdownMenuItem(
-                                      value: 'secretariat', child: Text('Secretariat')),
-                                  DropdownMenuItem(value: 'admin', child: Text('Admin')),
-                                ],
-                                onChanged: (val) => setState(() => _role = val!),
-                                onSaved: (val) => _role = val!,
+                              Text(
+                                'New accounts are registered as Members. '
+                                'Contact an admin to request a different role.',
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.bodySmall,
                               ),
                             ],
                             const SizedBox(height: 24),
@@ -175,7 +180,8 @@ class _AuthScreenState extends State<AuthScreen> {
                                       width: 18,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation(Colors.white),
+                                        valueColor: AlwaysStoppedAnimation(
+                                            Colors.white),
                                       ),
                                     )
                                   : Text(_isLogin ? 'Login' : 'Sign Up'),

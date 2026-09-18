@@ -1,20 +1,24 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../core/constants/firestore_collections.dart';
+import '../core/repositories/firestore_repository.dart';
 import '../models/giving_record.dart';
 
-class GivingRepository {
-  GivingRepository(this._firestore);
-  final FirebaseFirestore _firestore;
+class GivingRepository extends FirestoreRepository<GivingRecord> {
+  GivingRepository(FirebaseFirestore firestore)
+      : super(firestore, FirestoreCollections.giving);
 
-  CollectionReference<Map<String, dynamic>> get _col =>
-      _firestore.collection('giving');
+  @override
+  GivingRecord fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) =>
+      GivingRecord.fromDoc(doc);
 
-  Stream<List<GivingRecord>> watchAll() => _col
-      .orderBy('createdAt', descending: true)
-      .snapshots()
-      .map((s) => s.docs.map(GivingRecord.fromDoc).toList());
+  @override
+  Map<String, dynamic> toMap(GivingRecord record) => record.toMap();
 
-  Future<void> add(GivingRecord record) => _col.add(record.toMap());
-
-  Future<void> delete(String id) => _col.doc(id).delete();
+  Stream<List<GivingRecord>> watchForMember(String uid) =>
+      col.where('memberUserId', isEqualTo: uid).snapshots().map((snapshot) {
+        final records = snapshot.docs.map(fromDoc).toList();
+        records.sort((a, b) => b.date.compareTo(a.date));
+        return records;
+      });
 }

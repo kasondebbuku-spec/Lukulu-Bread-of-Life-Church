@@ -43,3 +43,13 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local scratch/debug artifacts
+/tmp/
+q5-page*.jpg
+q5-page*.png
+
+# Node (rules-tests emulator suite)
+node_modules/
+package-lock.json
+firestore-debug.log

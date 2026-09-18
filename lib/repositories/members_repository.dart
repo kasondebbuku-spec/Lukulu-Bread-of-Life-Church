@@ -1,23 +1,20 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../core/constants/firestore_collections.dart';
+import '../core/repositories/firestore_repository.dart';
 import '../models/member.dart';
 
-class MembersRepository {
-  MembersRepository(this._firestore);
-  final FirebaseFirestore _firestore;
+class MembersRepository extends FirestoreRepository<Member> {
+  MembersRepository(FirebaseFirestore firestore)
+      : super(firestore, FirestoreCollections.members);
 
-  CollectionReference<Map<String, dynamic>> get _col =>
-      _firestore.collection('members');
+  @override
+  Member fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) =>
+      Member.fromDoc(doc);
 
-  Stream<List<Member>> watchAll() => _col
-      .orderBy('createdAt', descending: true)
-      .snapshots()
-      .map((s) => s.docs.map(Member.fromDoc).toList());
-
-  Future<void> add(Member member) =>
-      _col.add({...member.toMap(), 'createdAt': FieldValue.serverTimestamp()});
-
-  Future<void> update(String id, Member member) => _col.doc(id).update(member.toMap());
-
-  Future<void> delete(String id) => _col.doc(id).delete();
+  @override
+  Map<String, dynamic> toMap(Member member) => {
+        ...member.toMap(),
+        'createdAt': FieldValue.serverTimestamp(),
+      };
 }

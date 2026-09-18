@@ -1,29 +1,34 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../core/constants/firestore_collections.dart';
 import '../core/providers/user_role_provider.dart';
+import '../core/repositories/firestore_repository.dart';
 import '../models/announcement.dart';
 
-class AnnouncementsRepository {
-  AnnouncementsRepository(this._firestore);
-  final FirebaseFirestore _firestore;
-
-  CollectionReference<Map<String, dynamic>> get _col =>
-      _firestore.collection('announcements');
+class AnnouncementsRepository extends FirestoreRepository<Announcement> {
+  AnnouncementsRepository(FirebaseFirestore firestore)
+      : super(firestore, FirestoreCollections.announcements);
 
   /// Leaders (admin/secretariat/pastor) see everything; everyone else only
   /// sees 'all' audience posts — enforced server-side, not just cosmetically.
-  Stream<List<Announcement>> watchAll(UserRole role) {
-    Query<Map<String, dynamic>> query = _col;
+  /// Not named `watchAll` — that's the base class's no-arg method and this
+  /// has an incompatible (role-filtered) signature, which Dart disallows
+  /// as an override.
+  Stream<List<Announcement>> watchAllForRole(UserAccess role) {
+    Query<Map<String, dynamic>> query = col;
     if (!role.canPostAnnouncements) {
       query = query.where('targetAudience', isEqualTo: 'all');
     }
     return query
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((s) => s.docs.map(Announcement.fromDoc).toList());
+        .map((snapshot) => snapshot.docs.map(fromDoc).toList());
   }
 
-  Future<void> add(Announcement announcement) => _col.add(announcement.toMap());
+  @override
+  Announcement fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) =>
+      Announcement.fromDoc(doc);
 
-  Future<void> delete(String id) => _col.doc(id).delete();
+  @override
+  Map<String, dynamic> toMap(Announcement announcement) => announcement.toMap();
 }

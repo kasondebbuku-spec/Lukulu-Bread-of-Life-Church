@@ -7,7 +7,8 @@ import '../../../models/giving_record.dart';
 import '../../../models/sunday_income_form.dart';
 import '../pdf/income_form_pdf.dart';
 import '../zmw_denominations.dart';
-import 'giving_screen.dart' show categoryColor, formatZmw;
+import '../../../core/utils/currency_format.dart';
+import '../giving_theme.dart';
 
 class IncomeFormDetailScreen extends StatelessWidget {
   const IncomeFormDetailScreen({super.key, required this.form});

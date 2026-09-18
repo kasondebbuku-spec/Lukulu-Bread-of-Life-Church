@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/extensions/async_value_extensions.dart';
 import '../../../core/providers/user_role_provider.dart';
+import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/confirm_delete_dialog.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../models/member.dart';
@@ -113,15 +115,13 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final canEdit = ref.watch(userRoleProvider).maybeWhen(
-          data: (role) => role.canManageMembers,
-          orElse: () => false,
-        );
+    final canEdit = ref.watch(userRoleProvider).canManageMembers;
     final membersAsync = ref.watch(membersProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Members Directory')),
-      body: membersAsync.when(
+      body: AsyncValueView<List<Member>>(
+        value: membersAsync,
         data: (members) {
           if (members.isEmpty) {
             return const EmptyState(
@@ -161,8 +161,6 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
             },
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error: $error')),
       ),
       floatingActionButton: canEdit
           ? FloatingActionButton(

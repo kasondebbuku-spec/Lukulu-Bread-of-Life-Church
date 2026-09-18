@@ -1,26 +1,34 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../core/constants/firestore_collections.dart';
+
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  AuthService({FirebaseAuth? auth, FirebaseFirestore? firestore})
+      : _auth = auth ?? FirebaseAuth.instance,
+        _firestore = firestore ?? FirebaseFirestore.instance;
+
+  final FirebaseAuth _auth;
+  final FirebaseFirestore _firestore;
 
   User? get currentUser => _auth.currentUser;
 
   /// Throws [FirebaseAuthException] on failure so the caller can show a
   /// specific message (wrong password, email already in use, etc.).
-  Future<User?> signUp(
-      String email, String password, String name, String role) async {
+  ///
+  /// New accounts are always created with the `member` role — elevated roles
+  /// must be granted by an admin in Firestore (enforced by security rules).
+  Future<User?> signUp(String email, String password, String name) async {
     final result = await _auth.createUserWithEmailAndPassword(
       email: email,
       password: password,
     );
     final user = result.user;
     if (user != null) {
-      await _firestore.collection('users').doc(user.uid).set({
-        'email': email,
+      await _firestore.collection(FirestoreCollections.users).doc(user.uid).set({
+        'email': user.email,
         'name': name,
-        'role': role,
+        'role': 'member',
         'createdAt': FieldValue.serverTimestamp(),
       });
       await user.updateDisplayName(name);
