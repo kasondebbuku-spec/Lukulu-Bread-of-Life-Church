@@ -60,6 +60,16 @@ class IncomeFormDetailScreen extends StatelessWidget {
             ),
           if (form.chequeEntries.isNotEmpty)
             _Row(label: 'Cheques', value: form.totalCheques, color: AppColors.primaryDark),
+          _Row(
+            label: 'Natsave Account Deposit',
+            value: form.natsaveDeposit(valuesByKey),
+            color: AppColors.primaryDark,
+          ),
+          _Row(
+            label: 'Expenses + Tithe of Tithes Reserve',
+            value: form.expensesReserveTotal(valuesByKey),
+            color: AppColors.goldInk,
+          ),
           const Divider(height: 32),
           _Row(
             label: 'Grand Total',
@@ -72,6 +82,77 @@ class IncomeFormDetailScreen extends StatelessWidget {
             value: form.twentyPercentOfTithe(valuesByKey),
             color: AppColors.secondary,
           ),
+          _Row(
+            label: 'Natsave Deposit',
+            value: form.natsaveDeposit(valuesByKey),
+            color: AppColors.primaryDark,
+          ),
+          _Row(
+            label: 'Total Collection',
+            value: form.totalCollection(valuesByKey),
+            color: AppColors.secondaryDark,
+            emphasized: true,
+          ),
+          if (!form.isReconciled(valuesByKey)) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.goldInk.withValues(alpha: 0.12),
+                border: Border.all(color: AppColors.goldInk),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.warning_amber_outlined, color: AppColors.goldInk),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Expenses reserve does not reconcile with expenses plus '
+                      'the 20%-of-tithe remittance (variance '
+                      '${formatZmw(form.reconciliationVariance(valuesByKey))}).',
+                      style: const TextStyle(color: AppColors.goldInk),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (form.expenseEntries.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Expenses', style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    for (final e in form.expenseEntries)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(e.description),
+                            Text(formatZmw(e.amount)),
+                          ],
+                        ),
+                      ),
+                    const Divider(),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Total Expenses', style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text(formatZmw(form.totalExpenses),
+                            style: const TextStyle(fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 24),
           Card(
             child: Padding(
