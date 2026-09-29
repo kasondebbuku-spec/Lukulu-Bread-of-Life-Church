@@ -43,6 +43,11 @@ Future<Uint8List> buildIncomeFormPdf(
         _overallSection(form, valuesByKey),
         if (form.forexEntries.isNotEmpty) _forexSection(form),
         if (form.chequeEntries.isNotEmpty) _chequeSection(form),
+        _denominationSection(
+            'Natsave Account Deposit', form.natsaveBlock, valuesByKey),
+        _denominationSection('Expenses + Tithe of Tithes Reserve',
+            form.expensesReserveBlock, valuesByKey),
+        if (form.expenseEntries.isNotEmpty) _expensesListSection(form),
         _attendanceSection(form),
         _summarySection(form, valuesByKey),
         _signaturesSection(form),
@@ -89,6 +94,67 @@ pw.Widget _categorySection(
           'Sub-total: ${formatZmw(block.amount(valuesByKey))}',
           style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
         ),
+      ),
+    ],
+  );
+}
+
+/// Same shape as [_categorySection] but for a title-only [CategoryBlock]
+/// that isn't tied to a [GivingCategory] (Natsave, Expenses Reserve).
+pw.Widget _denominationSection(
+  String title,
+  CategoryBlock block,
+  Map<String, double> valuesByKey,
+) {
+  final rows = zmwDenominations
+      .where((d) => (block.denominationBreakdown[d.key] ?? 0) > 0)
+      .map((d) {
+    final count = block.denominationBreakdown[d.key]!;
+    return [d.label, '$count', formatZmw(d.value * count)];
+  }).toList();
+
+  return pw.Column(
+    crossAxisAlignment: pw.CrossAxisAlignment.start,
+    children: [
+      _sectionHeading(title),
+      if (rows.isEmpty)
+        pw.Text('No entries.', style: const pw.TextStyle(fontSize: 10))
+      else
+        pw.TableHelper.fromTextArray(
+          headers: ['Note/Coin', 'Count', 'Amount (K)'],
+          data: rows,
+          cellStyle: const pw.TextStyle(fontSize: 10),
+          headerStyle: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
+        ),
+      pw.Align(
+        alignment: pw.Alignment.centerRight,
+        child: pw.Text(
+          'Sub-total: ${formatZmw(block.amount(valuesByKey))}',
+          style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
+        ),
+      ),
+    ],
+  );
+}
+
+pw.Widget _expensesListSection(SundayIncomeForm form) {
+  final rows = form.expenseEntries
+      .map((e) => [e.description, formatZmw(e.amount)])
+      .toList();
+  return pw.Column(
+    crossAxisAlignment: pw.CrossAxisAlignment.start,
+    children: [
+      _sectionHeading('Expenses'),
+      pw.TableHelper.fromTextArray(
+        headers: ['Description', 'Amount (K)'],
+        data: rows,
+        cellStyle: const pw.TextStyle(fontSize: 10),
+        headerStyle: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
+      ),
+      pw.Align(
+        alignment: pw.Alignment.centerRight,
+        child: pw.Text('Total Expenses: ${formatZmw(form.totalExpenses)}',
+            style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold)),
       ),
     ],
   );
@@ -203,10 +269,22 @@ pw.Widget _summarySection(SundayIncomeForm form, Map<String, double> valuesByKey
           if (form.chequeEntries.isNotEmpty) ['Cheques', formatZmw(form.totalCheques)],
           ['Grand Total', formatZmw(form.grandTotal(valuesByKey))],
           ['20% of Tithe (remittance)', formatZmw(form.twentyPercentOfTithe(valuesByKey))],
+          ['Natsave Deposit', formatZmw(form.natsaveDeposit(valuesByKey))],
+          ['Total Collection', formatZmw(form.totalCollection(valuesByKey))],
         ],
         cellStyle: const pw.TextStyle(fontSize: 10),
         headerStyle: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
       ),
+      if (!form.isReconciled(valuesByKey))
+        pw.Padding(
+          padding: const pw.EdgeInsets.only(top: 8),
+          child: pw.Text(
+            'Reconciliation warning: expenses reserve minus expenses does not '
+            'match the 20%-of-tithe remittance (variance '
+            '${formatZmw(form.reconciliationVariance(valuesByKey))}).',
+            style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
+          ),
+        ),
     ],
   );
 }
