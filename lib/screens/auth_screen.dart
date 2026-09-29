@@ -106,7 +106,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       padding: const EdgeInsets.all(28),
                       child: Form(
                         key: _formKey,
-                        child: Column(
+                        child: AutofillGroup(
+                          child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
@@ -122,6 +123,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                   labelText: 'Full Name',
                                   prefixIcon: Icon(Icons.person_outline),
                                 ),
+                                keyboardType: TextInputType.name,
+                                autofillHints: const [AutofillHints.name],
                                 onSaved: (val) => _name = val!.trim(),
                                 validator: (val) =>
                                     (val == null || val.trim().isEmpty)
@@ -136,6 +139,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                 prefixIcon: Icon(Icons.email_outlined),
                               ),
                               keyboardType: TextInputType.emailAddress,
+                              autofillHints: const [AutofillHints.email],
                               onSaved: (val) => _email = val!.trim(),
                               validator: (val) =>
                                   (val != null && val.contains('@'))
@@ -156,6 +160,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                 ),
                               ),
                               obscureText: _obscurePassword,
+                              autofillHints: [
+                                _isLogin
+                                    ? AutofillHints.password
+                                    : AutofillHints.newPassword,
+                              ],
                               onSaved: (val) => _password = val!,
                               validator: (val) =>
                                   (val != null && val.length >= 6)
@@ -196,6 +205,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                   : 'Already have an account? Login'),
                             ),
                           ],
+                          ),
                         ),
                       ),
                     ),

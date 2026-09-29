@@ -75,27 +75,35 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
         title: Text(_editingDocId == null ? 'Add Member' : 'Edit Member'),
         content: Form(
           key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Full Name'),
-                validator: (val) =>
-                    (val == null || val.trim().isEmpty) ? 'Required' : null,
-              ),
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(labelText: 'Email'),
-                validator: (val) => (val != null && val.contains('@'))
-                    ? null
-                    : 'Invalid email',
-              ),
-              TextFormField(
-                controller: _phoneController,
-                decoration: const InputDecoration(labelText: 'Phone'),
-              ),
-            ],
+          child: AutofillGroup(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(labelText: 'Full Name'),
+                  keyboardType: TextInputType.name,
+                  autofillHints: const [AutofillHints.name],
+                  validator: (val) =>
+                      (val == null || val.trim().isEmpty) ? 'Required' : null,
+                ),
+                TextFormField(
+                  controller: _emailController,
+                  decoration: const InputDecoration(labelText: 'Email'),
+                  keyboardType: TextInputType.emailAddress,
+                  autofillHints: const [AutofillHints.email],
+                  validator: (val) => (val != null && val.contains('@'))
+                      ? null
+                      : 'Invalid email',
+                ),
+                TextFormField(
+                  controller: _phoneController,
+                  decoration: const InputDecoration(labelText: 'Phone'),
+                  keyboardType: TextInputType.phone,
+                  autofillHints: const [AutofillHints.telephoneNumber],
+                ),
+              ],
+            ),
           ),
         ),
         actions: [
