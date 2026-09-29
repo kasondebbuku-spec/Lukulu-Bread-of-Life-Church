@@ -5,6 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../core/utils/week_utils.dart';
 import '../../../models/cheque_entry.dart';
+import '../../../models/expense_entry.dart';
 import '../../../models/forex_entry.dart';
 import '../../../models/giving_record.dart';
 import '../../../models/sunday_income_form.dart';
@@ -31,6 +32,15 @@ class _ChequeRow {
   }
 }
 
+class _ExpenseRow {
+  final descriptionController = TextEditingController();
+  final amountController = TextEditingController();
+  void dispose() {
+    descriptionController.dispose();
+    amountController.dispose();
+  }
+}
+
 class SundayIncomeFormScreen extends ConsumerStatefulWidget {
   const SundayIncomeFormScreen({super.key});
 
@@ -51,6 +61,14 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
 
   final List<_ForexRow> _forexRows = [_ForexRow()];
   final List<_ChequeRow> _chequeRows = [_ChequeRow()];
+  final List<_ExpenseRow> _expenseRows = [_ExpenseRow()];
+
+  final Map<String, TextEditingController> _natsaveControllers = {
+    for (final d in zmwDenominations) d.key: TextEditingController(),
+  };
+  final Map<String, TextEditingController> _expensesReserveControllers = {
+    for (final d in zmwDenominations) d.key: TextEditingController(),
+  };
 
   final _menController = TextEditingController();
   final _womenController = TextEditingController();
@@ -74,6 +92,15 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
     for (final row in _chequeRows) {
       row.dispose();
     }
+    for (final row in _expenseRows) {
+      row.dispose();
+    }
+    for (final c in _natsaveControllers.values) {
+      c.dispose();
+    }
+    for (final c in _expensesReserveControllers.values) {
+      c.dispose();
+    }
     _menController.dispose();
     _womenController.dispose();
     _childrenController.dispose();
@@ -86,6 +113,24 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
   Map<String, double> get _valuesByKey => {
         for (final d in zmwDenominations) d.key: d.value,
       };
+
+  double _denominationTotal(Map<String, TextEditingController> controllers) =>
+      zmwDenominations.fold(0.0, (total, d) {
+        final n = int.tryParse(controllers[d.key]!.text.trim()) ?? 0;
+        return total + n * d.value;
+      });
+
+  double get _titheAmount => _denominationTotal(_controllers[GivingCategory.tithe]!);
+  double get _twentyPercentOfTithe => _titheAmount * 0.20;
+  double get _expensesReserveTotal => _denominationTotal(_expensesReserveControllers);
+  double get _expensesTotal => _expenseRows.fold(
+      0.0, (total, r) => total + (double.tryParse(r.amountController.text.trim()) ?? 0));
+
+  /// How far the counted expenses-reserve cash is from covering the itemized
+  /// expenses plus the required 20%-of-tithe remittance. Zero reconciles.
+  double get _reconciliationVariance =>
+      (_expensesReserveTotal - _expensesTotal) - _twentyPercentOfTithe;
+  bool get _isReconciled => _reconciliationVariance.abs() <= 0.01;
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
@@ -136,6 +181,21 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
         preparedBy: _preparedByController.text.trim(),
         checkedBy: _checkedByController.text.trim(),
         collectedBy: _collectedByController.text.trim(),
+        natsaveBlock: CategoryBlock(denominationBreakdown: {
+          for (final d in zmwDenominations)
+            d.key: int.tryParse(_natsaveControllers[d.key]!.text.trim()) ?? 0,
+        }),
+        expensesReserveBlock: CategoryBlock(denominationBreakdown: {
+          for (final d in zmwDenominations)
+            d.key: int.tryParse(_expensesReserveControllers[d.key]!.text.trim()) ?? 0,
+        }),
+        expenseEntries: _expenseRows
+            .map((r) => ExpenseEntry(
+                  description: r.descriptionController.text.trim(),
+                  amount: double.tryParse(r.amountController.text.trim()) ?? 0,
+                ))
+            .where((e) => e.amount > 0)
+            .toList(),
       );
 
       final id = await ref
@@ -222,6 +282,55 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
               }),
             ),
             const SizedBox(height: 12),
+            _CategoryTable(
+              title: 'Natsave Account Deposit',
+              color: AppColors.primaryDark,
+              controllers: _natsaveControllers,
+              onChanged: () => setState(() {}),
+            ),
+            const SizedBox(height: 12),
+            _CategoryTable(
+              title: 'Expenses + Tithe of Tithes Reserve',
+              color: AppColors.goldInk,
+              controllers: _expensesReserveControllers,
+              onChanged: () => setState(() {}),
+            ),
+            const SizedBox(height: 12),
+            _ExpenseSection(
+              rows: _expenseRows,
+              onChanged: () => setState(() {}),
+              onAddRow: () => setState(() => _expenseRows.add(_ExpenseRow())),
+              onRemoveRow: (row) => setState(() {
+                row.dispose();
+                _expenseRows.remove(row);
+              }),
+            ),
+            const SizedBox(height: 12),
+            if (!_isReconciled)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.goldInk.withValues(alpha: 0.12),
+                  border: Border.all(color: AppColors.goldInk),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning_amber_outlined, color: AppColors.goldInk),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Expenses reserve does not reconcile: expected 20% of tithe '
+                        '(${formatZmw(_twentyPercentOfTithe)}) but reserve minus '
+                        'expenses is ${formatZmw(_expensesReserveTotal - _expensesTotal)} '
+                        '(variance ${formatZmw(_reconciliationVariance)}).',
+                        style: const TextStyle(color: AppColors.goldInk),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (!_isReconciled) const SizedBox(height: 12),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(12),
@@ -425,6 +534,71 @@ class _ForexSection extends StatelessWidget {
                           row.currency = v!;
                           onChanged();
                         },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextFormField(
+                        controller: row.amountController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: const InputDecoration(isDense: true, labelText: 'Amount'),
+                        onChanged: (_) => onChanged(),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 18),
+                      onPressed: rows.length > 1 ? () => onRemoveRow(row) : null,
+                    ),
+                  ],
+                ),
+              ),
+            TextButton.icon(
+              onPressed: onAddRow,
+              icon: const Icon(Icons.add),
+              label: const Text('Add row'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ExpenseSection extends StatelessWidget {
+  const _ExpenseSection({
+    required this.rows,
+    required this.onChanged,
+    required this.onAddRow,
+    required this.onRemoveRow,
+  });
+
+  final List<_ExpenseRow> rows;
+  final VoidCallback onChanged;
+  final VoidCallback onAddRow;
+  final ValueChanged<_ExpenseRow> onRemoveRow;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Expenses', style: Theme.of(context).textTheme.titleMedium),
+            const Divider(),
+            for (final row in rows)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: TextFormField(
+                        controller: row.descriptionController,
+                        decoration:
+                            const InputDecoration(isDense: true, labelText: 'Description'),
+                        onChanged: (_) => onChanged(),
                       ),
                     ),
                     const SizedBox(width: 8),
