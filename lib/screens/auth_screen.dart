@@ -82,8 +82,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       color: Colors.white.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.church,
-                        color: AppColors.secondary, size: 40),
+                    child: Image.asset(
+                      'assets/images/bol_logo.png',
+                      height: 40,
+                      fit: BoxFit.contain,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Text(

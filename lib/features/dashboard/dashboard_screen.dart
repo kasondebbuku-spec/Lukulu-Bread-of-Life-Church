@@ -83,8 +83,11 @@ class DashboardScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.church_outlined,
-                      color: AppColors.secondaryLight, size: 36),
+                  Image.asset(
+                    'assets/images/bol_logo.png',
+                    height: 36,
+                    fit: BoxFit.contain,
+                  ),
                   const SizedBox(height: 20),
                   const Text('BREAD OF LIFE • LUKULU',
                       style: TextStyle(
