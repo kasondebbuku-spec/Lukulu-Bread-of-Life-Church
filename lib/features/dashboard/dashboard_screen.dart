@@ -85,7 +85,7 @@ class DashboardScreen extends ConsumerWidget {
                 children: [
                   Image.asset(
                     'assets/images/bol_logo.png',
-                    height: 36,
+                    height: 72,
                     fit: BoxFit.contain,
                   ),
                   const SizedBox(height: 20),
