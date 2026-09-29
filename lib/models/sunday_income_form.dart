@@ -11,7 +11,7 @@ extension ServiceTypeX on ServiceType {
   String get label => this == ServiceType.morning ? 'Morning' : 'Evening';
 }
 
-/// One category's 10-row denomination count. Amount is derived from the
+/// One category's denomination count. Amount is derived from the
 /// breakdown, never stored redundantly — so the two numbers can never
 /// disagree, matching how the paper form's own cells are formulas.
 class CategoryBlock {

@@ -15,6 +15,8 @@ class ZmwDenomination {
 }
 
 const zmwDenominations = [
+  ZmwDenomination(key: '500', value: 500, label: 'K500'),
+  ZmwDenomination(key: '200', value: 200, label: 'K200'),
   ZmwDenomination(key: '100', value: 100, label: 'K100'),
   ZmwDenomination(key: '50', value: 50, label: 'K50'),
   ZmwDenomination(key: '20', value: 20, label: 'K20'),
