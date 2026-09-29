@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'cheque_entry.dart';
+import 'expense_entry.dart';
 import 'forex_entry.dart';
 import 'giving_record.dart';
 
@@ -48,6 +49,9 @@ class SundayIncomeForm {
     required this.preparedBy,
     required this.checkedBy,
     required this.collectedBy,
+    this.natsaveBlock = const CategoryBlock(denominationBreakdown: {}),
+    this.expensesReserveBlock = const CategoryBlock(denominationBreakdown: {}),
+    this.expenseEntries = const [],
     this.createdAt,
   });
 
@@ -65,6 +69,16 @@ class SundayIncomeForm {
   final String preparedBy;
   final String checkedBy;
   final String collectedBy;
+
+  /// Cash counted for deposit into the church's NATSAVE bank account --
+  /// all income except the tithe-of-tithes remittance and local expenses.
+  final CategoryBlock natsaveBlock;
+
+  /// Cash held back locally to cover [expenseEntries] plus the
+  /// tithe-of-tithes remittance. Its total minus [totalExpenses] should
+  /// reconcile with [twentyPercentOfTithe] -- see [isReconciled].
+  final CategoryBlock expensesReserveBlock;
+  final List<ExpenseEntry> expenseEntries;
   final DateTime? createdAt;
 
   int get attendanceTotal => men + women + children;
@@ -98,6 +112,29 @@ class SundayIncomeForm {
   double twentyPercentOfTithe(Map<String, double> valuesByKey) =>
       categoryAmount(GivingCategory.tithe, valuesByKey) * 0.20;
 
+  double natsaveDeposit(Map<String, double> valuesByKey) =>
+      natsaveBlock.amount(valuesByKey);
+
+  double expensesReserveTotal(Map<String, double> valuesByKey) =>
+      expensesReserveBlock.amount(valuesByKey);
+
+  double get totalExpenses =>
+      expenseEntries.fold(0.0, (total, e) => total + e.amount);
+
+  /// Mirrors the paper form's own "Total collection" line.
+  double totalCollection(Map<String, double> valuesByKey) =>
+      twentyPercentOfTithe(valuesByKey) + natsaveDeposit(valuesByKey);
+
+  /// How far the counted [expensesReserveBlock] is from covering
+  /// [totalExpenses] plus the required [twentyPercentOfTithe] remittance.
+  /// Zero means the cash physically set aside reconciles exactly.
+  double reconciliationVariance(Map<String, double> valuesByKey) =>
+      (expensesReserveTotal(valuesByKey) - totalExpenses) -
+      twentyPercentOfTithe(valuesByKey);
+
+  bool isReconciled(Map<String, double> valuesByKey, {double epsilon = 0.01}) =>
+      reconciliationVariance(valuesByKey).abs() <= epsilon;
+
   /// Returns a copy with a different id — used once the server assigns one
   /// on save, so the caller doesn't have to rebuild the whole object by hand.
   SundayIncomeForm copyWithId(String newId) => SundayIncomeForm(
@@ -113,6 +150,9 @@ class SundayIncomeForm {
         preparedBy: preparedBy,
         checkedBy: checkedBy,
         collectedBy: collectedBy,
+        natsaveBlock: natsaveBlock,
+        expensesReserveBlock: expensesReserveBlock,
+        expenseEntries: expenseEntries,
         createdAt: createdAt,
       );
 
@@ -152,6 +192,16 @@ class SundayIncomeForm {
       preparedBy: data['preparedBy'] as String? ?? '',
       checkedBy: data['checkedBy'] as String? ?? '',
       collectedBy: data['collectedBy'] as String? ?? '',
+      natsaveBlock: data['natsaveBlock'] is Map
+          ? CategoryBlock.fromMap(Map<String, dynamic>.from(data['natsaveBlock'] as Map))
+          : const CategoryBlock(denominationBreakdown: {}),
+      expensesReserveBlock: data['expensesReserveBlock'] is Map
+          ? CategoryBlock.fromMap(
+              Map<String, dynamic>.from(data['expensesReserveBlock'] as Map))
+          : const CategoryBlock(denominationBreakdown: {}),
+      expenseEntries: ((data['expenseEntries'] as List?) ?? [])
+          .map((e) => ExpenseEntry.fromMap(Map<String, dynamic>.from(e as Map)))
+          .toList(),
       createdAt: createdAt,
     );
   }
@@ -170,6 +220,9 @@ class SundayIncomeForm {
         'preparedBy': preparedBy,
         'checkedBy': checkedBy,
         'collectedBy': collectedBy,
+        'natsaveBlock': natsaveBlock.toMap(),
+        'expensesReserveBlock': expensesReserveBlock.toMap(),
+        'expenseEntries': expenseEntries.map((e) => e.toMap()).toList(),
         'createdAt': FieldValue.serverTimestamp(),
       };
 }
