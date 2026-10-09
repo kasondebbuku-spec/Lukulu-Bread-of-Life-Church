@@ -58,6 +58,7 @@ class SundayIncomeForm {
     this.preparedBySignature,
     this.checkedBySignature,
     this.collectedBySignature,
+    this.recordsKeyedById = true,
     this.createdAt,
   });
 
@@ -91,7 +92,15 @@ class SundayIncomeForm {
   final Uint8List? preparedBySignature;
   final Uint8List? checkedBySignature;
   final Uint8List? collectedBySignature;
+
+  /// True when this form's giving/attendance records use predictable ids
+  /// (`<formId>_<category>` / `<formId>_attendance`), which is what lets an
+  /// edit or delete update exactly those records. Forms saved before this was
+  /// introduced have random ids and stay read-only.
+  final bool recordsKeyedById;
   final DateTime? createdAt;
+
+  bool get canEdit => recordsKeyedById;
 
   int get attendanceTotal => men + women + children;
 
@@ -168,6 +177,7 @@ class SundayIncomeForm {
         preparedBySignature: preparedBySignature,
         checkedBySignature: checkedBySignature,
         collectedBySignature: collectedBySignature,
+        recordsKeyedById: recordsKeyedById,
         createdAt: createdAt,
       );
 
@@ -223,6 +233,7 @@ class SundayIncomeForm {
       preparedBySignature: _decodeSignature(data['preparedBySignature']),
       checkedBySignature: _decodeSignature(data['checkedBySignature']),
       collectedBySignature: _decodeSignature(data['collectedBySignature']),
+      recordsKeyedById: data['recordsKeyedById'] == true,
       createdAt: createdAt,
     );
   }
@@ -250,6 +261,7 @@ class SundayIncomeForm {
           'checkedBySignature': base64Encode(checkedBySignature!),
         if (collectedBySignature != null)
           'collectedBySignature': base64Encode(collectedBySignature!),
+        'recordsKeyedById': true,
         'createdAt': FieldValue.serverTimestamp(),
       };
 }
