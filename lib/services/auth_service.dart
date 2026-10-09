@@ -44,6 +44,17 @@ class AuthService {
     return result.user;
   }
 
+  /// Emails a password-reset link. Throws [FirebaseAuthException] for a
+  /// malformed address; an unknown address is not reported, so the screen can't
+  /// be used to discover which emails have accounts.
+  Future<void> sendPasswordReset(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+    } on FirebaseAuthException catch (e) {
+      if (e.code != 'user-not-found') rethrow;
+    }
+  }
+
   Future<void> signOut() async {
     await _auth.signOut();
   }

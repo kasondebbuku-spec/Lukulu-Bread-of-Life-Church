@@ -17,7 +17,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   bool _isLogin = true;
   bool _isSubmitting = false;
   bool _obscurePassword = true;
+  final _emailController = TextEditingController();
   String _email = '', _password = '', _name = '';
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
 
   Future<void> _submit() async {
     if (_isSubmitting) return;
@@ -50,6 +57,28 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  Future<void> _forgotPassword() async {
+    final email = await showDialog<String>(
+      context: context,
+      builder: (context) =>
+          _ResetPasswordDialog(initialEmail: _emailController.text.trim()),
+    );
+    if (email == null || email.isEmpty || !mounted) return;
+
+    try {
+      await ref.read(authServiceProvider).sendPasswordReset(email);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('If an account exists for $email, a reset link is on its way.')));
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(e.code == 'invalid-email'
+              ? 'That email address does not look right.'
+              : 'Could not send the reset link. Please try again.')));
     }
   }
 
@@ -120,6 +149,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                   prefixIcon: Icon(Icons.person_outline),
                                 ),
                                 keyboardType: TextInputType.name,
+                                textInputAction: TextInputAction.next,
                                 autofillHints: const [AutofillHints.name],
                                 onSaved: (val) => _name = val!.trim(),
                                 validator: (val) =>
@@ -134,7 +164,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                 labelText: 'Email',
                                 prefixIcon: Icon(Icons.email_outlined),
                               ),
+                              controller: _emailController,
                               keyboardType: TextInputType.emailAddress,
+                              textInputAction: TextInputAction.next,
                               autofillHints: const [AutofillHints.email],
                               onSaved: (val) => _email = val!.trim(),
                               validator: (val) =>
@@ -156,6 +188,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                 ),
                               ),
                               obscureText: _obscurePassword,
+                              textInputAction: TextInputAction.done,
+                              onFieldSubmitted: (_) => _submit(),
                               autofillHints: [
                                 _isLogin
                                     ? AutofillHints.password
@@ -167,6 +201,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                       ? null
                                       : 'Min 6 chars',
                             ),
+                            if (_isLogin)
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton(
+                                  onPressed: _isSubmitting ? null : _forgotPassword,
+                                  child: const Text('Forgot password?'),
+                                ),
+                              ),
                             if (!_isLogin) ...[
                               const SizedBox(height: 14),
                               Text(
@@ -212,6 +254,53 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ResetPasswordDialog extends StatefulWidget {
+  const _ResetPasswordDialog({required this.initialEmail});
+
+  final String initialEmail;
+
+  @override
+  State<_ResetPasswordDialog> createState() => _ResetPasswordDialogState();
+}
+
+class _ResetPasswordDialogState extends State<_ResetPasswordDialog> {
+  late final _controller = TextEditingController(text: widget.initialEmail);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Reset password'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text("Enter your account email and we'll send a reset link."),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _controller,
+            autofocus: true,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(labelText: 'Email'),
+            onSubmitted: (v) => Navigator.pop(context, v.trim()),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        TextButton(
+            onPressed: () => Navigator.pop(context, _controller.text.trim()),
+            child: const Text('Send link')),
+      ],
     );
   }
 }
