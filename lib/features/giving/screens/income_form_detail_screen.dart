@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:printing/printing.dart';
 
@@ -177,9 +179,9 @@ class IncomeFormDetailScreen extends StatelessWidget {
                 children: [
                   Text('Sign-off', style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 8),
-                  Text('Prepared By: ${form.preparedBy}'),
-                  Text('Checked By: ${form.checkedBy}'),
-                  Text('Collected By: ${form.collectedBy}'),
+                  _SignedLine('Prepared By', form.preparedBy, form.preparedBySignature),
+                  _SignedLine('Checked By', form.checkedBy, form.checkedBySignature),
+                  _SignedLine('Collected By', form.collectedBy, form.collectedBySignature),
                 ],
               ),
             ),
@@ -230,6 +232,39 @@ class _Row extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _SignedLine extends StatelessWidget {
+  const _SignedLine(this.role, this.name, this.signature);
+
+  final String role;
+  final String name;
+  final Uint8List? signature;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('$role: $name'),
+          if (signature != null)
+            Container(
+              height: 70,
+              margin: const EdgeInsets.only(top: 4),
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: AppColors.divider),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Image.memory(signature!, fit: BoxFit.contain),
+            ),
+        ],
       ),
     );
   }

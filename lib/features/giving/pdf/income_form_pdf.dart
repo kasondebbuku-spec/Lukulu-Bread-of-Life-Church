@@ -289,14 +289,32 @@ pw.Widget _summarySection(SundayIncomeForm form, Map<String, double> valuesByKey
   );
 }
 
+pw.Widget _signedLine(String role, String name, Uint8List? signature) {
+  return pw.Padding(
+    padding: const pw.EdgeInsets.only(bottom: 10),
+    child: pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        if (signature != null)
+          pw.Container(
+            height: 40,
+            margin: const pw.EdgeInsets.only(bottom: 2),
+            child: pw.Image(pw.MemoryImage(signature), fit: pw.BoxFit.contain),
+          ),
+        pw.Text('$role: $name', style: const pw.TextStyle(fontSize: 10)),
+      ],
+    ),
+  );
+}
+
 pw.Widget _signaturesSection(SundayIncomeForm form) {
   return pw.Column(
     crossAxisAlignment: pw.CrossAxisAlignment.start,
     children: [
       _sectionHeading('Sign-off'),
-      pw.Text('Prepared By: ${form.preparedBy}', style: const pw.TextStyle(fontSize: 10)),
-      pw.Text('Checked By: ${form.checkedBy}', style: const pw.TextStyle(fontSize: 10)),
-      pw.Text('Collected By: ${form.collectedBy}', style: const pw.TextStyle(fontSize: 10)),
+      _signedLine('Prepared By', form.preparedBy, form.preparedBySignature),
+      _signedLine('Checked By', form.checkedBy, form.checkedBySignature),
+      _signedLine('Collected By', form.collectedBy, form.collectedBySignature),
     ],
   );
 }
