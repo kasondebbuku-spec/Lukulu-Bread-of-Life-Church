@@ -29,6 +29,8 @@ class HeroBanner extends StatelessWidget {
         : [formatDate(event.date), if (event.location.isNotEmpty) event.location]
             .join('  •  ');
 
+    return LayoutBuilder(builder: (context, constraints) {
+    final compact = constraints.maxWidth < 560;
     return Container(
       width: double.infinity,
       constraints: const BoxConstraints(minHeight: 200),
@@ -59,20 +61,22 @@ class HeroBanner extends StatelessWidget {
               ),
             ),
           ),
-          Positioned(
-            right: 28,
-            top: 20,
-            bottom: 20,
-            child: Opacity(
-              opacity: 0.95,
+          if (!compact)
+            Positioned(
+              right: 28,
+              top: 20,
+              bottom: 20,
               child: Image.asset('assets/images/bol_logo.png', fit: BoxFit.contain),
             ),
-          ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(28, 28, 140, 28),
+            padding: EdgeInsets.fromLTRB(28, 28, compact ? 28 : 160, 28),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (compact) ...[
+                  Image.asset('assets/images/bol_logo.png', height: 64),
+                  const SizedBox(height: 14),
+                ],
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
@@ -131,5 +135,6 @@ class HeroBanner extends StatelessWidget {
         ],
       ),
     );
+    });
   }
 }

@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/daily_verses.dart';
 import '../../core/constants/social_links.dart';
+import '../../core/providers/display_name_provider.dart';
 import '../../core/providers/firebase_providers.dart';
 import '../../core/providers/user_role_provider.dart';
 import '../../core/theme/app_theme.dart';
@@ -27,13 +28,11 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(authStateChangesProvider).value;
     final role = ref.watch(userRoleProvider).maybeWhen(
           data: (r) => r,
           orElse: () => UserAccess.member,
         );
-    final userName =
-        user?.displayName ?? user?.email?.split('@').first ?? 'User';
+    final userName = ref.watch(displayNameProvider);
 
     final cards = _buildCards(context, ref, role);
     final upcoming = ref.watch(upcomingEventsProvider);
@@ -42,7 +41,7 @@ class DashboardScreen extends ConsumerWidget {
       orElse: () => null,
     );
     final now = ref.watch(dashboardClockProvider).value ?? DateTime.now();
-    final firstName = userName.split(RegExp(r'[ .]')).first;
+    final firstName = userName.split(' ').first;
 
     void openScreen(Widget screen) =>
         Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
@@ -233,20 +232,6 @@ class DashboardScreen extends ConsumerWidget {
       ));
     }
 
-    final events = ref.watch(upcomingEventsProvider);
-    cards.add(_DashboardCard(
-      title: 'Upcoming Events',
-      subtitle: 'Services & church calendar',
-      count: events.when(
-        data: (e) => '${e.length}',
-        loading: () => 'Loading…',
-        error: (error, stack) => 'Unavailable',
-      ),
-      icon: Icons.event,
-      accentColor: AppColors.blue,
-      onTap: () => openScreen(const EventsScreen()),
-    ));
-
     final announcements = ref.watch(announcementsProvider);
     cards.add(_DashboardCard(
       title: 'Announcements',
@@ -269,15 +254,6 @@ class DashboardScreen extends ConsumerWidget {
       icon: Icons.volunteer_activism,
       accentColor: AppColors.goldInk,
       onTap: () => openScreen(const PrayerScreen()),
-    ));
-
-    cards.add(_DashboardCard(
-      title: 'Join WhatsApp Group',
-      subtitle: 'Chat with the branch community',
-      count: 'Open',
-      icon: Icons.chat_bubble_outline,
-      accentColor: AppColors.blue,
-      onTap: () => _openUrl(context, SocialLinks.whatsAppGroup),
     ));
 
     return cards;
