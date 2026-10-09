@@ -3,6 +3,7 @@ import '../features/members/screens/account_roles_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/providers/display_name_provider.dart';
 import '../core/providers/firebase_providers.dart';
 import '../core/providers/user_role_provider.dart';
 import '../features/announcements/screens/announcements_screen.dart';
@@ -109,9 +110,7 @@ class _AppShellState extends ConsumerState<AppShell> {
 
         if (isWide) {
           final index = _selectedIndex.clamp(0, allDestinations.length - 1);
-          final user = ref.watch(authStateChangesProvider).value;
-          final userName =
-              user?.displayName ?? user?.email?.split('@').first ?? 'User';
+          final userName = ref.watch(displayNameProvider);
           return Scaffold(
             body: Row(
               children: [
