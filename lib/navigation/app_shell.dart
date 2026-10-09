@@ -3,6 +3,7 @@ import '../features/members/screens/account_roles_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/providers/firebase_providers.dart';
 import '../core/providers/user_role_provider.dart';
 import '../features/announcements/screens/announcements_screen.dart';
 import '../features/attendance/screens/attendance_screen.dart';
@@ -11,10 +12,11 @@ import '../features/events/screens/events_screen.dart';
 import '../features/giving/screens/giving_screen.dart';
 import '../features/members/screens/members_screen.dart';
 import '../features/prayer/screens/prayer_screen.dart';
+import 'app_sidebar.dart';
 import 'more_screen.dart';
 import 'nav_destination.dart';
 
-const _wideBreakpoint = 600.0;
+const _wideBreakpoint = 900.0;
 
 List<NavDestination> _destinationsForRole(UserAccess role) {
   final home = NavDestination(
@@ -107,28 +109,20 @@ class _AppShellState extends ConsumerState<AppShell> {
 
         if (isWide) {
           final index = _selectedIndex.clamp(0, allDestinations.length - 1);
+          final user = ref.watch(authStateChangesProvider).value;
+          final userName =
+              user?.displayName ?? user?.email?.split('@').first ?? 'User';
           return Scaffold(
             body: Row(
               children: [
-                SizedBox(
-                    width: 132,
-                    child: SingleChildScrollView(
-                        child: SizedBox(
-                            height: (allDestinations.length * 88.0 + 32)
-                                .clamp(constraints.maxHeight, double.infinity),
-                            child: NavigationRail(
-                              selectedIndex: index,
-                              onDestinationSelected: (i) =>
-                                  setState(() => _selectedIndex = i),
-                              labelType: NavigationRailLabelType.all,
-                              destinations: allDestinations
-                                  .map((d) => NavigationRailDestination(
-                                        icon: Icon(d.icon),
-                                        label: Text(d.label),
-                                      ))
-                                  .toList(),
-                            )))),
-                const VerticalDivider(width: 1),
+                AppSidebar(
+                  destinations: allDestinations,
+                  selectedIndex: index,
+                  onSelected: (i) => setState(() => _selectedIndex = i),
+                  userName: userName,
+                  roleLabel: role.label,
+                  onLogout: () => ref.read(firebaseAuthProvider).signOut(),
+                ),
                 Expanded(child: allDestinations[index].builder()),
               ],
             ),
