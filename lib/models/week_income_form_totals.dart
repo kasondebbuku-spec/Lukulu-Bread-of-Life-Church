@@ -25,9 +25,20 @@ class WeekIncomeFormTotals {
   bool get hasForms => formCount > 0;
   double get totalCollection => titheOfTithes + natsaveDeposit;
 
+  /// Totals for the forms dated into the week starting on [sunday].
   factory WeekIncomeFormTotals.compute(
     DateTime sunday,
     List<SundayIncomeForm> forms,
+    Map<String, double> valuesByKey,
+  ) =>
+      WeekIncomeFormTotals.fromForms(
+        forms.where((f) => sundayOnOrBefore(f.date) == sunday),
+        valuesByKey,
+      );
+
+  /// Totals across exactly the given forms (a week, a month, a year...).
+  factory WeekIncomeFormTotals.fromForms(
+    Iterable<SundayIncomeForm> forms,
     Map<String, double> valuesByKey,
   ) {
     var count = 0;
@@ -38,7 +49,6 @@ class WeekIncomeFormTotals {
     var unreconciled = 0;
 
     for (final form in forms) {
-      if (sundayOnOrBefore(form.date) != sunday) continue;
       count++;
       natsave += form.natsaveDeposit(valuesByKey);
       reserve += form.expensesReserveTotal(valuesByKey);

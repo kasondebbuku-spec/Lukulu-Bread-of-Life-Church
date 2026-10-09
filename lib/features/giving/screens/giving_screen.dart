@@ -18,6 +18,7 @@ import '../giving_theme.dart';
 import '../zmw_denominations.dart';
 import 'income_forms_list_screen.dart';
 import 'sunday_income_form_screen.dart';
+import 'period_summary_screen.dart';
 import 'weekly_statement_screen.dart';
 
 class GivingScreen extends ConsumerStatefulWidget {
@@ -310,6 +311,15 @@ class _GivingScreenState extends ConsumerState<GivingScreen> {
               context,
               MaterialPageRoute(
                   builder: (context) => const WeeklyStatementScreen()),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.insert_chart_outlined),
+            tooltip: 'Monthly & Yearly Summary',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const PeriodSummaryScreen()),
             ),
           ),
           IconButton(

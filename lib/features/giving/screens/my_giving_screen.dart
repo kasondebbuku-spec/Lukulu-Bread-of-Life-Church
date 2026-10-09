@@ -1,8 +1,14 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/providers/display_name_provider.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../models/giving_record.dart';
+import '../../../models/member_giving_statement.dart';
 import '../../../repositories/repository_providers.dart';
+import '../pdf/member_statement_pdf.dart';
+import '../pdf/pdf_actions.dart';
 
 class MyGivingScreen extends ConsumerStatefulWidget {
   const MyGivingScreen({super.key});
@@ -13,6 +19,64 @@ class MyGivingScreen extends ConsumerStatefulWidget {
 class _MyGivingScreenState extends ConsumerState<MyGivingScreen> {
   DateTimeRange? range;
   bool tithesOnly = false;
+  int? statementYear;
+  MemberGivingStatement _statement(List<GivingRecord> all, int year) =>
+      MemberGivingStatement.compute(
+        memberName: ref.read(displayNameProvider),
+        year: year,
+        records: all,
+      );
+
+  Widget _statementCard(List<GivingRecord> all) {
+    final years = MemberGivingStatement.yearsWithGiving(all);
+    if (years.isEmpty) return const SizedBox.shrink();
+    final year = years.contains(statementYear) ? statementYear! : years.first;
+    Future<Uint8List> build() =>
+        buildMemberStatementPdf(_statement(all, year), generatedOn: DateTime.now());
+    final filename = 'giving-statement-$year.pdf';
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Yearly statement',
+                style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 4),
+            const Text('A printable summary of your recorded giving for a year.'),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                DropdownButton<int>(
+                  value: year,
+                  items: [
+                    for (final y in years)
+                      DropdownMenuItem(value: y, child: Text('$y')),
+                  ],
+                  onChanged: (v) => setState(() => statementYear = v),
+                ),
+                FilledButton.icon(
+                  icon: const Icon(Icons.download_outlined),
+                  label: const Text('Download PDF'),
+                  onPressed: () =>
+                      downloadPdf(context, filename: filename, build: build),
+                ),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.print_outlined),
+                  label: const Text('Print'),
+                  onPressed: () => printPdf(context, filename: filename, build: build),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final records = ref.watch(myGivingProvider);
@@ -77,6 +141,7 @@ class _MyGivingScreenState extends ConsumerState<MyGivingScreen> {
             return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  _statementCard(all),
                   for (final total in totals.entries)
                     Card(
                         child: Padding(

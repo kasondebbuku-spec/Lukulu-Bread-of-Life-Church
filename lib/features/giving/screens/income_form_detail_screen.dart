@@ -1,18 +1,22 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:printing/printing.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/user_role_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../models/giving_record.dart';
 import '../../../models/sunday_income_form.dart';
+import '../../../repositories/repository_providers.dart';
 import '../pdf/income_form_pdf.dart';
+import '../pdf/pdf_actions.dart';
 import '../zmw_denominations.dart';
 import '../../../core/utils/currency_format.dart';
 import '../giving_theme.dart';
+import 'sunday_income_form_screen.dart';
 
-class IncomeFormDetailScreen extends StatelessWidget {
+class IncomeFormDetailScreen extends ConsumerWidget {
   const IncomeFormDetailScreen({super.key, required this.form});
 
   final SundayIncomeForm form;
@@ -21,20 +25,80 @@ class IncomeFormDetailScreen extends StatelessWidget {
         for (final d in zmwDenominations) d.key: d.value,
       };
 
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete this form?'),
+        content: const Text(
+            'This also removes the giving and attendance records it created. '
+            'This cannot be undone.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    try {
+      await ref.read(incomeFormRepositoryProvider).deleteAndCascade(form);
+      navigator.pop();
+      messenger.showSnackBar(const SnackBar(content: Text('Form deleted.')));
+    } catch (_) {
+      messenger.showSnackBar(const SnackBar(
+          content: Text('Could not delete the form. Please try again.')));
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final valuesByKey = _valuesByKey;
+    final canManage = ref.watch(userRoleProvider).maybeWhen(
+          data: (role) => role.canManageGiving,
+          orElse: () => false,
+        );
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Sunday Income Form'),
         actions: [
+          if (canManage && form.canEdit) ...[
+            IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              tooltip: 'Edit',
+              onPressed: () => Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SundayIncomeFormScreen(initialForm: form),
+                ),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              tooltip: 'Delete',
+              onPressed: () => _confirmDelete(context, ref),
+            ),
+          ],
+          IconButton(
+            icon: const Icon(Icons.download_outlined),
+            tooltip: 'Download PDF',
+            onPressed: () => downloadPdf(context,
+                filename: incomeFormPdfFilename(form),
+                build: () => buildIncomeFormPdf(form, valuesByKey)),
+          ),
           IconButton(
             icon: const Icon(Icons.print_outlined),
             tooltip: 'Print',
-            onPressed: () => Printing.layoutPdf(
-              onLayout: (_) => buildIncomeFormPdf(form, valuesByKey),
-            ),
+            onPressed: () => printPdf(context,
+                filename: incomeFormPdfFilename(form),
+                build: () => buildIncomeFormPdf(form, valuesByKey)),
           ),
         ],
       ),
@@ -47,6 +111,16 @@ class IncomeFormDetailScreen extends StatelessWidget {
               title: Text('${formatDate(form.date)} — ${form.service.label} service'),
             ),
           ),
+          if (!form.canEdit)
+            const Card(
+              child: ListTile(
+                leading: Icon(Icons.lock_outline, color: AppColors.goldInk),
+                title: Text('Read-only'),
+                subtitle: Text(
+                    'This form was saved before editing was available, so it '
+                    'cannot be changed or deleted from here.'),
+              ),
+            ),
           const SizedBox(height: 16),
           for (final c in GivingCategory.values)
             _Row(
