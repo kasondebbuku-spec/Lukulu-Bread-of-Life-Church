@@ -188,6 +188,49 @@ async function main() {
   await check('admin CAN promote a member to elder', () =>
     assertSucceeds(updateDoc(doc(ctxFor('admin1'), 'users/member1'), { role: 'elder' })));
 
+  console.log('\n--- Editing and deleting Sunday Income Forms ---');
+  await seedDoc('attendance/linked1', { incomeFormId: 'f1', count: 5 });
+  await seedDoc('attendance/linked2', { incomeFormId: 'f1', count: 6 });
+  await seedDoc('attendance/unlinked1', { count: 3 });
+  await check('finance CAN update attendance created by a form', () =>
+    assertSucceeds(updateDoc(doc(ctxFor('finance1'), 'attendance/linked1'), { count: 9 })));
+  await check('finance CANNOT update attendance not created by a form', () =>
+    assertFails(updateDoc(doc(ctxFor('finance1'), 'attendance/unlinked1'), { count: 9 })));
+  await check('finance CANNOT relink a form attendance record', () =>
+    assertFails(updateDoc(doc(ctxFor('finance1'), 'attendance/linked2'), { incomeFormId: 'other' })));
+  await check('finance CANNOT strip the form link from attendance', () =>
+    assertFails(updateDoc(doc(ctxFor('finance1'), 'attendance/linked2'), { incomeFormId: '' })));
+  await check('finance CAN delete attendance created by a form', () =>
+    assertSucceeds(deleteDoc(doc(ctxFor('finance1'), 'attendance/linked2'))));
+  await check('finance CANNOT delete attendance not created by a form', () =>
+    assertFails(deleteDoc(doc(ctxFor('finance1'), 'attendance/unlinked1'))));
+  await check('member CANNOT update form attendance', () =>
+    assertFails(updateDoc(doc(ctxFor('member2'), 'attendance/linked1'), { count: 1 })));
+  await check('oversight CANNOT delete form attendance', () =>
+    assertFails(deleteDoc(doc(ctxFor('oversight1'), 'attendance/linked1'))));
+  await check('finance still CANNOT read attendance', () =>
+    assertFails(getDoc(doc(ctxFor('finance1'), 'attendance/linked1'))));
+  await seedDoc('income_forms/edit1', { service: 'sunday' });
+  await seedDoc('giving/edit1_tithe', { memberName: 'Tithe', amount: 100, incomeFormId: 'edit1' });
+  await seedDoc('attendance/edit1_attendance', { incomeFormId: 'edit1', count: 10 });
+  await check('finance CAN edit a form and its derived records in one batch', () => {
+    const db = ctxFor('finance1');
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'income_forms/edit1'), { service: 'sunday', updated: true }, { merge: true });
+    batch.set(doc(db, 'giving/edit1_tithe'), { memberName: 'Tithe', amount: 250, incomeFormId: 'edit1' });
+    batch.delete(doc(db, 'giving/edit1_offering'));
+    batch.set(doc(db, 'attendance/edit1_attendance'), { incomeFormId: 'edit1', count: 12 });
+    return assertSucceeds(batch.commit());
+  });
+  await check('finance CAN delete a form and its derived records in one batch', () => {
+    const db = ctxFor('finance1');
+    const batch = writeBatch(db);
+    batch.delete(doc(db, 'giving/edit1_tithe'));
+    batch.delete(doc(db, 'attendance/edit1_attendance'));
+    batch.delete(doc(db, 'income_forms/edit1'));
+    return assertSucceeds(batch.commit());
+  });
+
   await testEnv.cleanup();
 
   console.log(`\n${passed} passed, ${failed} failed`);

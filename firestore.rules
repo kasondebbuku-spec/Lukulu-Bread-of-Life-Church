@@ -78,7 +78,14 @@ service cloud.firestore {
     }
 
     match /attendance/{id} {
-      allow read, update, delete: if canManageAttendance();
+      allow read: if canManageAttendance();
+      // Finance can edit or delete only the attendance records a Sunday Income
+      // Form created (they carry its incomeFormId), and cannot relink them.
+      allow update: if canManageAttendance() || (canManageGiving()
+        && resource.data.get('incomeFormId', '') != ''
+        && request.resource.data.get('incomeFormId', '') == resource.data.get('incomeFormId', ''));
+      allow delete: if canManageAttendance() || (canManageGiving()
+        && resource.data.get('incomeFormId', '') != '');
       // A finance officer can save attendance only with a new income form
       // in the same atomic batch, without gaining general attendance access.
       allow create: if canManageAttendance() || (canManageGiving()
