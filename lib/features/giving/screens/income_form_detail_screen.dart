@@ -25,6 +25,39 @@ class IncomeFormDetailScreen extends ConsumerWidget {
         for (final d in zmwDenominations) d.key: d.value,
       };
 
+  Future<void> _download(
+      BuildContext context, Map<String, double> valuesByKey) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await Printing.sharePdf(
+        bytes: await buildIncomeFormPdf(form, valuesByKey),
+        filename: incomeFormPdfFilename(form),
+      );
+    } catch (_) {
+      messenger.showSnackBar(const SnackBar(
+          content: Text('Could not create the PDF. Please try again.')));
+    }
+  }
+
+  /// Opens the browser's print dialog; if that doesn't open (some browsers
+  /// can't print an embedded PDF), downloads the PDF so it can be printed
+  /// from the file instead.
+  Future<void> _print(
+      BuildContext context, Map<String, double> valuesByKey) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await Printing.layoutPdf(
+        name: incomeFormPdfFilename(form),
+        onLayout: (_) => buildIncomeFormPdf(form, valuesByKey),
+      ).timeout(const Duration(seconds: 20));
+    } catch (_) {
+      messenger.showSnackBar(const SnackBar(
+          content: Text(
+              "The print dialog didn't open, so the PDF was downloaded instead. Open it to print.")));
+      if (context.mounted) await _download(context, valuesByKey);
+    }
+  }
+
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -87,11 +120,14 @@ class IncomeFormDetailScreen extends ConsumerWidget {
             ),
           ],
           IconButton(
+            icon: const Icon(Icons.download_outlined),
+            tooltip: 'Download PDF',
+            onPressed: () => _download(context, valuesByKey),
+          ),
+          IconButton(
             icon: const Icon(Icons.print_outlined),
             tooltip: 'Print',
-            onPressed: () => Printing.layoutPdf(
-              onLayout: (_) => buildIncomeFormPdf(form, valuesByKey),
-            ),
+            onPressed: () => _print(context, valuesByKey),
           ),
         ],
       ),
