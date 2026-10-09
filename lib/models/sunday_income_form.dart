@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'cheque_entry.dart';
@@ -52,6 +55,9 @@ class SundayIncomeForm {
     this.natsaveBlock = const CategoryBlock(denominationBreakdown: {}),
     this.expensesReserveBlock = const CategoryBlock(denominationBreakdown: {}),
     this.expenseEntries = const [],
+    this.preparedBySignature,
+    this.checkedBySignature,
+    this.collectedBySignature,
     this.createdAt,
   });
 
@@ -79,6 +85,12 @@ class SundayIncomeForm {
   /// reconcile with [twentyPercentOfTithe] -- see [isReconciled].
   final CategoryBlock expensesReserveBlock;
   final List<ExpenseEntry> expenseEntries;
+
+  /// Drawn signatures (PNG bytes), stored base64 in the document. Optional --
+  /// a form can still be saved with only the typed names.
+  final Uint8List? preparedBySignature;
+  final Uint8List? checkedBySignature;
+  final Uint8List? collectedBySignature;
   final DateTime? createdAt;
 
   int get attendanceTotal => men + women + children;
@@ -153,8 +165,14 @@ class SundayIncomeForm {
         natsaveBlock: natsaveBlock,
         expensesReserveBlock: expensesReserveBlock,
         expenseEntries: expenseEntries,
+        preparedBySignature: preparedBySignature,
+        checkedBySignature: checkedBySignature,
+        collectedBySignature: collectedBySignature,
         createdAt: createdAt,
       );
+
+  static Uint8List? _decodeSignature(Object? raw) =>
+      raw is String && raw.isNotEmpty ? base64Decode(raw) : null;
 
   factory SundayIncomeForm.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? const {};
@@ -202,6 +220,9 @@ class SundayIncomeForm {
       expenseEntries: ((data['expenseEntries'] as List?) ?? [])
           .map((e) => ExpenseEntry.fromMap(Map<String, dynamic>.from(e as Map)))
           .toList(),
+      preparedBySignature: _decodeSignature(data['preparedBySignature']),
+      checkedBySignature: _decodeSignature(data['checkedBySignature']),
+      collectedBySignature: _decodeSignature(data['collectedBySignature']),
       createdAt: createdAt,
     );
   }
@@ -223,6 +244,12 @@ class SundayIncomeForm {
         'natsaveBlock': natsaveBlock.toMap(),
         'expensesReserveBlock': expensesReserveBlock.toMap(),
         'expenseEntries': expenseEntries.map((e) => e.toMap()).toList(),
+        if (preparedBySignature != null)
+          'preparedBySignature': base64Encode(preparedBySignature!),
+        if (checkedBySignature != null)
+          'checkedBySignature': base64Encode(checkedBySignature!),
+        if (collectedBySignature != null)
+          'collectedBySignature': base64Encode(collectedBySignature!),
         'createdAt': FieldValue.serverTimestamp(),
       };
 }

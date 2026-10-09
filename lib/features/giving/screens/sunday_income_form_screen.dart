@@ -1,6 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:signature/signature.dart';
 
+import '../../../core/providers/display_name_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../core/utils/week_utils.dart';
@@ -13,6 +17,7 @@ import '../../../repositories/repository_providers.dart';
 import '../zmw_denominations.dart';
 import '../../../core/utils/currency_format.dart';
 import '../giving_theme.dart';
+import '../widgets/signature_pad_field.dart';
 import 'income_form_detail_screen.dart';
 
 class _ForexRow {
@@ -77,7 +82,19 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
   final _checkedByController = TextEditingController();
   final _collectedByController = TextEditingController();
 
+  final _preparedSignature = SignaturePadField.newController();
+  final _checkedSignature = SignaturePadField.newController();
+  final _collectedSignature = SignaturePadField.newController();
+
   bool _saving = false;
+  bool _signing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // The person filling in the form is normally the one who prepared it.
+    _preparedByController.text = ref.read(displayNameProvider);
+  }
 
   @override
   void dispose() {
@@ -107,6 +124,9 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
     _preparedByController.dispose();
     _checkedByController.dispose();
     _collectedByController.dispose();
+    _preparedSignature.dispose();
+    _checkedSignature.dispose();
+    _collectedSignature.dispose();
     super.dispose();
   }
 
@@ -158,6 +178,9 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
     if (picked != null) setState(() => _serviceDate = picked);
   }
 
+  Future<Uint8List?> _signatureBytes(SignatureController c) async =>
+      c.isEmpty ? null : c.toPngBytes();
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
@@ -196,6 +219,9 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
         preparedBy: _preparedByController.text.trim(),
         checkedBy: _checkedByController.text.trim(),
         collectedBy: _collectedByController.text.trim(),
+        preparedBySignature: await _signatureBytes(_preparedSignature),
+        checkedBySignature: await _signatureBytes(_checkedSignature),
+        collectedBySignature: await _signatureBytes(_collectedSignature),
         natsaveBlock: CategoryBlock(denominationBreakdown: {
           for (final d in zmwDenominations)
             d.key: int.tryParse(_natsaveControllers[d.key]!.text.trim()) ?? 0,
@@ -236,6 +262,7 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
       body: Form(
         key: _formKey,
         child: ListView(
+          physics: _signing ? const NeverScrollableScrollPhysics() : null,
           padding: const EdgeInsets.all(16),
           children: [
             Card(
@@ -406,17 +433,32 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
                       validator: (v) =>
                           (v == null || v.trim().isEmpty) ? 'Required' : null,
                     ),
+                    SignaturePadField(
+                      label: 'Prepared By signature (optional)',
+                      controller: _preparedSignature,
+                      onDrawingChanged: (v) => setState(() => _signing = v),
+                    ),
                     TextFormField(
                       controller: _checkedByController,
                       decoration: const InputDecoration(labelText: 'Checked By'),
                       validator: (v) =>
                           (v == null || v.trim().isEmpty) ? 'Required' : null,
                     ),
+                    SignaturePadField(
+                      label: 'Checked By signature (optional)',
+                      controller: _checkedSignature,
+                      onDrawingChanged: (v) => setState(() => _signing = v),
+                    ),
                     TextFormField(
                       controller: _collectedByController,
                       decoration: const InputDecoration(labelText: 'Collected By'),
                       validator: (v) =>
                           (v == null || v.trim().isEmpty) ? 'Required' : null,
+                    ),
+                    SignaturePadField(
+                      label: 'Collected By signature (optional)',
+                      controller: _collectedSignature,
+                      onDrawingChanged: (v) => setState(() => _signing = v),
                     ),
                   ],
                 ),
