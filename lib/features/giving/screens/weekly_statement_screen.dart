@@ -5,6 +5,8 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../core/utils/week_utils.dart';
 import '../../../models/giving_record.dart';
+import '../../../models/sunday_income_form.dart';
+import '../../../models/week_income_form_totals.dart';
 import '../../../repositories/repository_providers.dart';
 import '../zmw_denominations.dart';
 import '../../../core/utils/currency_format.dart';
@@ -40,6 +42,15 @@ class _WeeklyStatementScreenState extends ConsumerState<WeeklyStatementScreen> {
       body: recordsAsync.when(
         data: (_) {
           final summary = ref.watch(weekSummaryProvider(_selectedSunday));
+          final forms = ref.watch(incomeFormsProvider).maybeWhen(
+                data: (f) => f,
+                orElse: () => const <SundayIncomeForm>[],
+              );
+          final formTotals = WeekIncomeFormTotals.compute(
+            _selectedSunday,
+            forms,
+            {for (final d in zmwDenominations) d.key: d.value},
+          );
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -71,6 +82,62 @@ class _WeeklyStatementScreenState extends ConsumerState<WeeklyStatementScreen> {
                 color: AppColors.primaryDark,
                 emphasized: true,
               ),
+              if (formTotals.hasForms) ...[
+                const SizedBox(height: 24),
+                Text('Bank Deposit & Expenses',
+                    style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 8),
+                _StatRow(
+                  label: 'Tithe of Tithes (20%)',
+                  value: formTotals.titheOfTithes,
+                  color: AppColors.secondary,
+                ),
+                _StatRow(
+                  label: 'Natsave Deposit',
+                  value: formTotals.natsaveDeposit,
+                  color: AppColors.primaryDark,
+                ),
+                _StatRow(
+                  label: 'Total Collection',
+                  value: formTotals.totalCollection,
+                  color: AppColors.secondaryDark,
+                  emphasized: true,
+                ),
+                _StatRow(
+                  label: 'Expenses + Tithe of Tithes Reserve',
+                  value: formTotals.expensesReserve,
+                  color: AppColors.goldInk,
+                ),
+                _StatRow(
+                  label: 'Total Expenses',
+                  value: formTotals.totalExpenses,
+                  color: AppColors.goldInk,
+                ),
+                if (formTotals.unreconciledCount > 0)
+                  Container(
+                    margin: const EdgeInsets.only(top: 4),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.goldInk.withValues(alpha: 0.12),
+                      border: Border.all(color: AppColors.goldInk),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.warning_amber_outlined, color: AppColors.goldInk),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '${formTotals.unreconciledCount} of ${formTotals.formCount} '
+                            'form(s) this week do not reconcile — open the Sunday '
+                            'Income Form to review the variance.',
+                            style: const TextStyle(color: AppColors.goldInk),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
               const SizedBox(height: 24),
               Text('Offering Denomination Breakdown',
                   style: Theme.of(context).textTheme.titleMedium),
