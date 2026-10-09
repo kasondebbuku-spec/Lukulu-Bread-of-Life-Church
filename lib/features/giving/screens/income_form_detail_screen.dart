@@ -2,7 +2,6 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:printing/printing.dart';
 
 import '../../../core/providers/user_role_provider.dart';
 import '../../../core/theme/app_theme.dart';
@@ -11,6 +10,7 @@ import '../../../models/giving_record.dart';
 import '../../../models/sunday_income_form.dart';
 import '../../../repositories/repository_providers.dart';
 import '../pdf/income_form_pdf.dart';
+import '../pdf/pdf_actions.dart';
 import '../zmw_denominations.dart';
 import '../../../core/utils/currency_format.dart';
 import '../giving_theme.dart';
@@ -24,39 +24,6 @@ class IncomeFormDetailScreen extends ConsumerWidget {
   Map<String, double> get _valuesByKey => {
         for (final d in zmwDenominations) d.key: d.value,
       };
-
-  Future<void> _download(
-      BuildContext context, Map<String, double> valuesByKey) async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      await Printing.sharePdf(
-        bytes: await buildIncomeFormPdf(form, valuesByKey),
-        filename: incomeFormPdfFilename(form),
-      );
-    } catch (_) {
-      messenger.showSnackBar(const SnackBar(
-          content: Text('Could not create the PDF. Please try again.')));
-    }
-  }
-
-  /// Opens the browser's print dialog; if that doesn't open (some browsers
-  /// can't print an embedded PDF), downloads the PDF so it can be printed
-  /// from the file instead.
-  Future<void> _print(
-      BuildContext context, Map<String, double> valuesByKey) async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      await Printing.layoutPdf(
-        name: incomeFormPdfFilename(form),
-        onLayout: (_) => buildIncomeFormPdf(form, valuesByKey),
-      ).timeout(const Duration(seconds: 20));
-    } catch (_) {
-      messenger.showSnackBar(const SnackBar(
-          content: Text(
-              "The print dialog didn't open, so the PDF was downloaded instead. Open it to print.")));
-      if (context.mounted) await _download(context, valuesByKey);
-    }
-  }
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
@@ -122,12 +89,16 @@ class IncomeFormDetailScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.download_outlined),
             tooltip: 'Download PDF',
-            onPressed: () => _download(context, valuesByKey),
+            onPressed: () => downloadPdf(context,
+                filename: incomeFormPdfFilename(form),
+                build: () => buildIncomeFormPdf(form, valuesByKey)),
           ),
           IconButton(
             icon: const Icon(Icons.print_outlined),
             tooltip: 'Print',
-            onPressed: () => _print(context, valuesByKey),
+            onPressed: () => printPdf(context,
+                filename: incomeFormPdfFilename(form),
+                build: () => buildIncomeFormPdf(form, valuesByKey)),
           ),
         ],
       ),
