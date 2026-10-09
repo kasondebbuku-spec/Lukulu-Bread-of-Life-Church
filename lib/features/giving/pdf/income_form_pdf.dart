@@ -32,7 +32,7 @@ Future<Uint8List> buildIncomeFormPdf(
               style: const pw.TextStyle(fontSize: 12)),
           pw.SizedBox(height: 4),
           pw.Text(
-              '${formatDate(form.date)} — ${form.service.label} service',
+              '${formatDate(form.date)} - ${form.service.label} service',
               style: const pw.TextStyle(fontSize: 10)),
           pw.Divider(),
         ],
@@ -56,6 +56,13 @@ Future<Uint8List> buildIncomeFormPdf(
   );
 
   return doc.save();
+}
+
+/// e.g. `income-form-2026-10-04-morning.pdf`
+String incomeFormPdfFilename(SundayIncomeForm form) {
+  String two(int n) => n.toString().padLeft(2, '0');
+  final d = form.date;
+  return 'income-form-${d.year}-${two(d.month)}-${two(d.day)}-${form.service.name}.pdf';
 }
 
 pw.Widget _sectionHeading(String text) => pw.Padding(
