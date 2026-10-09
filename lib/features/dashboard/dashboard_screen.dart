@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/constants/daily_verses.dart';
 import '../../core/constants/social_links.dart';
+import '../../core/providers/display_name_provider.dart';
 import '../../core/providers/firebase_providers.dart';
 import '../../core/providers/user_role_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/currency_format.dart';
-import '../../core/widgets/role_badge.dart';
+import '../../core/utils/greeting.dart';
 import '../../repositories/repository_providers.dart';
 import '../announcements/screens/announcements_screen.dart';
 import '../attendance/screens/attendance_screen.dart';
@@ -15,130 +17,166 @@ import '../events/screens/events_screen.dart';
 import '../giving/screens/giving_screen.dart';
 import '../members/screens/members_screen.dart';
 import '../prayer/screens/prayer_screen.dart';
+import 'widgets/daily_verse_card.dart';
+import 'widgets/dashboard_header.dart';
+import 'widgets/hero_banner.dart';
+import 'widgets/quick_access_card.dart';
+import 'widgets/upcoming_events_card.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(authStateChangesProvider).value;
     final role = ref.watch(userRoleProvider).maybeWhen(
           data: (r) => r,
           orElse: () => UserAccess.member,
         );
-    final userName =
-        user?.displayName ?? user?.email?.split('@').first ?? 'User';
+    final userName = ref.watch(displayNameProvider);
 
     final cards = _buildCards(context, ref, role);
+    final upcoming = ref.watch(upcomingEventsProvider);
+    final nextEvent = upcoming.maybeWhen(
+      data: (events) => events.isEmpty ? null : events.first,
+      orElse: () => null,
+    );
+    final now = ref.watch(dashboardClockProvider).value ?? DateTime.now();
+    final firstName = userName.split(' ').first;
+
+    void openScreen(Widget screen) =>
+        Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+
+    final panels = <Widget>[
+      UpcomingEventsCard(
+          events: upcoming, onViewAll: () => openScreen(const EventsScreen())),
+      QuickAccessCard(items: _quickAccess(context, role, openScreen)),
+      DailyVerseCard(verse: verseForDate(now)),
+    ];
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Bread of Life Lukulu Branch'),
-        actions: [
-          PopupMenuButton<String>(
-            icon: const CircleAvatar(child: Icon(Icons.person)),
-            onSelected: (value) async {
-              if (value == 'logout') {
-                await ref.read(firebaseAuthProvider).signOut();
-              }
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'info',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(userName,
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
-                    RoleBadge(role: role),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(value: 'logout', child: Text('Logout')),
-            ],
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(28),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [
-                    AppColors.primaryDark,
-                    AppColors.primary,
-                    AppColors.blueDark
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(24),
-              ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1200),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Image.asset(
-                    'assets/images/bol_logo.png',
-                    height: 72,
-                    fit: BoxFit.contain,
+                  DashboardHeader(
+                    greeting: '${greetingFor(now)}, $firstName',
+                    userName: userName,
+                    role: role,
+                    onLogout: () => ref.read(firebaseAuthProvider).signOut(),
                   ),
                   const SizedBox(height: 20),
-                  const Text('BREAD OF LIFE • LUKULU',
-                      style: TextStyle(
-                        color: AppColors.secondaryLight,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.5,
-                      )),
-                  const SizedBox(height: 12),
-                  Text('Welcome, $userName',
-                      style: Theme.of(context)
-                          .textTheme
-                          .headlineLarge
-                          ?.copyWith(color: Colors.white)),
-                  const SizedBox(height: 8),
-                  const Text('Growing in faith. Serving together.',
-                      style: TextStyle(color: Colors.white, fontSize: 16)),
+                  HeroBanner(
+                    nextEvent: nextEvent,
+                    onViewEvents: () => openScreen(const EventsScreen()),
+                    onJoinWhatsApp: () => _openUrl(context, SocialLinks.whatsAppGroup),
+                    onWatchLive: SocialLinks.hasFacebookLive
+                        ? () => _openUrl(context, SocialLinks.facebookLive)
+                        : null,
+                  ),
                   const SizedBox(height: 20),
-                  RoleBadge(role: role),
+                  LayoutBuilder(builder: (context, constraints) {
+                    if (constraints.maxWidth >= 900) {
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(flex: 4, child: panels[0]),
+                          const SizedBox(width: 16),
+                          Expanded(flex: 4, child: panels[1]),
+                          const SizedBox(width: 16),
+                          Expanded(flex: 3, child: panels[2]),
+                        ],
+                      );
+                    }
+                    return Column(children: [
+                      for (final p in panels)
+                        Padding(padding: const EdgeInsets.only(bottom: 16), child: p),
+                    ]);
+                  }),
+                  const SizedBox(height: 12),
+                  Text('Overview', style: Theme.of(context).textTheme.headlineMedium),
+                  const SizedBox(height: 8),
+                  const Text('Stay connected and manage your church activities.'),
+                  const SizedBox(height: 20),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final crossAxisCount = constraints.maxWidth >= 900
+                          ? 3
+                          : constraints.maxWidth >= 600
+                              ? 2
+                              : 1;
+                      const spacing = 16.0;
+                      final cardWidth =
+                          (constraints.maxWidth - spacing * (crossAxisCount - 1)) /
+                              crossAxisCount;
+                      return Wrap(
+                        spacing: spacing,
+                        runSpacing: spacing,
+                        children: cards
+                            .map((card) => SizedBox(width: cardWidth, child: card))
+                            .toList(),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 28),
-            Text('Your church community',
-                style: Theme.of(context).textTheme.headlineMedium),
-            const SizedBox(height: 8),
-            const Text('Stay connected and manage your church activities.'),
-            const SizedBox(height: 20),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final crossAxisCount = constraints.maxWidth >= 900
-                    ? 3
-                    : constraints.maxWidth >= 600
-                        ? 2
-                        : 1;
-                const spacing = 16.0;
-                final cardWidth =
-                    (constraints.maxWidth - spacing * (crossAxisCount - 1)) /
-                        crossAxisCount;
-                return Wrap(
-                  spacing: spacing,
-                  runSpacing: spacing,
-                  children: cards
-                      .map((card) => SizedBox(width: cardWidth, child: card))
-                      .toList(),
-                );
-              },
-            ),
-          ],
+          ),
         ),
       ),
     );
+  }
+
+  List<QuickAccessItem> _quickAccess(
+    BuildContext context,
+    UserAccess role,
+    void Function(Widget) open,
+  ) {
+    final all = <QuickAccessItem>[
+      if (role.canViewGiving)
+        QuickAccessItem(
+            label: 'Giving',
+            icon: Icons.account_balance_wallet,
+            color: AppColors.goldInk,
+            onTap: () => open(const GivingScreen())),
+      if (role.canManageMembers)
+        QuickAccessItem(
+            label: 'Members',
+            icon: Icons.people,
+            color: AppColors.primary,
+            onTap: () => open(const MembersScreen())),
+      if (role.canManageAttendance)
+        QuickAccessItem(
+            label: 'Attendance',
+            icon: Icons.how_to_reg,
+            color: AppColors.blue,
+            onTap: () => open(const AttendanceScreen())),
+      QuickAccessItem(
+          label: 'Events',
+          icon: Icons.event,
+          color: AppColors.blue,
+          onTap: () => open(const EventsScreen())),
+      QuickAccessItem(
+          label: 'Prayer',
+          icon: Icons.volunteer_activism,
+          color: AppColors.primaryLight,
+          onTap: () => open(const PrayerScreen())),
+      QuickAccessItem(
+          label: 'Announcements',
+          icon: Icons.campaign,
+          color: AppColors.goldInk,
+          onTap: () => open(const AnnouncementsScreen())),
+      QuickAccessItem(
+          label: 'WhatsApp',
+          icon: Icons.chat_bubble_outline,
+          color: AppColors.blue,
+          onTap: () => _openUrl(context, SocialLinks.whatsAppGroup)),
+    ];
+    return all.take(4).toList();
   }
 
   List<Widget> _buildCards(
@@ -194,20 +232,6 @@ class DashboardScreen extends ConsumerWidget {
       ));
     }
 
-    final events = ref.watch(upcomingEventsProvider);
-    cards.add(_DashboardCard(
-      title: 'Upcoming Events',
-      subtitle: 'Services & church calendar',
-      count: events.when(
-        data: (e) => '${e.length}',
-        loading: () => 'Loading…',
-        error: (error, stack) => 'Unavailable',
-      ),
-      icon: Icons.event,
-      accentColor: AppColors.blue,
-      onTap: () => openScreen(const EventsScreen()),
-    ));
-
     final announcements = ref.watch(announcementsProvider);
     cards.add(_DashboardCard(
       title: 'Announcements',
@@ -232,20 +256,11 @@ class DashboardScreen extends ConsumerWidget {
       onTap: () => openScreen(const PrayerScreen()),
     ));
 
-    cards.add(_DashboardCard(
-      title: 'Join WhatsApp Group',
-      subtitle: 'Chat with the branch community',
-      count: 'Open',
-      icon: Icons.chat_bubble_outline,
-      accentColor: AppColors.blue,
-      onTap: () => _openWhatsAppGroup(context),
-    ));
-
     return cards;
   }
 
-  Future<void> _openWhatsAppGroup(BuildContext context) async {
-    final uri = Uri.parse(SocialLinks.whatsAppGroup);
+  Future<void> _openUrl(BuildContext context, String url) async {
+    final uri = Uri.parse(url);
     var launched = false;
     try {
       launched = await launchUrl(
@@ -259,7 +274,7 @@ class DashboardScreen extends ConsumerWidget {
     if (!launched && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Could not open WhatsApp. Is it installed?')),
+            content: Text('Could not open the link. Please try again.')),
       );
     }
   }
