@@ -47,7 +47,10 @@ class _ExpenseRow {
 }
 
 class SundayIncomeFormScreen extends ConsumerStatefulWidget {
-  const SundayIncomeFormScreen({super.key});
+  /// Pass [initialForm] to edit a saved form instead of entering a new one.
+  const SundayIncomeFormScreen({super.key, this.initialForm});
+
+  final SundayIncomeForm? initialForm;
 
   @override
   ConsumerState<SundayIncomeFormScreen> createState() => _SundayIncomeFormScreenState();
@@ -92,8 +95,75 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
   @override
   void initState() {
     super.initState();
-    // The person filling in the form is normally the one who prepared it.
-    _preparedByController.text = ref.read(displayNameProvider);
+    final existing = widget.initialForm;
+    if (existing != null) {
+      _prefill(existing);
+    } else {
+      // The person filling in the form is normally the one who prepared it.
+      _preparedByController.text = ref.read(displayNameProvider);
+    }
+  }
+
+  bool get _editing => widget.initialForm != null;
+
+  static String _count(int? n) => (n == null || n == 0) ? '' : '$n';
+
+  void _fillDenominations(
+      Map<String, TextEditingController> controllers, CategoryBlock? block) {
+    for (final d in zmwDenominations) {
+      controllers[d.key]!.text = _count(block?.denominationBreakdown[d.key]);
+    }
+  }
+
+  void _prefill(SundayIncomeForm form) {
+    _serviceDate = form.date;
+    _service = form.service;
+    for (final c in GivingCategory.values) {
+      _fillDenominations(_controllers[c]!, form.categoryBlocks[c]);
+    }
+    _fillDenominations(_natsaveControllers, form.natsaveBlock);
+    _fillDenominations(_expensesReserveControllers, form.expensesReserveBlock);
+
+    String money(double v) => v == v.roundToDouble() ? v.toStringAsFixed(0) : '$v';
+
+    if (form.forexEntries.isNotEmpty) {
+      for (final r in _forexRows) {
+        r.dispose();
+      }
+      _forexRows
+        ..clear()
+        ..addAll(form.forexEntries.map((f) => _ForexRow()
+          ..currency = f.currency
+          ..amountController.text = money(f.amount)));
+    }
+    if (form.chequeEntries.isNotEmpty) {
+      for (final r in _chequeRows) {
+        r.dispose();
+      }
+      _chequeRows
+        ..clear()
+        ..addAll(form.chequeEntries.map((c) => _ChequeRow()
+          ..nameController.text = c.name
+          ..chequeNoController.text = c.chequeNo
+          ..amountController.text = money(c.amount)));
+    }
+    if (form.expenseEntries.isNotEmpty) {
+      for (final r in _expenseRows) {
+        r.dispose();
+      }
+      _expenseRows
+        ..clear()
+        ..addAll(form.expenseEntries.map((e) => _ExpenseRow()
+          ..descriptionController.text = e.description
+          ..amountController.text = money(e.amount)));
+    }
+
+    _menController.text = '${form.men}';
+    _womenController.text = '${form.women}';
+    _childrenController.text = '${form.children}';
+    _preparedByController.text = form.preparedBy;
+    _checkedByController.text = form.checkedBy;
+    _collectedByController.text = form.collectedBy;
   }
 
   @override
@@ -178,6 +248,10 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
     if (picked != null) setState(() => _serviceDate = picked);
   }
 
+  String _signatureLabel(String role, Uint8List? saved) => saved == null
+      ? '$role signature (optional)'
+      : '$role signature -- saved one is kept unless you draw a new one';
+
   Future<Uint8List?> _signatureBytes(SignatureController c) async =>
       c.isEmpty ? null : c.toPngBytes();
 
@@ -188,7 +262,7 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
     try {
       final valuesByKey = _valuesByKey;
       final form = SundayIncomeForm(
-        id: '',
+        id: widget.initialForm?.id ?? '',
         date: _serviceDate,
         service: _service,
         categoryBlocks: {
@@ -219,9 +293,12 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
         preparedBy: _preparedByController.text.trim(),
         checkedBy: _checkedByController.text.trim(),
         collectedBy: _collectedByController.text.trim(),
-        preparedBySignature: await _signatureBytes(_preparedSignature),
-        checkedBySignature: await _signatureBytes(_checkedSignature),
-        collectedBySignature: await _signatureBytes(_collectedSignature),
+        preparedBySignature: await _signatureBytes(_preparedSignature) ??
+            widget.initialForm?.preparedBySignature,
+        checkedBySignature: await _signatureBytes(_checkedSignature) ??
+            widget.initialForm?.checkedBySignature,
+        collectedBySignature: await _signatureBytes(_collectedSignature) ??
+            widget.initialForm?.collectedBySignature,
         natsaveBlock: CategoryBlock(denominationBreakdown: {
           for (final d in zmwDenominations)
             d.key: int.tryParse(_natsaveControllers[d.key]!.text.trim()) ?? 0,
@@ -239,9 +316,14 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
             .toList(),
       );
 
-      final id = await ref
-          .read(incomeFormRepositoryProvider)
-          .saveAndCascade(form, valuesByKey);
+      final repository = ref.read(incomeFormRepositoryProvider);
+      final String id;
+      if (_editing) {
+        await repository.updateAndCascade(form, valuesByKey);
+        id = form.id;
+      } else {
+        id = await repository.saveAndCascade(form, valuesByKey);
+      }
 
       if (!mounted) return;
       Navigator.pushReplacement(
@@ -258,7 +340,8 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Sunday Income Form')),
+      appBar: AppBar(
+          title: Text(_editing ? 'Edit Sunday Income Form' : 'Sunday Income Form')),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -434,7 +517,7 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
                           (v == null || v.trim().isEmpty) ? 'Required' : null,
                     ),
                     SignaturePadField(
-                      label: 'Prepared By signature (optional)',
+                      label: _signatureLabel('Prepared By', widget.initialForm?.preparedBySignature),
                       controller: _preparedSignature,
                       onDrawingChanged: (v) => setState(() => _signing = v),
                     ),
@@ -445,7 +528,7 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
                           (v == null || v.trim().isEmpty) ? 'Required' : null,
                     ),
                     SignaturePadField(
-                      label: 'Checked By signature (optional)',
+                      label: _signatureLabel('Checked By', widget.initialForm?.checkedBySignature),
                       controller: _checkedSignature,
                       onDrawingChanged: (v) => setState(() => _signing = v),
                     ),
@@ -456,7 +539,7 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
                           (v == null || v.trim().isEmpty) ? 'Required' : null,
                     ),
                     SignaturePadField(
-                      label: 'Collected By signature (optional)',
+                      label: _signatureLabel('Collected By', widget.initialForm?.collectedBySignature),
                       controller: _collectedSignature,
                       onDrawingChanged: (v) => setState(() => _signing = v),
                     ),
