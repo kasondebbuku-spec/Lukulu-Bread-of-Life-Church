@@ -120,6 +120,21 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
         return total + n * d.value;
       });
 
+  double get _cashTotal => _controllers.values.fold(
+      0.0, (total, controllers) => total + _denominationTotal(controllers));
+  double get _forexTotal => _forexRows.fold(
+      0.0,
+      (total, r) =>
+          total +
+          ForexEntry(
+                  currency: r.currency,
+                  amount: double.tryParse(r.amountController.text.trim()) ?? 0)
+              .kwachaValue);
+  double get _chequesTotal => _chequeRows.fold(
+      0.0, (total, r) => total + (double.tryParse(r.amountController.text.trim()) ?? 0));
+  double get _grandTotal => _cashTotal + _forexTotal + _chequesTotal;
+  double get _natsaveTotal => _denominationTotal(_natsaveControllers);
+
   double get _titheAmount => _denominationTotal(_controllers[GivingCategory.tithe]!);
   double get _twentyPercentOfTithe => _titheAmount * 0.20;
   double get _expensesReserveTotal => _denominationTotal(_expensesReserveControllers);
@@ -407,6 +422,29 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
                 ),
               ),
             ),
+            const SizedBox(height: 12),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Totals (live)', style: Theme.of(context).textTheme.titleMedium),
+                    const Divider(),
+                    _TotalLine('Cash (all categories)', _cashTotal),
+                    _TotalLine('Forex (Kwacha value)', _forexTotal),
+                    _TotalLine('Cheques', _chequesTotal),
+                    _TotalLine('Grand Total', _grandTotal, emphasized: true),
+                    const Divider(),
+                    _TotalLine('20% of Tithe (remittance)', _twentyPercentOfTithe),
+                    _TotalLine('Natsave Deposit', _natsaveTotal),
+                    _TotalLine('Total Collection', _twentyPercentOfTithe + _natsaveTotal,
+                        emphasized: true),
+                    _TotalLine('Total Expenses', _expensesTotal),
+                  ],
+                ),
+              ),
+            ),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: _saving ? null : _save,
@@ -421,6 +459,30 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
             const SizedBox(height: 24),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _TotalLine extends StatelessWidget {
+  const _TotalLine(this.label, this.value, {this.emphasized = false});
+
+  final String label;
+  final double value;
+  final bool emphasized;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = TextStyle(
+      fontWeight: emphasized ? FontWeight.bold : FontWeight.normal,
+      fontSize: emphasized ? 16 : 14,
+      color: emphasized ? AppColors.primaryDark : null,
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [Text(label, style: style), Text(formatZmw(value), style: style)],
       ),
     );
   }
