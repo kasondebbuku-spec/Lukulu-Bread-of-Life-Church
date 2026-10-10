@@ -1,0 +1,15 @@
+# Not needed to build the web app.
+rules-tests/node_modules
+rules-tests
+test
+tmp
+output
+build
+.dart_tool
+android
+ios
+macos
+linux
+windows
+*.py
+q5-page*
