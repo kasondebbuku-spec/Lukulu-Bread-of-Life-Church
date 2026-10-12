@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/audit_actor_provider.dart';
 import '../../../core/providers/user_role_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_format.dart';
@@ -48,7 +49,11 @@ class IncomeFormDetailScreen extends ConsumerWidget {
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     try {
-      await ref.read(incomeFormRepositoryProvider).deleteAndCascade(form);
+      final actor = ref.read(auditActorProvider);
+      if (actor == null) throw StateError('You must be signed in.');
+      await ref
+          .read(incomeFormRepositoryProvider)
+          .deleteAndCascade(form, _valuesByKey, actor: actor);
       navigator.pop();
       messenger.showSnackBar(const SnackBar(content: Text('Form deleted.')));
     } catch (_) {
