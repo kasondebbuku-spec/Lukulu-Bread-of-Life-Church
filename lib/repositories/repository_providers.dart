@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/providers/firebase_providers.dart';
 import '../core/providers/user_role_provider.dart';
 import '../models/announcement.dart';
+import '../models/audit_entry.dart';
 import '../models/attendance_record.dart';
 import '../models/church_event.dart';
 import '../models/giving_record.dart';
@@ -11,6 +12,7 @@ import '../models/prayer_request.dart';
 import '../models/sunday_income_form.dart';
 import '../models/week_summary.dart';
 import 'announcements_repository.dart';
+import 'audit_repository.dart';
 import 'attendance_repository.dart';
 import 'events_repository.dart';
 import 'giving_repository.dart';
@@ -136,3 +138,11 @@ final prayerRequestsProvider = StreamProvider<List<PrayerRequest>>((ref) {
         seeAll: role.canSeeAllPrayerRequests,
       );
 });
+
+// Activity log (read-only; entries are written together with the change they record)
+final auditRepositoryProvider = Provider<AuditRepository>(
+  (ref) => AuditRepository(ref.watch(firestoreProvider)),
+);
+final auditLogProvider = StreamProvider<List<AuditEntry>>(
+  (ref) => ref.watch(auditRepositoryProvider).watchAll(),
+);

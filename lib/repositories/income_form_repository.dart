@@ -2,7 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../core/constants/firestore_collections.dart';
 import '../core/repositories/firestore_repository.dart';
+import '../core/utils/currency_format.dart';
+import '../core/utils/date_format.dart';
 import '../models/attendance_record.dart';
+import '../models/audit_entry.dart';
 import '../models/giving_record.dart';
 import '../models/sunday_income_form.dart';
 
@@ -27,6 +30,35 @@ class IncomeFormRepository extends FirestoreRepository<SundayIncomeForm> {
   static String givingRecordId(String formId, GivingCategory category) =>
       '${formId}_${category.name}';
   static String attendanceRecordId(String formId) => '${formId}_attendance';
+
+  CollectionReference<Map<String, dynamic>> get _auditLog =>
+      _firestore.collection(FirestoreCollections.auditLog);
+
+  static String _summary(SundayIncomeForm form) =>
+      '${formatDate(form.date)} - ${form.service.label} service';
+
+  /// Adds an activity-log entry to [batch], so the change and its record are
+  /// committed together or not at all.
+  void _writeAudit(
+    WriteBatch batch, {
+    required AuditAction action,
+    required String formId,
+    required SundayIncomeForm form,
+    required String detail,
+    required AuditActor actor,
+  }) {
+    batch.set(
+      _auditLog.doc(),
+      AuditEntry.newEntry(
+        action: action,
+        entity: 'income_form',
+        entityId: formId,
+        summary: _summary(form),
+        detail: detail,
+        actor: actor,
+      ),
+    );
+  }
 
   /// Adds the writes for the records derived from [form] to [batch]: one
   /// [GivingRecord] per non-empty category (empty ones are removed, in case an
@@ -78,12 +110,21 @@ class IncomeFormRepository extends FirestoreRepository<SundayIncomeForm> {
   /// a single atomic Firestore batch so partial writes cannot occur.
   Future<String> saveAndCascade(
     SundayIncomeForm form,
-    Map<String, double> valuesByKey,
-  ) async {
+    Map<String, double> valuesByKey, {
+    required AuditActor actor,
+  }) async {
     final batch = _firestore.batch();
     final formRef = col.doc();
     batch.set(formRef, form.toMap());
     _writeCascade(batch, formRef.id, form, valuesByKey);
+    _writeAudit(
+      batch,
+      action: AuditAction.create,
+      formId: formRef.id,
+      form: form,
+      detail: 'Total ${formatZmw(form.grandTotal(valuesByKey))}',
+      actor: actor,
+    );
     await batch.commit();
     return formRef.id;
   }
@@ -92,8 +133,10 @@ class IncomeFormRepository extends FirestoreRepository<SundayIncomeForm> {
   /// Only valid for forms whose records are keyed by id ([SundayIncomeForm.canEdit]).
   Future<void> updateAndCascade(
     SundayIncomeForm form,
-    Map<String, double> valuesByKey,
-  ) async {
+    Map<String, double> valuesByKey, {
+    required SundayIncomeForm previous,
+    required AuditActor actor,
+  }) async {
     if (!form.canEdit) {
       throw StateError('This form predates editing and cannot be changed.');
     }
@@ -106,11 +149,27 @@ class IncomeFormRepository extends FirestoreRepository<SundayIncomeForm> {
       SetOptions(merge: true),
     );
     _writeCascade(batch, form.id, form, valuesByKey);
+    final before = previous.grandTotal(valuesByKey);
+    final after = form.grandTotal(valuesByKey);
+    _writeAudit(
+      batch,
+      action: AuditAction.update,
+      formId: form.id,
+      form: form,
+      detail: before == after
+          ? 'Total unchanged at ${formatZmw(after)}'
+          : 'Total ${formatZmw(before)} -> ${formatZmw(after)}',
+      actor: actor,
+    );
     await batch.commit();
   }
 
   /// Deletes the form together with the giving and attendance records it created.
-  Future<void> deleteAndCascade(SundayIncomeForm form) async {
+  Future<void> deleteAndCascade(
+    SundayIncomeForm form,
+    Map<String, double> valuesByKey, {
+    required AuditActor actor,
+  }) async {
     if (!form.canEdit) {
       throw StateError('This form predates editing and cannot be deleted here.');
     }
@@ -120,6 +179,14 @@ class IncomeFormRepository extends FirestoreRepository<SundayIncomeForm> {
     }
     batch.delete(_attendance.doc(attendanceRecordId(form.id)));
     batch.delete(col.doc(form.id));
+    _writeAudit(
+      batch,
+      action: AuditAction.delete,
+      formId: form.id,
+      form: form,
+      detail: 'Total was ${formatZmw(form.grandTotal(valuesByKey))}',
+      actor: actor,
+    );
     await batch.commit();
   }
 }
