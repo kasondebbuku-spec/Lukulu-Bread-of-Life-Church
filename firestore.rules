@@ -95,6 +95,17 @@ service cloud.firestore {
         && existsAfter(/databases/$(database)/documents/income_forms/$(request.resource.data.incomeFormId)));
     }
 
+    // Activity log for financial records: written in the same batch as the change
+    // it records, readable by those who can see giving, and immutable once written
+    // (nobody -- including admins -- can edit or delete an entry).
+    match /audit_log/{id} {
+      allow read: if canViewGiving();
+      allow create: if canManageGiving()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.action in ['create', 'update', 'delete'];
+      allow update, delete: if false;
+    }
+
     // Events are public to every signed-in member; only certain roles edit them.
     match /events/{id} {
       allow read: if isSignedIn();

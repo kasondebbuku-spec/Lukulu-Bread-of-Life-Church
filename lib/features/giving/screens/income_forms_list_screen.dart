@@ -8,6 +8,7 @@ import '../../../models/sunday_income_form.dart';
 import '../../../repositories/repository_providers.dart';
 import '../zmw_denominations.dart';
 import '../../../core/utils/currency_format.dart';
+import 'audit_log_screen.dart';
 import 'income_form_detail_screen.dart';
 
 class IncomeFormsListScreen extends ConsumerWidget {
@@ -19,7 +20,19 @@ class IncomeFormsListScreen extends ConsumerWidget {
     final valuesByKey = {for (final d in zmwDenominations) d.key: d.value};
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Sunday Income Forms')),
+      appBar: AppBar(
+        title: const Text('Sunday Income Forms'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history),
+            tooltip: 'Activity log',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const AuditLogScreen()),
+            ),
+          ),
+        ],
+      ),
       body: formsAsync.when(
         data: (forms) {
           if (forms.isEmpty) {

@@ -231,6 +231,47 @@ async function main() {
     return assertSucceeds(batch.commit());
   });
 
+  console.log('\n--- Activity log (audit_log) ---');
+  const entry = (uid, action = 'update') => ({
+    action, entity: 'income_form', entityId: 'f1', summary: 'Oct 4, 2026',
+    detail: 'Total 1 -> 2', userId: uid, userName: uid,
+  });
+  await seedDoc('audit_log/existing1', entry('finance1'));
+  await check('finance CAN add an entry naming themselves', () =>
+    assertSucceeds(setDoc(doc(ctxFor('finance1'), 'audit_log/new1'), entry('finance1'))));
+  await check('finance CANNOT add an entry in someone else\'s name', () =>
+    assertFails(setDoc(doc(ctxFor('finance1'), 'audit_log/new2'), entry('admin1'))));
+  await check('finance CANNOT add an entry with an unknown action', () =>
+    assertFails(setDoc(doc(ctxFor('finance1'), 'audit_log/new3'), entry('finance1', 'tamper'))));
+  await check('member CANNOT add an entry', () =>
+    assertFails(setDoc(doc(ctxFor('member2'), 'audit_log/new4'), entry('member2'))));
+  await check('finance CAN read the log', () =>
+    assertSucceeds(getDocs(collection(ctxFor('finance1'), 'audit_log'))));
+  await check('oversight CAN read the log', () =>
+    assertSucceeds(getDocs(collection(ctxFor('oversight1'), 'audit_log'))));
+  await check('member CANNOT read the log', () =>
+    assertFails(getDocs(collection(ctxFor('member2'), 'audit_log'))));
+  await check('finance CANNOT edit an entry', () =>
+    assertFails(updateDoc(doc(ctxFor('finance1'), 'audit_log/existing1'), { detail: 'rewritten' })));
+  await check('admin CANNOT edit an entry', () =>
+    assertFails(updateDoc(doc(ctxFor('admin1'), 'audit_log/existing1'), { detail: 'rewritten' })));
+  await check('finance CANNOT delete an entry', () =>
+    assertFails(deleteDoc(doc(ctxFor('finance1'), 'audit_log/existing1'))));
+  await check('admin CANNOT delete an entry', () =>
+    assertFails(deleteDoc(doc(ctxFor('admin1'), 'audit_log/existing1'))));
+  await seedDoc('income_forms/aud1', { service: 'sunday' });
+  await seedDoc('giving/aud1_tithe', { memberName: 'Tithe', amount: 100, incomeFormId: 'aud1' });
+  await seedDoc('attendance/aud1_attendance', { incomeFormId: 'aud1', count: 10 });
+  await check('finance CAN delete a form with its log entry in one batch', () => {
+    const db = ctxFor('finance1');
+    const batch = writeBatch(db);
+    batch.delete(doc(db, 'giving/aud1_tithe'));
+    batch.delete(doc(db, 'attendance/aud1_attendance'));
+    batch.delete(doc(db, 'income_forms/aud1'));
+    batch.set(doc(db, 'audit_log/del1'), entry('finance1', 'delete'));
+    return assertSucceeds(batch.commit());
+  });
+
   await testEnv.cleanup();
 
   console.log(`\n${passed} passed, ${failed} failed`);

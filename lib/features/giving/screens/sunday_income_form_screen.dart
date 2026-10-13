@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:signature/signature.dart';
 
+import '../../../core/providers/audit_actor_provider.dart';
 import '../../../core/providers/display_name_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_format.dart';
@@ -316,13 +317,18 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
             .toList(),
       );
 
+      final actor = ref.read(auditActorProvider);
+      if (actor == null) {
+        throw StateError('You must be signed in to save a form.');
+      }
       final repository = ref.read(incomeFormRepositoryProvider);
       final String id;
       if (_editing) {
-        await repository.updateAndCascade(form, valuesByKey);
+        await repository.updateAndCascade(form, valuesByKey,
+            previous: widget.initialForm!, actor: actor);
         id = form.id;
       } else {
-        id = await repository.saveAndCascade(form, valuesByKey);
+        id = await repository.saveAndCascade(form, valuesByKey, actor: actor);
       }
 
       if (!mounted) return;
