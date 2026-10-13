@@ -34,4 +34,8 @@ class PrayerRepository extends FirestoreRepository<PrayerRequest> {
 
   Future<void> updateStatus(String id, String status) =>
       col.doc(id).update({'status': status});
+
+  /// Rewords an existing request (the owner may do this; see firestore.rules).
+  Future<void> updateText(String id, String text) =>
+      col.doc(id).update({'request': text});
 }
