@@ -17,6 +17,7 @@ dependencies:
   pdf: ^3.12.0
   printing: ^5.14.3
   signature: ^6.4.0
+  web: ^1.1.1
 
 dev_dependencies:
   flutter_test:
