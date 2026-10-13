@@ -23,7 +23,7 @@ class BreadOfLifeApp extends ConsumerWidget {
     final authState = ref.watch(authStateChangesProvider);
 
     return MaterialApp(
-      title: 'Bread of Life Church',
+      title: 'Lukulu Bread of Life Church',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       home: authState.when(
