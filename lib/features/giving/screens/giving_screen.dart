@@ -18,6 +18,7 @@ import '../giving_theme.dart';
 import '../zmw_denominations.dart';
 import 'income_forms_list_screen.dart';
 import 'sunday_income_form_screen.dart';
+import 'export_screen.dart';
 import 'period_summary_screen.dart';
 import 'weekly_statement_screen.dart';
 
@@ -311,6 +312,14 @@ class _GivingScreenState extends ConsumerState<GivingScreen> {
               context,
               MaterialPageRoute(
                   builder: (context) => const WeeklyStatementScreen()),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.file_download_outlined),
+            tooltip: 'Export data (CSV)',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ExportScreen()),
             ),
           ),
           IconButton(
