@@ -126,7 +126,19 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow read: if isSignedIn()
                   && (resource.data.userId == request.auth.uid || canSeeAllPrayer());
-      allow update, delete: if canSeeAllPrayer();
+      // Leaders moderate everything. The person who posted a request may edit its
+      // wording, mark it answered or pending, and delete it -- but cannot change
+      // whose it is or touch anyone else's.
+      allow update: if canSeeAllPrayer()
+        || (isSignedIn() && resource.data.userId == request.auth.uid
+            && request.resource.data.userId == resource.data.userId
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['request', 'status'])
+            && request.resource.data.status in ['pending', 'answered']
+            && request.resource.data.request is string
+            && request.resource.data.request.size() > 0
+            && request.resource.data.request.size() <= 2000);
+      allow delete: if canSeeAllPrayer()
+        || (isSignedIn() && resource.data.userId == request.auth.uid);
     }
   }
 }

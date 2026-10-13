@@ -272,6 +272,37 @@ async function main() {
     return assertSucceeds(batch.commit());
   });
 
+  console.log('\n--- Members editing and deleting their own prayer requests ---');
+  await seedUser('member3', 'member');
+  const prayer = (uid) => ({ userId: uid, userName: uid, request: 'original', status: 'pending' });
+  await seedDoc('prayer_requests/own2', prayer('member2'));
+  await seedDoc('prayer_requests/own3', prayer('member3'));
+  await seedDoc('prayer_requests/own4', prayer('member2'));
+  await check('owner CAN edit the wording of their own request', () =>
+    assertSucceeds(updateDoc(doc(ctxFor('member2'), 'prayer_requests/own2'), { request: 'reworded' })));
+  await check('owner CAN mark their own request answered', () =>
+    assertSucceeds(updateDoc(doc(ctxFor('member2'), 'prayer_requests/own2'), { status: 'answered' })));
+  await check('owner CANNOT set an invalid status', () =>
+    assertFails(updateDoc(doc(ctxFor('member2'), 'prayer_requests/own2'), { status: 'hacked' })));
+  await check('owner CANNOT blank the request', () =>
+    assertFails(updateDoc(doc(ctxFor('member2'), 'prayer_requests/own2'), { request: '' })));
+  await check('owner CANNOT make the request enormous', () =>
+    assertFails(updateDoc(doc(ctxFor('member2'), 'prayer_requests/own2'), { request: 'x'.repeat(2001) })));
+  await check('owner CANNOT reassign the request to someone else', () =>
+    assertFails(updateDoc(doc(ctxFor('member2'), 'prayer_requests/own2'), { userId: 'member3' })));
+  await check('owner CANNOT change other fields', () =>
+    assertFails(updateDoc(doc(ctxFor('member2'), 'prayer_requests/own2'), { userName: 'someone else' })));
+  await check('a member CANNOT edit another member\'s request', () =>
+    assertFails(updateDoc(doc(ctxFor('member2'), 'prayer_requests/own3'), { request: 'defaced' })));
+  await check('a member CANNOT delete another member\'s request', () =>
+    assertFails(deleteDoc(doc(ctxFor('member2'), 'prayer_requests/own3'))));
+  await check('owner CAN delete their own request', () =>
+    assertSucceeds(deleteDoc(doc(ctxFor('member2'), 'prayer_requests/own4'))));
+  await check('a leader CAN still delete any request', () =>
+    assertSucceeds(deleteDoc(doc(ctxFor('elder1'), 'prayer_requests/own3'))));
+  await check('anonymous CANNOT edit a request', () =>
+    assertFails(updateDoc(doc(testEnv.unauthenticatedContext().firestore(), 'prayer_requests/own2'), { request: 'x' })));
+
   await testEnv.cleanup();
 
   console.log(`\n${passed} passed, ${failed} failed`);
