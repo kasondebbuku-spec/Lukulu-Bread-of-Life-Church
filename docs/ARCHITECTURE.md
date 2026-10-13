@@ -15,7 +15,7 @@ flowchart LR
 
     auth["Firebase Authentication"]
     db[("Cloud Firestore<br/>database + security rules")]
-    host["Firebase Hosting<br/>kasonde-bbuku.web.app"]
+    host["Firebase Hosting<br/>lukulu-bread-of-life.web.app<br/>(also kasonde-bbuku.web.app)"]
     fb["Facebook page<br/>(live services)"]
     wa["WhatsApp community group"]
 
@@ -262,7 +262,7 @@ the stored counts each time, so they cannot disagree with the source data.
 | Authorisation | `firestore.rules` mirrors the permission getters in `user_role_provider.dart` ("keep in sync"). Each collection has its own rule. |
 | Privilege escalation | Self-signup may only create `role: member`; only an Admin may change roles, and not remove their own admin. |
 | Financial confidentiality | `giving` and `income_forms` readable only by Admin, Finance and Oversight; a member may read only giving linked to their own uid. |
-| Separation of duties | Oversight is read-only. Finance can maintain only attendance records created by a form. |
+| Separation of duties | Oversight is read-only. Finance can maintain only attendance records created by a form. A member can edit, mark answered or delete only their own prayer requests; leaders moderate all. |
 | Integrity of changes | Each form create/edit/delete and its activity-log entry commit in **one atomic batch**. `audit_log` is write-once: no update or delete for anyone. |
 | Spreadsheet safety | The CSV writer neutralises formula-like text (`=`, `+`, `-`, `@`). |
 | Transport / headers | HTTPS (Firebase Hosting). `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, and revalidating `Cache-Control`. |

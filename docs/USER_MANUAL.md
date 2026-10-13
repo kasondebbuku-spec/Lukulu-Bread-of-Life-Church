@@ -1,7 +1,7 @@
 # User Manual
 
 **Bread of Life Church International - Lukulu Branch**
-Web address: **https://kasonde-bbuku.web.app**
+Web address: **https://lukulu-bread-of-life.web.app**
 
 This manual explains how to use the church app. Start with
 [Getting started](#1-getting-started), then jump to the section for your role.
@@ -28,7 +28,7 @@ This manual explains how to use the church app. Start with
 ## 1. Getting started
 
 ### Create an account
-1. Open **https://kasonde-bbuku.web.app**.
+1. Open **https://lukulu-bread-of-life.web.app**.
 2. Tap **Need an account? Sign up**.
 3. Enter your **full name**, **email** and a **password** (at least 6 characters), then tap **Sign Up**.
 
@@ -62,7 +62,7 @@ get everything either role allows.
 
 | Role | Members directory | Giving and finances | Attendance | Events | Announcements | Prayer requests |
 |---|:-:|:-:|:-:|:-:|:-:|:-:|
-| **Member** | - | Own giving only | - | View | Read (public) | Own requests |
+| **Member** | - | Own giving only | - | View | Read (public) | Own requests (edit, delete) |
 | **Elder / Deacon / Deaconess / Pastor** | - | - | Record | View | Post and read | See all |
 | **Secretariat** | Manage | - | Record | Manage | Post and read | See all |
 | **Hospitality** | Manage | - | - | View | Read (public) | Own requests |
@@ -276,8 +276,11 @@ title, date and location. Upcoming events also appear on Home.
 Admin) can post. An announcement can be for **everyone** or for **leaders only**;
 leaders-only posts are hidden from ordinary members.
 
-**Prayer.** Anyone can submit a prayer request. You see your own requests; church
-leaders see all requests so they can pray and respond.
+**Prayer.** Anyone can submit a prayer request: tap **+** and write in the large
+box (up to 1000 characters). You see your own requests; church leaders see all of
+them so they can pray and respond. On a request **you** posted, tap the **three
+dots** to **Edit** the wording, **Mark as answered** (or back to pending), or
+**Delete** it. Leaders can mark or delete anyone's request but cannot reword it.
 
 **WhatsApp and Facebook.** **Join WhatsApp** on Home opens the branch community
 group. **Watch Live** opens the church Facebook page for live services.

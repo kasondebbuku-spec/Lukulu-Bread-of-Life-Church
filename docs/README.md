@@ -1,7 +1,7 @@
 # Bread of Life Church (Lukulu) - Documentation
 
 Church management web app: members, attendance, giving and finances, events,
-announcements and prayer requests. Live at **https://kasonde-bbuku.web.app**.
+announcements and prayer requests. Live at **https://lukulu-bread-of-life.web.app**.
 
 | Document | Audience | What it covers |
 |---|---|---|
