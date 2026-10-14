@@ -63,7 +63,8 @@ get everything either role allows.
 | Role | Members directory | Giving and finances | Attendance | Events | Announcements | Prayer requests |
 |---|:-:|:-:|:-:|:-:|:-:|:-:|
 | **Member** | - | Own giving only | - | View | Read (public) | Own requests (edit, delete) |
-| **Elder / Deacon / Deaconess / Pastor** | - | - | Record | View | Post and read | See all |
+| **Elder / Deacon / Deaconess** | - | - | Record | View | Post and read | See all |
+| **Pastor** | Manage | **View only** | Record | Manage | Post and read | See all |
 | **Secretariat** | Manage | - | Record | Manage | Post and read | See all |
 | **Hospitality** | Manage | - | - | View | Read (public) | Own requests |
 | **Finance Officer** | - | Manage | - | View | Read (public) | Own requests |
@@ -72,8 +73,9 @@ get everything either role allows.
 
 Notes:
 - **Financial records are confidential.** Only Admin and Finance can enter or change
-  them; Oversight can read them but cannot change anything. Leadership roles such
-  as Pastor or Elder do **not** see finances unless they also hold Finance or Oversight.
+  them. The Pastor and Financial Oversight can read them but cannot change anything.
+  Elders, Deacons and Deaconesses do **not** see finances unless they also hold
+  Finance or Oversight.
 - These rules are enforced by the server, not just hidden in the screens.
 
 ---
@@ -294,6 +296,21 @@ group. **Watch Live** opens the church Facebook page for live services.
 1. Find the person in the list (they must already have signed up).
 2. Tap their name. A **Roles for ...** box opens with a tick-box for each role.
 3. Tick one or more roles and save. Their access updates the next time their screen loads.
+
+### Add a staff account
+
+To set up a pastor, finance officer or leader who has not signed up yet, tap
+**Add staff** on the Account Roles screen. Enter their **name** and **email**, tick
+their roles and tap **Create account**. You never see or set a password: they are
+emailed a link to choose their own, then sign in as normal. If the email is already
+registered, change their role from the list instead.
+
+### The very first Admin
+
+The first Admin cannot be made from inside the app. Sign up as normal, then in the
+Firebase console open **Firestore Database > users**, open your own document and set
+`roles` to the list `["admin"]`. Sign out and in again; from then on use Account
+Roles and Add staff.
 
 Safeguards: an Admin cannot remove their own Admin role (to avoid locking everyone
 out), and only an Admin can change roles.

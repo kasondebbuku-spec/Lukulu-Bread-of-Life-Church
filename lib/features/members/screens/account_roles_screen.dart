@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/firebase_providers.dart';
 import '../../../core/providers/user_role_provider.dart';
+import 'add_staff_dialog.dart';
 
 class RegisteredAccount {
   const RegisteredAccount(this.id, this.name, this.email, this.access);
@@ -43,6 +44,13 @@ class AccountRolesScreen extends ConsumerWidget {
     final accounts = ref.watch(registeredAccountsProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('Account Roles')),
+      floatingActionButton: FloatingActionButton.extended(
+        tooltip: 'Add staff account',
+        onPressed: () => showDialog<void>(
+            context: context, builder: (_) => const AddStaffDialog()),
+        icon: const Icon(Icons.person_add_alt_1),
+        label: const Text('Add staff'),
+      ),
       body: accounts.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(

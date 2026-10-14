@@ -261,8 +261,8 @@ the stored counts each time, so they cannot disagree with the source data.
 | Authentication | Firebase Auth (email + password). Passwords never touch the app's own code beyond the SDK call. |
 | Authorisation | `firestore.rules` mirrors the permission getters in `user_role_provider.dart` ("keep in sync"). Each collection has its own rule. |
 | Privilege escalation | Self-signup may only create `role: member`; only an Admin may change roles, and not remove their own admin. |
-| Financial confidentiality | `giving` and `income_forms` readable only by Admin, Finance and Oversight; a member may read only giving linked to their own uid. |
-| Separation of duties | Oversight is read-only. Finance can maintain only attendance records created by a form. A member can edit, mark answered or delete only their own prayer requests; leaders moderate all. |
+| Financial confidentiality | `giving` and `income_forms` readable only by Admin, Finance, Oversight and Pastor (read-only for the last two); a member may read only giving linked to their own uid. |
+| Separation of duties | Oversight and Pastor are read-only. An Admin creates staff accounts on a short-lived second Firebase app, so the Admin stays signed in and never sees the temporary password; roles are then granted through the Admin-only update rule. Finance can maintain only attendance records created by a form. A member can edit, mark answered or delete only their own prayer requests; leaders moderate all. |
 | Integrity of changes | Each form create/edit/delete and its activity-log entry commit in **one atomic batch**. `audit_log` is write-once: no update or delete for anyone. |
 | Spreadsheet safety | The CSV writer neutralises formula-like text (`=`, `+`, `-`, `@`). |
 | Transport / headers | HTTPS (Firebase Hosting). `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, and revalidating `Cache-Control`. |
