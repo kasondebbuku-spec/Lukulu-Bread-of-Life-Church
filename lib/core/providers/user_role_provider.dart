@@ -58,20 +58,24 @@ extension UserRoleX on UserRole {
   bool get canManageMembers =>
       this == UserRole.admin ||
       this == UserRole.secretariat ||
-      this == UserRole.hospitality;
+      this == UserRole.hospitality ||
+      this == UserRole.pastor;
 
   /// Financial records are sensitive — only Admin and the Finance department
-  /// can see or manage them, regardless of other leadership seniority.
+  /// can change them. Oversight and the Pastor can read them but not edit.
   bool get canManageGiving =>
       this == UserRole.admin || this == UserRole.finance;
-  bool get canViewGiving => canManageGiving || this == UserRole.oversight;
+  bool get canViewGiving =>
+      canManageGiving || this == UserRole.oversight || this == UserRole.pastor;
 
   bool get canManageAttendance =>
       this == UserRole.admin ||
       this == UserRole.secretariat ||
       isLeadershipTier;
   bool get canManageEvents =>
-      this == UserRole.admin || this == UserRole.secretariat;
+      this == UserRole.admin ||
+      this == UserRole.secretariat ||
+      this == UserRole.pastor;
   bool get canPostAnnouncements =>
       this == UserRole.admin ||
       this == UserRole.secretariat ||

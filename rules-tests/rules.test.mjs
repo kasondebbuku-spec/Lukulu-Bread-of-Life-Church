@@ -60,6 +60,7 @@ async function main() {
   await seedUser('admin1', 'admin');
   await seedUser('hospitality1', 'hospitality');
   await seedUser('oversight1', 'oversight');
+  await seedUser('pastor1', 'pastor');
   await seedDoc('users/combined1', { role: 'member', roles: ['elder', 'finance'] });
   await seedDoc('users/revoked1', { role: 'admin', roles: ['member'] });
   await seedDoc('giving/own1', { memberUserId: 'member1', memberName: 'Test', amount: 100 });
@@ -85,6 +86,28 @@ async function main() {
     assertFails(updateDoc(doc(ctxFor('oversight1'), 'giving/own1'), { amount: 900 })));
   await check('oversight CANNOT create income forms', () =>
     assertFails(setDoc(doc(ctxFor('oversight1'), 'income_forms/new'), { amount: 100 })));
+
+  console.log('\n--- Pastor: read-only finances, directory and events ---');
+  await check('pastor CAN read financial records', () =>
+    assertSucceeds(getDocs(collection(ctxFor('pastor1'), 'giving'))));
+  await check('pastor CAN read income forms', () =>
+    assertSucceeds(getDoc(doc(ctxFor('pastor1'), 'income_forms/f1'))));
+  await check('pastor CANNOT update giving', () =>
+    assertFails(updateDoc(doc(ctxFor('pastor1'), 'giving/own1'), { amount: 900 })));
+  await check('pastor CANNOT create income forms', () =>
+    assertFails(setDoc(doc(ctxFor('pastor1'), 'income_forms/newp'), { amount: 100 })));
+  await check('pastor CANNOT delete giving', () =>
+    assertFails(deleteDoc(doc(ctxFor('pastor1'), 'giving/own1'))));
+  await check('pastor CAN register a directory member', () =>
+    assertSucceeds(setDoc(doc(ctxFor('pastor1'), 'members/by-pastor'), { name: 'Visitor' })));
+  await check('pastor CAN create an event', () =>
+    assertSucceeds(setDoc(doc(ctxFor('pastor1'), 'events/by-pastor'), { title: 'Service' })));
+  await check('pastor CANNOT change other accounts\' roles', () =>
+    assertFails(updateDoc(doc(ctxFor('pastor1'), 'users/member1'), { roles: ['admin'] })));
+  await check('elder CANNOT create an event', () =>
+    assertFails(setDoc(doc(ctxFor('elder1'), 'events/by-elder'), { title: 'Service' })));
+  await check('elder CANNOT register a directory member', () =>
+    assertFails(setDoc(doc(ctxFor('elder1'), 'members/by-elder'), { name: 'Visitor' })));
   await check('hospitality CAN register a directory member', () =>
     assertSucceeds(setDoc(doc(ctxFor('hospitality1'), 'members/visitor'), { name: 'Visitor' })));
   await check('hospitality CANNOT read giving', () =>

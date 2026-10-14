@@ -23,7 +23,8 @@ service cloud.firestore {
     function isLeadership() {
       return hasRole('elder') || hasRole('deacon') || hasRole('deaconess') || hasRole('pastor');
     }
-    function canViewGiving() { return isAdmin() || isFinance() || hasRole('oversight'); }
+    // The pastor reads the church's finances (read-only); only Admin and Finance change them.
+    function canViewGiving() { return isAdmin() || isFinance() || hasRole('oversight') || hasRole('pastor'); }
     function validRoles(data) {
       return !('roles' in data) || (data.roles is list && data.roles.size() > 0
         && data.roles.hasOnly(['member', 'deacon', 'deaconess', 'elder', 'pastor', 'finance', 'secretariat', 'hospitality', 'oversight', 'admin']));
@@ -35,10 +36,10 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/users/$(data.memberUserId)));
     }
     // Mirrors lib/core/providers/user_role_provider.dart — keep in sync.
-    function canManageMembers() { return isAdmin() || isSecretariat() || hasRole('hospitality'); }
+    function canManageMembers() { return isAdmin() || isSecretariat() || hasRole('hospitality') || hasRole('pastor'); }
     function canManageGiving() { return isAdmin() || isFinance(); }
     function canManageAttendance() { return isAdmin() || isSecretariat() || isLeadership(); }
-    function canManageEvents() { return isAdmin() || isSecretariat(); }
+    function canManageEvents() { return isAdmin() || isSecretariat() || hasRole('pastor'); }
     function canPostAnnouncements() { return isAdmin() || isSecretariat() || isLeadership(); }
     function canSeeAllPrayer() { return isAdmin() || isSecretariat() || isLeadership(); }
 
