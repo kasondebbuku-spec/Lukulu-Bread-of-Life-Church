@@ -37,8 +37,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     setState(() => _isSubmitting = true);
     try {
       final auth = ref.read(authServiceProvider);
+      String? loginNote;
       if (_isLogin) {
-        await auth.signIn(_email, _password);
+        final user = await auth.signIn(_email, _password);
+        final wanted = _requestedRole;
+        if (user != null && wanted != null) {
+          loginNote = signInMessage(wanted, await auth.loadAccess(user.uid));
+        }
       } else {
         await auth.signUp(_email, _password, _name,
             requestedRole: _requestedRole);
@@ -47,7 +52,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content: Text(_isLogin
-                ? 'Logged in!'
+                ? (loginNote ?? 'Logged in!')
                 : _requestedRole == null
                     ? 'Account created!'
                     : 'Account created! Your request to be ${_requestedRole!.label} '
@@ -211,6 +216,27 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                       ? null
                                       : 'Min 6 chars',
                             ),
+                            const SizedBox(height: 14),
+                            DropdownButtonFormField<UserRole?>(
+                              initialValue: _requestedRole,
+                              isExpanded: true,
+                              decoration: InputDecoration(
+                                labelText:
+                                    _isLogin ? 'Sign in as' : 'I am registering as',
+                                prefixIcon: const Icon(Icons.badge_outlined),
+                              ),
+                              items: [
+                                const DropdownMenuItem(
+                                    value: null, child: Text('Church member')),
+                                for (final role in requestableRoles)
+                                  DropdownMenuItem(
+                                      value: role, child: Text(role.label)),
+                              ],
+                              onChanged: _isSubmitting
+                                  ? null
+                                  : (role) =>
+                                      setState(() => _requestedRole = role),
+                            ),
                             if (_isLogin)
                               Align(
                                 alignment: Alignment.centerRight,
@@ -220,26 +246,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                 ),
                               ),
                             if (!_isLogin) ...[
-                              const SizedBox(height: 14),
-                              DropdownButtonFormField<UserRole?>(
-                                initialValue: _requestedRole,
-                                isExpanded: true,
-                                decoration: const InputDecoration(
-                                  labelText: 'I am registering as',
-                                  prefixIcon: Icon(Icons.badge_outlined),
-                                ),
-                                items: [
-                                  const DropdownMenuItem(
-                                      value: null, child: Text('Church member')),
-                                  for (final role in requestableRoles)
-                                    DropdownMenuItem(
-                                        value: role, child: Text(role.label)),
-                                ],
-                                onChanged: _isSubmitting
-                                    ? null
-                                    : (role) =>
-                                        setState(() => _requestedRole = role),
-                              ),
                               const SizedBox(height: 8),
                               Text(
                                 _requestedRole == null

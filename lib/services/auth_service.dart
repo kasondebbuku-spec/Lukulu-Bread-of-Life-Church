@@ -43,6 +43,13 @@ class AuthService {
     return user;
   }
 
+  /// The roles recorded on a profile (a plain member if there is none yet).
+  Future<UserAccess> loadAccess(String uid) async {
+    final doc =
+        await _firestore.collection(FirestoreCollections.users).doc(uid).get();
+    return UserAccess.fromData(doc.data());
+  }
+
   Future<User?> signIn(String email, String password) async {
     final result = await _auth.signInWithEmailAndPassword(
       email: email,

@@ -20,6 +20,16 @@ List<String> rolesAfterApproval(Set<UserRole> current, UserRole requested) {
   return roles.map((r) => r.name).toList();
 }
 
+/// What to tell someone who signed in saying which role they are.
+/// Access always comes from the account itself, never from this choice.
+String signInMessage(UserRole? wanted, UserAccess access) {
+  if (wanted == null) return 'Logged in!';
+  return access.roles.contains(wanted)
+      ? 'Signed in as ${wanted.label}.'
+      : 'Signed in as a Member. Your ${wanted.label} access has not '
+          'been approved by the Admin yet.';
+}
+
 /// The role a profile is waiting on, or null when there is nothing to decide.
 UserRole? pendingRoleRequest(Map<String, dynamic>? data, UserAccess access) {
   final raw = data?['requestedRole'];

@@ -67,6 +67,23 @@ void main() {
     });
   });
 
+  group('role-based sign-in message', () {
+    test('confirms a role the account really holds', () {
+      expect(signInMessage(UserRole.finance, const UserAccess({UserRole.finance})),
+          'Signed in as Finance Officer.');
+    });
+
+    test('does not pretend when the role is not approved yet', () {
+      final message = signInMessage(UserRole.finance, UserAccess.member);
+      expect(message, contains('Signed in as a Member'));
+      expect(message, contains('not been approved'));
+    });
+
+    test('plain sign-in keeps the usual message', () {
+      expect(signInMessage(null, UserAccess.member), 'Logged in!');
+    });
+  });
+
   testWidgets('sign-up lets a person say they are on the finance committee',
       (tester) async {
     tester.view.physicalSize = const Size(500, 1400);

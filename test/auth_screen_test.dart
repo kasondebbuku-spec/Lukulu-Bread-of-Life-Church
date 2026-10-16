@@ -30,6 +30,9 @@ class _FakeAuthService implements AuthService {
   }
 
   @override
+  Future<UserAccess> loadAccess(String uid) async => UserAccess.member;
+
+  @override
   Future<void> signOut() async {}
 
   @override
