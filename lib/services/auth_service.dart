@@ -2,6 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../core/constants/firestore_collections.dart';
+import '../core/providers/user_role_provider.dart';
+import '../models/role_request.dart';
 
 class AuthService {
   AuthService({FirebaseAuth? auth, FirebaseFirestore? firestore})
@@ -17,8 +19,11 @@ class AuthService {
   /// specific message (wrong password, email already in use, etc.).
   ///
   /// New accounts are always created with the `member` role — elevated roles
-  /// must be granted by an admin in Firestore (enforced by security rules).
-  Future<User?> signUp(String email, String password, String name) async {
+  /// must be granted by an admin (enforced by security rules). A person can name
+  /// the role they hold in the church as [requestedRole]; that is only a note for
+  /// the Admin to approve and grants no access by itself.
+  Future<User?> signUp(String email, String password, String name,
+      {UserRole? requestedRole}) async {
     final result = await _auth.createUserWithEmailAndPassword(
       email: email,
       password: password,
@@ -29,6 +34,8 @@ class AuthService {
         'email': user.email,
         'name': name,
         'role': 'member',
+        if (requestedRole != null && requestableRoles.contains(requestedRole))
+          'requestedRole': requestedRole.name,
         'createdAt': FieldValue.serverTimestamp(),
       });
       await user.updateDisplayName(name);

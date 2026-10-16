@@ -32,10 +32,12 @@ This manual explains how to use the church app. Start with
 2. Tap **Need an account? Sign up**.
 3. Enter your **full name**, **email** and a **password** (at least 6 characters), then tap **Sign Up**.
 
-Every new account starts as a **Member**. To get a different role (Finance,
-Secretariat, Elder and so on), sign up first, then ask an **Admin** to assign
-your role (see [Account Roles](#10-account-roles-admin)). Nobody can give
-themselves a higher role.
+Every new account starts as a **Member**. If you serve as a Pastor, Elder,
+Deacon, Deaconess, Finance Officer, Secretariat, Hospitality or Financial
+Oversight, choose it under **I am registering as** on the sign-up form. You can use
+the app as a Member straight away, and an **Admin** approves your role with one tap
+(see [Account Roles](#10-account-roles-admin)). Nobody can give themselves a higher
+role: asking grants nothing until it is approved.
 
 ### Sign in
 Enter your email and password and tap **Login** (pressing **Enter** on the
@@ -293,6 +295,11 @@ group. **Watch Live** opens the church Facebook page for live services.
 
 *Admin only.* **Account Roles** lists registered accounts.
 
+**Requests.** People who chose a role when they signed up appear in a **Waiting for
+your approval** box at the top. Tap **Approve** to give them that role, or
+**Decline** to leave them as a Member.
+
+**Changing roles by hand.**
 1. Find the person in the list (they must already have signed up).
 2. Tap their name. A **Roles for ...** box opens with a tick-box for each role.
 3. Tick one or more roles and save. Their access updates the next time their screen loads.

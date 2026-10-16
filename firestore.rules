@@ -49,7 +49,11 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.auth.uid == uid
         && request.resource.data.role == 'member'
         && request.resource.data.email == request.auth.token.email
-        && (!('roles' in request.resource.data) || request.resource.data.roles == ['member']);
+        && (!('roles' in request.resource.data) || request.resource.data.roles == ['member'])
+        // A sign-up may name the role the person holds, for an Admin to approve.
+        // It grants nothing by itself, and 'admin' cannot be requested.
+        && (!('requestedRole' in request.resource.data)
+            || request.resource.data.requestedRole in ['deacon', 'deaconess', 'elder', 'pastor', 'finance', 'secretariat', 'hospitality', 'oversight']);
       allow update: if (isAdmin() && validRoles(request.resource.data)
         && (request.auth.uid != uid || ('admin' in request.resource.data.get('roles', [request.resource.data.get('role', 'member')]))))
         || (isSignedIn() && request.auth.uid == uid

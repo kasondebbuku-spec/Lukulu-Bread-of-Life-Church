@@ -206,6 +206,34 @@ async function main() {
     assertFails(setDoc(doc(ctxFor('newbie2'), 'users/newbie2'), { role: 'admin', email: 'newbie2@test.com' })));
   await check('new user CANNOT self-signup as finance', () =>
     assertFails(setDoc(doc(ctxFor('newbie3'), 'users/newbie3'), { role: 'finance', email: 'newbie3@test.com' })));
+  console.log('\n--- Role requests at sign-up (Admin approves) ---');
+  await check('sign-up CAN ask for finance but is still only a member', async () => {
+    await assertSucceeds(setDoc(doc(ctxFor('asker1'), 'users/asker1'),
+      { role: 'member', email: 'asker1@test.com', requestedRole: 'finance' }));
+    // asking grants nothing: the finance records stay closed
+    await assertFails(getDocs(collection(ctxFor('asker1'), 'giving')));
+  });
+  await check('sign-up CANNOT ask for admin', () =>
+    assertFails(setDoc(doc(ctxFor('asker2'), 'users/asker2'),
+      { role: 'member', email: 'asker2@test.com', requestedRole: 'admin' })));
+  await check('sign-up CANNOT ask for a made-up role', () =>
+    assertFails(setDoc(doc(ctxFor('asker3'), 'users/asker3'),
+      { role: 'member', email: 'asker3@test.com', requestedRole: 'superuser' })));
+  await check('sign-up CANNOT ask and grant themselves in one go', () =>
+    assertFails(setDoc(doc(ctxFor('asker4'), 'users/asker4'),
+      { role: 'member', email: 'asker4@test.com', requestedRole: 'finance', roles: ['finance'] })));
+  await check('a requester CANNOT approve themselves', () =>
+    assertFails(updateDoc(doc(ctxFor('asker1'), 'users/asker1'), { roles: ['finance'] })));
+  await check('a requester CANNOT change their request later', () =>
+    assertFails(updateDoc(doc(ctxFor('asker1'), 'users/asker1'), { requestedRole: 'pastor' })));
+  await check('admin CAN approve a request and clear it', async () => {
+    await assertSucceeds(updateDoc(doc(ctxFor('admin1'), 'users/asker1'),
+      { roles: ['finance'], requestedRole: deleteField() }));
+    await assertSucceeds(getDocs(collection(ctxFor('asker1'), 'giving')));
+  });
+  await check('finance CANNOT approve requests', () =>
+    assertFails(updateDoc(doc(ctxFor('finance1'), 'users/member1'), { roles: ['finance'] })));
+
   await check('existing member CANNOT self-promote to admin', () =>
     assertFails(updateDoc(doc(ctxFor('member1'), 'users/member1'), { role: 'admin' })));
   await check('admin CAN promote a member to elder', () =>

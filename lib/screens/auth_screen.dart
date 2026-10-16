@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../core/providers/auth_providers.dart';
+import '../core/providers/user_role_provider.dart';
+import '../models/role_request.dart';
 import '../core/theme/app_theme.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
@@ -19,6 +21,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   bool _obscurePassword = true;
   final _emailController = TextEditingController();
   String _email = '', _password = '', _name = '';
+  UserRole? _requestedRole;
 
   @override
   void dispose() {
@@ -37,11 +40,18 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       if (_isLogin) {
         await auth.signIn(_email, _password);
       } else {
-        await auth.signUp(_email, _password, _name);
+        await auth.signUp(_email, _password, _name,
+            requestedRole: _requestedRole);
       }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_isLogin ? 'Logged in!' : 'Account created!')),
+        SnackBar(
+            content: Text(_isLogin
+                ? 'Logged in!'
+                : _requestedRole == null
+                    ? 'Account created!'
+                    : 'Account created! Your request to be ${_requestedRole!.label} '
+                        'has been sent to the Admin.')),
       );
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
@@ -211,9 +221,32 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                               ),
                             if (!_isLogin) ...[
                               const SizedBox(height: 14),
+                              DropdownButtonFormField<UserRole?>(
+                                initialValue: _requestedRole,
+                                isExpanded: true,
+                                decoration: const InputDecoration(
+                                  labelText: 'I am registering as',
+                                  prefixIcon: Icon(Icons.badge_outlined),
+                                ),
+                                items: [
+                                  const DropdownMenuItem(
+                                      value: null, child: Text('Church member')),
+                                  for (final role in requestableRoles)
+                                    DropdownMenuItem(
+                                        value: role, child: Text(role.label)),
+                                ],
+                                onChanged: _isSubmitting
+                                    ? null
+                                    : (role) =>
+                                        setState(() => _requestedRole = role),
+                              ),
+                              const SizedBox(height: 8),
                               Text(
-                                'New accounts are registered as Members. '
-                                'Contact an admin to request a different role.',
+                                _requestedRole == null
+                                    ? 'You will join as a Member.'
+                                    : 'You can use the app as a Member now. The Admin '
+                                        'will approve your ${_requestedRole!.label} '
+                                        'access.',
                                 textAlign: TextAlign.center,
                                 style: Theme.of(context).textTheme.bodySmall,
                               ),

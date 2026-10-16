@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:church_cms/core/providers/auth_providers.dart';
+import 'package:church_cms/core/providers/user_role_provider.dart';
 import 'package:church_cms/core/theme/app_theme.dart';
 import 'package:church_cms/screens/auth_screen.dart';
 import 'package:church_cms/services/auth_service.dart';
@@ -10,6 +11,7 @@ import 'package:church_cms/services/auth_service.dart';
 class _FakeAuthService implements AuthService {
   final signIns = <String>[];
   final resets = <String>[];
+  final signUps = <List<String?>>[];
 
   @override
   Future<User?> signIn(String email, String password) async {
@@ -21,7 +23,11 @@ class _FakeAuthService implements AuthService {
   Future<void> sendPasswordReset(String email) async => resets.add(email);
 
   @override
-  Future<User?> signUp(String email, String password, String name) async => null;
+  Future<User?> signUp(String email, String password, String name,
+      {UserRole? requestedRole}) async {
+    signUps.add([email, name, requestedRole?.name]);
+    return null;
+  }
 
   @override
   Future<void> signOut() async {}

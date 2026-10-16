@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/providers/auth_providers.dart';
 import '../../../core/providers/firebase_providers.dart';
 import '../../../core/providers/user_role_provider.dart';
+import '../../../models/role_request.dart';
 import 'add_staff_dialog.dart';
 
 class RegisteredAccount {
-  const RegisteredAccount(this.id, this.name, this.email, this.access);
+  const RegisteredAccount(this.id, this.name, this.email, this.access,
+      {this.requestedRole});
   final String id, name, email;
   final UserAccess access;
+
+  /// A role they asked for at sign-up that an Admin has not yet decided on.
+  final UserRole? requestedRole;
   String get label => '$name ($email)';
 }
 
@@ -24,8 +30,10 @@ final registeredAccountsProvider =
       .map((snapshot) {
     final accounts = snapshot.docs.map((doc) {
       final data = doc.data();
+      final access = UserAccess.fromData(data);
       return RegisteredAccount(doc.id, data['name'] as String? ?? 'Member',
-          data['email'] as String? ?? '', UserAccess.fromData(data));
+          data['email'] as String? ?? '', access,
+          requestedRole: pendingRoleRequest(data, access));
     }).toList();
     accounts
         .sort((a, b) => a.label.toLowerCase().compareTo(b.label.toLowerCase()));
@@ -59,6 +67,8 @@ class AccountRolesScreen extends ConsumerWidget {
           child: const Text('Could not load accounts. Retry'),
         )),
         data: (items) => ListView(children: [
+          _PendingRequests(
+              accounts: items.where((a) => a.requestedRole != null).toList()),
           const Padding(
               padding: EdgeInsets.all(16),
               child: Text(
@@ -160,4 +170,66 @@ class _RoleDialogState extends ConsumerState<_RoleDialog> {
               child: Text(saving ? 'Saving…' : 'Save Roles')),
         ],
       );
+}
+
+/// People who asked for a role when they signed up, awaiting one-tap approval.
+class _PendingRequests extends ConsumerWidget {
+  const _PendingRequests({required this.accounts});
+  final List<RegisteredAccount> accounts;
+
+  Future<void> _run(BuildContext context, Future<void> Function() action,
+      String done) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await action();
+      messenger.showSnackBar(SnackBar(content: Text(done)));
+    } catch (_) {
+      messenger.showSnackBar(
+          const SnackBar(content: Text('Could not save. Please try again.')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (accounts.isEmpty) return const SizedBox.shrink();
+    final service = ref.read(roleRequestServiceProvider);
+    return Card(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: Text('Waiting for your approval (${accounts.length})',
+                  style: Theme.of(context).textTheme.titleMedium),
+            ),
+            for (final account in accounts)
+              ListTile(
+                title: Text(account.label),
+                subtitle: Text('Wants to be ${account.requestedRole!.label}'),
+                trailing: Wrap(spacing: 4, children: [
+                  TextButton(
+                    onPressed: () => _run(
+                        context,
+                        () => service.decline(account.id),
+                        'Request declined.'),
+                    child: const Text('Decline'),
+                  ),
+                  FilledButton(
+                    onPressed: () => _run(
+                        context,
+                        () => service.approve(account.id, account.access.roles,
+                            account.requestedRole!),
+                        '${account.name} is now ${account.requestedRole!.label}.'),
+                    child: const Text('Approve'),
+                  ),
+                ]),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }

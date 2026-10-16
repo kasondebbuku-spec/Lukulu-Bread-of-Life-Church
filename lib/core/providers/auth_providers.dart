@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../services/auth_service.dart';
+import '../../services/role_request_service.dart';
 import '../../services/staff_account_service.dart';
 import '../constants/firestore_collections.dart';
 import 'firebase_providers.dart';
@@ -24,3 +25,7 @@ final staffAccountServiceProvider = Provider<StaffAccountService>((ref) {
     sendPasswordReset: ref.watch(authServiceProvider).sendPasswordReset,
   );
 });
+
+/// Admin decisions on roles people asked for at sign-up.
+final roleRequestServiceProvider = Provider<RoleRequestService>(
+    (ref) => RoleRequestService(ref.watch(firestoreProvider)));
