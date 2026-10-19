@@ -11,6 +11,9 @@ import '../../../core/widgets/tag_chip.dart';
 import '../../../models/announcement.dart';
 import '../../../repositories/repository_providers.dart';
 
+/// Longest announcement body accepted by the writing box.
+const announcementMaxLength = 2000;
+
 class AnnouncementsScreen extends ConsumerStatefulWidget {
   const AnnouncementsScreen({super.key});
 
@@ -58,7 +61,11 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
         builder: (context, setDialogState) {
           return AlertDialog(
             title: const Text('New Announcement'),
-            content: Form(
+            scrollable: true,
+            content: SizedBox(
+              // Uses the full width the dialog allows instead of a narrow strip.
+              width: double.maxFinite,
+              child: Form(
               key: _formKey,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -72,22 +79,36 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _contentController,
-                    decoration: const InputDecoration(labelText: 'Content'),
-                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      labelText: 'Content',
+                      hintText: 'Write the announcement here...',
+                      alignLabelWithHint: true,
+                    ),
+                    minLines: 7,
+                    maxLines: 14,
+                    maxLength: announcementMaxLength,
+                    keyboardType: TextInputType.multiline,
+                    textCapitalization: TextCapitalization.sentences,
                     validator: (val) =>
                         (val == null || val.trim().isEmpty) ? 'Required' : null,
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
                     initialValue: _selectedAudience,
-                    decoration: const InputDecoration(labelText: 'Audience'),
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Audience',
+                      helperText:
+                          'Leaders: admin, secretariat, pastor, elders, deacons and deaconesses',
+                      helperMaxLines: 2,
+                    ),
                     items: const [
                       DropdownMenuItem(
                           value: 'all', child: Text('Everyone (all members)')),
                       DropdownMenuItem(
                           value: 'leaders',
                           child:
-                              Text('Leaders only (admin, secretariat, pastor)')),
+                              Text('Leaders only')),
                     ],
                     onChanged: (value) {
                       setDialogState(() {
@@ -97,6 +118,7 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
                   ),
                 ],
               ),
+            ),
             ),
             actions: [
               TextButton(
@@ -210,7 +232,9 @@ class _AnnouncementCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            Text(announcement.content, style: Theme.of(context).textTheme.bodyMedium),
+            // Wraps fully, keeps the writer's line breaks, and can be selected/copied.
+            SelectableText(announcement.content,
+                style: Theme.of(context).textTheme.bodyMedium),
             const SizedBox(height: 10),
             Wrap(
               spacing: 8,
