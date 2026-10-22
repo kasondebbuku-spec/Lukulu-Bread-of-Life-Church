@@ -8,6 +8,7 @@ import '../../../core/widgets/confirm_delete_dialog.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../models/member.dart';
 import '../../../repositories/repository_providers.dart';
+import '../../../core/theme/app_theme.dart';
 
 class MembersScreen extends ConsumerStatefulWidget {
   const MembersScreen({super.key});
@@ -158,7 +159,8 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                                   _showMemberDialog(member: member),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
+                              tooltip: 'Delete',
+                              icon: const Icon(Icons.delete, color: AppColors.primaryLight),
                               onPressed: () => _deleteMember(member.id),
                             ),
                           ],

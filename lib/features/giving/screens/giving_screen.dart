@@ -399,7 +399,8 @@ class _GivingScreenState extends ConsumerState<GivingScreen> {
                           ),
                         if (canEdit)
                           IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
+                            tooltip: 'Delete',
+                            icon: const Icon(Icons.delete, color: AppColors.primaryLight),
                             onPressed: () => _deleteGiving(record.id),
                           ),
                       ],

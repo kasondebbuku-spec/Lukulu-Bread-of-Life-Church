@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
 /// Shows a confirmation dialog and returns true if the user confirmed deletion.
 Future<bool> confirmDelete(
@@ -17,7 +18,9 @@ Future<bool> confirmDelete(
         ),
         TextButton(
           onPressed: () => Navigator.pop(context, true),
-          child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          child: const Text('Delete',
+              style: TextStyle(
+                  color: AppColors.primary, fontWeight: FontWeight.w700)),
         ),
       ],
     ),

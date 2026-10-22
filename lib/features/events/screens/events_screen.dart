@@ -263,7 +263,8 @@ class _EventCard extends StatelessWidget {
               ),
               if (canEdit)
                 IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                  tooltip: 'Delete',
+                  icon: const Icon(Icons.delete, color: AppColors.primaryLight, size: 20),
                   onPressed: onDelete,
                 ),
             ],

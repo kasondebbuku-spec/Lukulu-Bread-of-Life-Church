@@ -43,6 +43,8 @@ class AppTheme {
         surface: AppColors.surface,
         onPrimary: Colors.white,
         onSecondary: AppColors.textPrimary,
+        error: AppColors.goldInk,
+        onError: Colors.white,
       ),
 
       // AppBar

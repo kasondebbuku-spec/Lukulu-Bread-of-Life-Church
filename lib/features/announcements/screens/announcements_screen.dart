@@ -224,7 +224,8 @@ class _AnnouncementCard extends StatelessWidget {
                 ),
                 if (canWrite)
                   IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                    tooltip: 'Delete',
+                    icon: const Icon(Icons.delete, color: AppColors.primaryLight, size: 20),
                     onPressed: onDelete,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),

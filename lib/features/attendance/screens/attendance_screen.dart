@@ -7,6 +7,7 @@ import '../../../core/widgets/confirm_delete_dialog.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../models/attendance_record.dart';
 import '../../../repositories/repository_providers.dart';
+import '../../../core/theme/app_theme.dart';
 
 class AttendanceScreen extends ConsumerStatefulWidget {
   const AttendanceScreen({super.key});
@@ -168,7 +169,8 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                       'Attended: ${record.count}  •  New: ${record.newVisitors}'),
                   trailing: canEdit
                       ? IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
+                          tooltip: 'Delete',
+                          icon: const Icon(Icons.delete, color: AppColors.primaryLight),
                           onPressed: () => _deleteAttendance(record.id))
                       : null,
                 ),
