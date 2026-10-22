@@ -96,6 +96,13 @@ Notes:
 
 Home greets you by name and shows:
 
+- **Notification bell** (top right, beside your initial): a number on the bell is how
+  many announcements and events were posted since you last looked. Tap it to see them
+  (the new ones are highlighted); tap an item to open that section. Opening the bell
+  clears the number, on every device you use. It shows news from the last 30 days.
+- **Waiting for Admin approval:** if you asked for a role when you signed up and the
+  Admin has not decided yet, a gold notice says so. It disappears by itself once your
+  request is approved or declined.
 - **Banner:** the next upcoming event, or a welcome message if none is scheduled.
   Buttons: **Watch Live** (opens the church Facebook page), **View Events**,
   **Join WhatsApp**.
