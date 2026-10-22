@@ -57,7 +57,10 @@ service cloud.firestore {
       allow update: if (isAdmin() && validRoles(request.resource.data)
         && (request.auth.uid != uid || ('admin' in request.resource.data.get('roles', [request.resource.data.get('role', 'member')]))))
         || (isSignedIn() && request.auth.uid == uid
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name']));
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'notificationsSeenAt'])
+          // 'last opened notifications' is stamped with the server's own clock.
+          && (!('notificationsSeenAt' in request.resource.data)
+              || request.resource.data.notificationsSeenAt == request.time));
       allow delete: if isAdmin() && request.auth.uid != uid;
     }
     // Congregation directory holds personal contact info (email, phone) —

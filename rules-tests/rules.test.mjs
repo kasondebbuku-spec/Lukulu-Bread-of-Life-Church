@@ -6,7 +6,7 @@ import {
 import { readFileSync } from 'fs';
 import {
   doc, getDoc, setDoc, updateDoc, deleteDoc,
-  collection, getDocs, addDoc, query, where, writeBatch, deleteField,
+  collection, getDocs, addDoc, query, where, writeBatch, deleteField, serverTimestamp,
 } from 'firebase/firestore';
 
 const PROJECT_ID = 'demo-church-access';
@@ -233,6 +233,23 @@ async function main() {
   });
   await check('finance CANNOT approve requests', () =>
     assertFails(updateDoc(doc(ctxFor('finance1'), 'users/member1'), { roles: ['finance'] })));
+
+  console.log('\n--- Notifications "last seen" marker ---');
+  await check('a user CAN stamp their own notificationsSeenAt with server time', () =>
+    assertSucceeds(updateDoc(doc(ctxFor('member1'), 'users/member1'),
+      { notificationsSeenAt: serverTimestamp() })));
+  await check('a user CANNOT set notificationsSeenAt to a made-up time', () =>
+    assertFails(updateDoc(doc(ctxFor('member1'), 'users/member1'),
+      { notificationsSeenAt: new Date('2020-01-01') })));
+  await check('a user CANNOT set notificationsSeenAt to text', () =>
+    assertFails(updateDoc(doc(ctxFor('member1'), 'users/member1'),
+      { notificationsSeenAt: 'now' })));
+  await check('a user CANNOT sneak a role change in with the marker', () =>
+    assertFails(updateDoc(doc(ctxFor('member1'), 'users/member1'),
+      { notificationsSeenAt: serverTimestamp(), roles: ['admin'] })));
+  await check('a user CANNOT stamp someone else\'s marker', () =>
+    assertFails(updateDoc(doc(ctxFor('member1'), 'users/elder1'),
+      { notificationsSeenAt: serverTimestamp() })));
 
   await check('existing member CANNOT self-promote to admin', () =>
     assertFails(updateDoc(doc(ctxFor('member1'), 'users/member1'), { role: 'admin' })));

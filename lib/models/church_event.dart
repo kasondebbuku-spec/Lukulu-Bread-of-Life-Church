@@ -6,11 +6,15 @@ class ChurchEvent {
   final DateTime date;
   final String location;
 
+  /// When it was posted (null while a new one is still being saved).
+  final DateTime? createdAt;
+
   const ChurchEvent({
     required this.id,
     required this.title,
     required this.date,
     required this.location,
+    this.createdAt,
   });
 
   factory ChurchEvent.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -24,6 +28,7 @@ class ChurchEvent {
       title: data['title'] as String? ?? 'No title',
       date: date,
       location: data['location'] as String? ?? '',
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
     );
   }
 
