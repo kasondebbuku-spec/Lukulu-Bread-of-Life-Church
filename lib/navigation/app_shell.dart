@@ -47,6 +47,7 @@ List<NavDestination> _destinationsForRole(UserAccess role) {
   );
   final announcements = NavDestination(
     label: 'Announcements',
+    shortLabel: 'Notices',
     icon: Icons.campaign,
     builder: () => const AnnouncementsScreen(),
   );
@@ -150,7 +151,7 @@ class _AppShellState extends ConsumerState<AppShell> {
             destinations: [
               ...barDestinations.map((d) => NavigationDestination(
                     icon: Icon(d.icon),
-                    label: d.label,
+                    label: d.barLabel,
                   )),
               if (overflowing)
                 const NavigationDestination(
