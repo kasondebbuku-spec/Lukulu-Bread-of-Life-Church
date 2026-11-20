@@ -133,9 +133,9 @@ final prayerRepositoryProvider = Provider<PrayerRepository>(
 final prayerRequestsProvider = StreamProvider<List<PrayerRequest>>((ref) {
   final role = ref.watch(userRoleProvider).value ?? UserAccess.member;
   final user = ref.watch(authStateChangesProvider).value;
-  return ref.watch(prayerRepositoryProvider).watchFiltered(
+  return ref.watch(prayerRepositoryProvider).watchVisible(
         userId: user?.uid,
-        seeAll: role.canSeeAllPrayerRequests,
+        audiences: role.readablePrayerAudiences,
       );
 });
 

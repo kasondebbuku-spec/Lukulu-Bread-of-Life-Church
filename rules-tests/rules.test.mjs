@@ -151,7 +151,7 @@ async function main() {
   await seedDoc('attendance/a1', { date: new Date().toISOString(), count: 50, newVisitors: 2 });
   await seedDoc('announcements/pub1', { title: 'Public', content: 'hi', targetAudience: 'all' });
   await seedDoc('announcements/priv1', { title: 'Leaders', content: 'secret', targetAudience: 'leaders' });
-  await seedDoc('prayer_requests/p1', { userId: 'member1', request: 'pray for me' });
+  await seedDoc('prayer_requests/p1', { userId: 'member1', request: 'pray for me' }); // before the audience choice existed
 
   console.log('\n--- Giving (financial records) ---');
   await check('member CANNOT read giving', () =>
@@ -198,6 +198,91 @@ async function main() {
   });
   await check('elder CAN read any prayer request', () =>
     assertSucceeds(getDoc(doc(ctxFor('elder1'), 'prayer_requests/p1'))));
+
+  console.log('\n--- Prayer requests: the author chooses who sees them ---');
+  await seedUser('deacon1', 'deacon');
+  await seedUser('deaconess1', 'deaconess');
+  await seedDoc('users/eldpastor1', { role: 'member', roles: ['elder', 'pastor'] });
+  const pr = (audience) => ({ userId: 'member1', userName: 'M', request: 'pray', status: 'pending', ...(audience ? { audience } : {}) });
+  await seedDoc('prayer_requests/aud_pastor', pr('pastor'));
+  await seedDoc('prayer_requests/aud_elders', pr('pastor_elders'));
+  await seedDoc('prayer_requests/aud_leaders', pr('leaders'));
+  await seedDoc('prayer_requests/aud_change', pr('pastor'));
+  await seedDoc('prayer_requests/legacy_ok', pr(null)); // as the app wrote it before the choice: has a status, no audience
+  const readable = (uid, id) => getDoc(doc(ctxFor(uid), 'prayer_requests/' + id));
+  const asks = (uid, audiences) => getDocs(query(collection(ctxFor(uid), 'prayer_requests'), where('audience', 'in', audiences)));
+  const ALL = ['pastor', 'pastor_elders', 'leaders'];
+
+  await check('author CAN read their own, whichever audience', async () => {
+    for (const id of ['aud_pastor', 'aud_elders', 'aud_leaders']) await assertSucceeds(readable('member1', id));
+  });
+  await check('pastor CAN read all three audiences', async () => {
+    for (const id of ['aud_pastor', 'aud_elders', 'aud_leaders']) await assertSucceeds(readable('pastor1', id));
+  });
+  await check('pastor CAN list every audience', () => assertSucceeds(asks('pastor1', ALL)));
+  await check('elder CANNOT read a Pastor-only request', () => assertFails(readable('elder1', 'aud_pastor')));
+  await check('elder CAN read Pastor-and-Elders and All-leaders', async () => {
+    await assertSucceeds(readable('elder1', 'aud_elders'));
+    await assertSucceeds(readable('elder1', 'aud_leaders'));
+  });
+  await check('elder CAN list the two audiences they may read', () => assertSucceeds(asks('elder1', ['pastor_elders', 'leaders'])));
+  await check('elder CANNOT list the Pastor-only audience', () => assertFails(asks('elder1', ALL)));
+  for (const who of ['deacon1', 'deaconess1', 'secretariat1', 'admin1']) {
+    await check(who + ' CANNOT read Pastor-only or Pastor-and-Elders', async () => {
+      await assertFails(readable(who, 'aud_pastor'));
+      await assertFails(readable(who, 'aud_elders'));
+    });
+    await check(who + ' CAN read an All-leaders request and list that audience', async () => {
+      await assertSucceeds(readable(who, 'aud_leaders'));
+      await assertSucceeds(asks(who, ['leaders']));
+    });
+  }
+  await check('another member CANNOT read any of them', async () => {
+    for (const id of ['aud_pastor', 'aud_elders', 'aud_leaders']) await assertFails(readable('member2', id));
+  });
+  await check('finance and oversight CANNOT read prayer requests', async () => {
+    await assertFails(readable('finance1', 'aud_leaders'));
+    await assertFails(readable('oversight1', 'aud_leaders'));
+  });
+  await check('a leader with two roles gets the wider access', async () => {
+    await assertSucceeds(readable('eldpastor1', 'aud_pastor'));
+  });
+  await check('a request from before the choice reads as All-leaders', async () => {
+    await assertSucceeds(readable('elder1', 'p1'));
+    await assertSucceeds(readable('deacon1', 'p1'));
+    await assertSucceeds(readable('pastor1', 'p1'));
+  });
+
+  await check('a new request CAN be created with each valid audience', async () => {
+    for (const a of ALL) await assertSucceeds(addDoc(collection(ctxFor('member1'), 'prayer_requests'), pr(a)));
+  });
+  await check('a new request CANNOT be created without an audience', () =>
+    assertFails(addDoc(collection(ctxFor('member1'), 'prayer_requests'), pr(null))));
+  await check('a new request CANNOT use an unknown audience', () =>
+    assertFails(addDoc(collection(ctxFor('member1'), 'prayer_requests'), pr('everyone'))));
+  await check('a new request CANNOT be created in someone else\'s name', () =>
+    assertFails(addDoc(collection(ctxFor('member2'), 'prayer_requests'), pr('pastor'))));
+
+  await check('author CAN change who sees their request', () =>
+    assertSucceeds(updateDoc(doc(ctxFor('member1'), 'prayer_requests/aud_change'), { audience: 'leaders' })));
+  await check('author CANNOT set an unknown audience', () =>
+    assertFails(updateDoc(doc(ctxFor('member1'), 'prayer_requests/aud_elders'), { audience: 'everyone' })));
+  await check('author CAN reword a request from before the choice, without touching its audience', () =>
+    assertSucceeds(updateDoc(doc(ctxFor('member1'), 'prayer_requests/legacy_ok'), { request: 'pray for me, updated' })));
+  await check('pastor CAN mark a request answered', () =>
+    assertSucceeds(updateDoc(doc(ctxFor('pastor1'), 'prayer_requests/aud_elders'), { status: 'answered' })));
+  await check('a leader CANNOT widen who sees someone else\'s request', () =>
+    assertFails(updateDoc(doc(ctxFor('pastor1'), 'prayer_requests/aud_elders'), { audience: 'leaders' })));
+  await check('a leader CANNOT reword someone else\'s request', () =>
+    assertFails(updateDoc(doc(ctxFor('elder1'), 'prayer_requests/aud_elders'), { request: 'defaced' })));
+  await check('elder CANNOT mark or delete a Pastor-only request', async () => {
+    await assertFails(updateDoc(doc(ctxFor('elder1'), 'prayer_requests/aud_pastor'), { status: 'answered' }));
+    await assertFails(deleteDoc(doc(ctxFor('elder1'), 'prayer_requests/aud_pastor')));
+  });
+  await check('a leader CANNOT delete a request shared only with a smaller group', () =>
+    assertFails(deleteDoc(doc(ctxFor('deacon1'), 'prayer_requests/aud_elders'))));
+  await check('pastor CAN delete a request shared with them', () =>
+    assertSucceeds(deleteDoc(doc(ctxFor('pastor1'), 'prayer_requests/aud_elders'))));
 
   console.log('\n--- Signup role-escalation lockdown ---');
   await check('new user CAN self-signup as member', () =>

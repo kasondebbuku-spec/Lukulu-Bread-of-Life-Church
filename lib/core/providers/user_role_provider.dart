@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../models/prayer_request.dart';
 import '../constants/firestore_collections.dart';
 import 'firebase_providers.dart';
 
@@ -84,6 +85,15 @@ extension UserRoleX on UserRole {
       this == UserRole.admin ||
       this == UserRole.secretariat ||
       isLeadershipTier;
+
+  /// The prayer-request audiences this role may read (besides its own).
+  /// Mirrors `canSeePrayer` in firestore.rules.
+  Set<PrayerAudience> get readablePrayerAudiences => switch (this) {
+        UserRole.pastor => PrayerAudience.values.toSet(),
+        UserRole.elder => {PrayerAudience.pastorElders, PrayerAudience.leaders},
+        _ when canSeeAllPrayerRequests => {PrayerAudience.leaders},
+        _ => const {},
+      };
 }
 
 /// Multiple responsibilities; legacy profiles with a single role still work.
@@ -110,6 +120,10 @@ class UserAccess {
   bool get canPostAnnouncements => roles.any((r) => r.canPostAnnouncements);
   bool get canSeeAllPrayerRequests =>
       roles.any((r) => r.canSeeAllPrayerRequests);
+
+  /// Everything shared with any of this person's roles.
+  Set<PrayerAudience> get readablePrayerAudiences =>
+      roles.expand((r) => r.readablePrayerAudiences).toSet();
 }
 
 /// Streams the current user's role from Firestore, re-evaluating whenever
