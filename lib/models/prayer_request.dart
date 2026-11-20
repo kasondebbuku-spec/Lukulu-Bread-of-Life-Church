@@ -1,5 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// Whether members may choose who reads their prayer request.
+///
+/// Off for now: the church wants only the Pastor to read prayer requests, so the
+/// choice is hidden and every request is Pastor-only. The choice itself is built
+/// and tested; to turn it on, set this to true AND return true from
+/// `prayerSharingOpen()` in firestore.rules (and deploy the rules first).
+const prayerSharingChoiceEnabled = false;
+
 /// Who may read a prayer request, chosen by the member who wrote it.
 /// Mirrors `canSeePrayer` in firestore.rules -- keep in sync.
 enum PrayerAudience {

@@ -248,7 +248,7 @@ class DashboardScreen extends ConsumerWidget {
     final prayerRequests = ref.watch(prayerRequestsProvider);
     cards.add(_DashboardCard(
       title: 'Prayer Request Wall',
-      subtitle: role.canSeeAllPrayerRequests
+      subtitle: role.readablePrayerAudiences.isNotEmpty
           ? 'Review intercessory wall'
           : 'Your submitted requests',
       count: prayerRequests.maybeWhen(

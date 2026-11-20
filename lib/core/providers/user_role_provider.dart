@@ -90,6 +90,8 @@ extension UserRoleX on UserRole {
   /// Mirrors `canSeePrayer` in firestore.rules.
   Set<PrayerAudience> get readablePrayerAudiences => switch (this) {
         UserRole.pastor => PrayerAudience.values.toSet(),
+        // Until sharing is switched on, nobody else reads others' requests.
+        _ when !prayerSharingChoiceEnabled => const {},
         UserRole.elder => {PrayerAudience.pastorElders, PrayerAudience.leaders},
         _ when canSeeAllPrayerRequests => {PrayerAudience.leaders},
         _ => const {},

@@ -16,6 +16,24 @@ PrayerRequest _r(String id, DateTime? at,
     );
 
 void main() {
+  group('while sharing is off, only the pastor reads others\' requests', () {
+    UserAccess a(Set<UserRole> r) => UserAccess(r);
+
+    test('the pastor reads every audience', () {
+      expect(a({UserRole.pastor}).readablePrayerAudiences,
+          PrayerAudience.values.toSet());
+    });
+    test('nobody else reads anyone else\'s request', () {
+      for (final role in UserRole.values.where((r) => r != UserRole.pastor)) {
+        expect(a({role}).readablePrayerAudiences, isEmpty, reason: role.name);
+      }
+    });
+    test('an elder who is also the pastor still reads them', () {
+      expect(a({UserRole.elder, UserRole.pastor}).readablePrayerAudiences,
+          PrayerAudience.values.toSet());
+    });
+  }, skip: prayerSharingChoiceEnabled);
+
   group('who may read which audience (mirrors firestore.rules)', () {
     UserAccess a(Set<UserRole> r) => UserAccess(r);
 
@@ -52,7 +70,7 @@ void main() {
       expect(a({UserRole.elder, UserRole.pastor}).readablePrayerAudiences,
           PrayerAudience.values.toSet());
     });
-  });
+  }, skip: !prayerSharingChoiceEnabled);
 
   group('audience values', () {
     test('round-trip through the stored text', () {

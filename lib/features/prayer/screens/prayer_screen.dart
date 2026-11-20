@@ -67,9 +67,10 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
     }
 
     try {
-      await ref
-          .read(prayerRepositoryProvider)
-          .updateDetails(request.id, text: result.text, audience: result.audience);
+      await ref.read(prayerRepositoryProvider).updateDetails(request.id,
+          text: result.text,
+          // While the choice is off, an edit changes the wording only.
+          audience: prayerSharingChoiceEnabled ? result.audience : null);
       if (mounted) _say('Prayer request updated.');
     } catch (_) {
       if (mounted) _say('Could not save your changes. Please try again.');
@@ -214,7 +215,20 @@ class _PrayerDialogState extends State<_PrayerDialog> {
                     ? 'Please write something'
                     : null,
               ),
-              const SizedBox(height: 12),
+              if (!prayerSharingChoiceEnabled)
+                const Padding(
+                  padding: EdgeInsets.only(top: 4),
+                  child: Row(
+                    children: [
+                      Icon(Icons.lock_outline, size: 16),
+                      SizedBox(width: 6),
+                      Expanded(
+                          child: Text('Only the Pastor (and you) can read this.')),
+                    ],
+                  ),
+                ),
+              if (prayerSharingChoiceEnabled) const SizedBox(height: 12),
+              if (prayerSharingChoiceEnabled)
               DropdownButtonFormField<PrayerAudience>(
                 initialValue: _audience,
                 isExpanded: true,
@@ -311,7 +325,11 @@ class _PrayerCard extends StatelessWidget {
                         icon: request.isAnswered ? Icons.check : Icons.hourglass_empty,
                       ),
                       TagChip(
-                        label: request.audience.label,
+                        // With sharing off, everything is Pastor-only whatever an
+                        // older request was marked.
+                        label: prayerSharingChoiceEnabled
+                            ? request.audience.label
+                            : PrayerAudience.pastor.label,
                         color: AppColors.primary,
                         icon: Icons.lock_outline,
                       ),

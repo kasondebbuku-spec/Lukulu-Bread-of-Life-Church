@@ -11,6 +11,20 @@ import {
 
 const PROJECT_ID = 'demo-church-access';
 
+// Production has prayer-request sharing switched off (only the Pastor reads them).
+// `PRAYER_SHARING=open npm test` flips that switch in a copy of the rules so the
+// sharing logic, which is built but dormant, stays tested.
+const OPEN = process.env.PRAYER_SHARING === 'open';
+function rulesText() {
+  let text = readFileSync('../firestore.rules', 'utf8');
+  if (OPEN) {
+    const off = 'function prayerSharingOpen() { return false; }';
+    if (!text.includes(off)) throw new Error('prayerSharingOpen switch not found in firestore.rules');
+    text = text.replace(off, 'function prayerSharingOpen() { return true; }');
+  }
+  return text;
+}
+
 let testEnv;
 let passed = 0;
 let failed = 0;
@@ -47,7 +61,7 @@ async function main() {
   testEnv = await initializeTestEnvironment({
     projectId: PROJECT_ID,
     firestore: {
-      rules: readFileSync('../firestore.rules', 'utf8'),
+      rules: rulesText(),
       host: 'localhost',
       port: 8080,
     },
@@ -196,8 +210,15 @@ async function main() {
     await seedUser('member2', 'member');
     return assertFails(getDoc(doc(ctxFor('member2'), 'prayer_requests/p1')));
   });
-  await check('elder CAN read any prayer request', () =>
-    assertSucceeds(getDoc(doc(ctxFor('elder1'), 'prayer_requests/p1'))));
+  if (OPEN) {
+    await check('elder CAN read any prayer request', () =>
+      assertSucceeds(getDoc(doc(ctxFor('elder1'), 'prayer_requests/p1'))));
+  } else {
+    await check('elder CANNOT read someone else\'s prayer request (only the Pastor can)', () =>
+      assertFails(getDoc(doc(ctxFor('elder1'), 'prayer_requests/p1'))));
+    await check('pastor CAN read any prayer request', () =>
+      assertSucceeds(getDoc(doc(ctxFor('pastor1'), 'prayer_requests/p1'))));
+  }
 
   console.log('\n--- Prayer requests: the author chooses who sees them ---');
   await seedUser('deacon1', 'deacon');
@@ -213,6 +234,7 @@ async function main() {
   const asks = (uid, audiences) => getDocs(query(collection(ctxFor(uid), 'prayer_requests'), where('audience', 'in', audiences)));
   const ALL = ['pastor', 'pastor_elders', 'leaders'];
 
+  if (OPEN) {
   await check('author CAN read their own, whichever audience', async () => {
     for (const id of ['aud_pastor', 'aud_elders', 'aud_leaders']) await assertSucceeds(readable('member1', id));
   });
@@ -283,6 +305,65 @@ async function main() {
     assertFails(deleteDoc(doc(ctxFor('deacon1'), 'prayer_requests/aud_elders'))));
   await check('pastor CAN delete a request shared with them', () =>
     assertSucceeds(deleteDoc(doc(ctxFor('pastor1'), 'prayer_requests/aud_elders'))));
+  } else {
+    // Sharing is switched off: only the Pastor (and the author) read a request,
+    // whatever audience it carries.
+    for (const id of ['aud_pastor', 'aud_elders', 'aud_leaders', 'p1']) {
+      await check('pastor CAN read ' + id, () => assertSucceeds(readable('pastor1', id)));
+    }
+    await check('pastor CAN list every audience', () => assertSucceeds(asks('pastor1', ALL)));
+    await check('author CAN still read their own, whatever it carries', async () => {
+      for (const id of ['aud_pastor', 'aud_elders', 'aud_leaders']) await assertSucceeds(readable('member1', id));
+    });
+    for (const who of ['elder1', 'deacon1', 'deaconess1', 'secretariat1', 'admin1', 'finance1', 'oversight1', 'member2']) {
+      await check(who + ' CANNOT read any request, even one marked All leaders', async () => {
+        for (const id of ['aud_pastor', 'aud_elders', 'aud_leaders', 'p1']) await assertFails(readable(who, id));
+      });
+    }
+    await check('elder CANNOT list any audience', () => assertFails(asks('elder1', ['leaders'])));
+    await check('admin CANNOT list any audience', () => assertFails(asks('admin1', ['leaders'])));
+    await check('a leader CAN read their own request', async () => {
+      await seedDoc('prayer_requests/deacon_own', { userId: 'deacon1', userName: 'D', request: 'pray', status: 'pending', audience: 'pastor' });
+      await assertSucceeds(readable('deacon1', 'deacon_own'));
+    });
+
+    await check('a new request CAN be created for the Pastor only', () =>
+      assertSucceeds(addDoc(collection(ctxFor('member1'), 'prayer_requests'), pr('pastor'))));
+    for (const a of ['pastor_elders', 'leaders', 'everyone']) {
+      await check('a new request CANNOT be created as ' + a, () =>
+        assertFails(addDoc(collection(ctxFor('member1'), 'prayer_requests'), pr(a))));
+    }
+    await check('a new request CANNOT be created without an audience', () =>
+      assertFails(addDoc(collection(ctxFor('member1'), 'prayer_requests'), pr(null))));
+
+    await check('author CAN reword a request that still carries an old audience', () =>
+      assertSucceeds(updateDoc(doc(ctxFor('member1'), 'prayer_requests/aud_leaders'), { request: 'reworded' })));
+    await check('author CAN reword a request from before the choice', () =>
+      assertSucceeds(updateDoc(doc(ctxFor('member1'), 'prayer_requests/legacy_ok'), { request: 'reworded' })));
+    await check('author CAN make an old request Pastor-only', () =>
+      assertSucceeds(updateDoc(doc(ctxFor('member1'), 'prayer_requests/aud_elders'), { audience: 'pastor' })));
+    await check('author CANNOT widen a request to leaders', () =>
+      assertFails(updateDoc(doc(ctxFor('member1'), 'prayer_requests/aud_change'), { audience: 'leaders' })));
+    await check('author CANNOT widen a request to Pastor and Elders', () =>
+      assertFails(updateDoc(doc(ctxFor('member1'), 'prayer_requests/aud_change'), { audience: 'pastor_elders' })));
+
+    await check('pastor CAN mark a request answered', () =>
+      assertSucceeds(updateDoc(doc(ctxFor('pastor1'), 'prayer_requests/aud_pastor'), { status: 'answered' })));
+    await check('pastor CANNOT reword or widen someone else\'s request', async () => {
+      await assertFails(updateDoc(doc(ctxFor('pastor1'), 'prayer_requests/aud_change'), { request: 'defaced' }));
+      await assertFails(updateDoc(doc(ctxFor('pastor1'), 'prayer_requests/aud_change'), { audience: 'leaders' }));
+    });
+    await check('elder CANNOT mark or delete a request', async () => {
+      await assertFails(updateDoc(doc(ctxFor('elder1'), 'prayer_requests/aud_pastor'), { status: 'answered' }));
+      await assertFails(deleteDoc(doc(ctxFor('elder1'), 'prayer_requests/aud_pastor')));
+    });
+    await check('admin CANNOT mark or delete a request', async () => {
+      await assertFails(updateDoc(doc(ctxFor('admin1'), 'prayer_requests/aud_leaders'), { status: 'answered' }));
+      await assertFails(deleteDoc(doc(ctxFor('admin1'), 'prayer_requests/aud_leaders')));
+    });
+    await check('pastor CAN delete a request', () =>
+      assertSucceeds(deleteDoc(doc(ctxFor('pastor1'), 'prayer_requests/aud_elders'))));
+  }
 
   console.log('\n--- Signup role-escalation lockdown ---');
   await check('new user CAN self-signup as member', () =>
@@ -451,8 +532,8 @@ async function main() {
     assertFails(deleteDoc(doc(ctxFor('member2'), 'prayer_requests/own3'))));
   await check('owner CAN delete their own request', () =>
     assertSucceeds(deleteDoc(doc(ctxFor('member2'), 'prayer_requests/own4'))));
-  await check('a leader CAN still delete any request', () =>
-    assertSucceeds(deleteDoc(doc(ctxFor('elder1'), 'prayer_requests/own3'))));
+  await check(OPEN ? 'a leader CAN still delete any request' : 'the pastor CAN delete any request', () =>
+    assertSucceeds(deleteDoc(doc(ctxFor(OPEN ? 'elder1' : 'pastor1'), 'prayer_requests/own3'))));
   await check('anonymous CANNOT edit a request', () =>
     assertFails(updateDoc(doc(testEnv.unauthenticatedContext().firestore(), 'prayer_requests/own2'), { request: 'x' })));
 

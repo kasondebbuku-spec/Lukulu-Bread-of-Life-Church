@@ -13,7 +13,7 @@ import 'package:church_cms/repositories/repository_providers.dart';
 /// Records what the screen asks the repository to do.
 class _FakePrayerRepository implements PrayerRepository {
   final added = <PrayerRequest>[];
-  final edits = <List<Object>>[];
+  final edits = <List<Object?>>[];
   final statuses = <List<String>>[];
   final deleted = <String>[];
 
@@ -22,7 +22,7 @@ class _FakePrayerRepository implements PrayerRepository {
 
   @override
   Future<void> updateDetails(String id,
-          {required String text, required PrayerAudience audience}) async =>
+          {required String text, PrayerAudience? audience}) async =>
       edits.add([id, text, audience]);
 
   @override
@@ -106,21 +106,33 @@ void main() {
     expect(find.text('Prayer request posted.'), findsOneWidget);
   });
 
-  testWidgets('a new request is private to the Pastor unless the member widens it',
-      (tester) async {
+  testWidgets('a new request is private to the Pastor', (tester) async {
     await pump(tester, requests: const []);
     await tester.tap(find.byType(FloatingActionButton));
     await tester.pumpAndSettle();
 
-    // The most private choice is already selected, and says what it means.
-    expect(find.text('Pastor only'), findsOneWidget);
+    // For now there is no choice to make, and the dialog says who reads it.
+    expect(find.byType(DropdownButtonFormField<PrayerAudience>), findsNothing);
     expect(find.text('Only the Pastor (and you) can read this.'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField), 'Please pray for my exams');
     await tester.tap(find.text('Submit'));
     await tester.pumpAndSettle();
     expect(repo.added.single.audience, PrayerAudience.pastor);
-  });
+  }, skip: prayerSharingChoiceEnabled);
+
+  testWidgets('with sharing on, a new request starts private and says what it means',
+      (tester) async {
+    await pump(tester, requests: const []);
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+    expect(find.text('Pastor only'), findsOneWidget);
+    expect(find.text('Only the Pastor (and you) can read this.'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'Please pray for my exams');
+    await tester.tap(find.text('Submit'));
+    await tester.pumpAndSettle();
+    expect(repo.added.single.audience, PrayerAudience.pastor);
+  }, skip: !prayerSharingChoiceEnabled);
 
   for (final choice in const {
     'Pastor and Elders': PrayerAudience.pastorElders,
@@ -138,7 +150,7 @@ void main() {
       await tester.tap(find.text('Submit'));
       await tester.pumpAndSettle();
       expect(repo.added.single.audience, choice.value);
-    });
+    }, skip: !prayerSharingChoiceEnabled);
   }
 
   testWidgets('each request shows who can see it', (tester) async {
@@ -146,7 +158,18 @@ void main() {
       _request('r1', 'u1', audience: PrayerAudience.pastorElders),
     ]);
     expect(find.text('Pastor and Elders'), findsOneWidget);
-  });
+  }, skip: !prayerSharingChoiceEnabled);
+
+  testWidgets('while sharing is off every request reads as Pastor only',
+      (tester) async {
+    await pump(tester, requests: [
+      _request('r1', 'u1', audience: PrayerAudience.leaders),
+      _request('r2', 'u1', audience: PrayerAudience.pastorElders),
+    ]);
+    expect(find.text('Pastor only'), findsNWidgets(2));
+    expect(find.text('All leaders'), findsNothing);
+    expect(find.text('Pastor and Elders'), findsNothing);
+  }, skip: prayerSharingChoiceEnabled);
 
   testWidgets('the author can change who sees a request', (tester) async {
     await pump(tester, requests: [_request('r1', 'u1')]);
@@ -162,7 +185,7 @@ void main() {
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
     expect(repo.edits.single, ['r1', 'Pray for my family', PrayerAudience.leaders]);
-  });
+  }, skip: !prayerSharingChoiceEnabled);
 
   testWidgets('an empty request is not submitted', (tester) async {
     await pump(tester, requests: const []);
@@ -188,8 +211,12 @@ void main() {
     await tester.enterText(find.byType(TextField), 'Pray for my family and job');
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
-    expect(repo.edits.single,
-        ['r1', 'Pray for my family and job', PrayerAudience.pastor]);
+    // While sharing is off an edit changes the wording only, never the audience.
+    expect(repo.edits.single, [
+      'r1',
+      'Pray for my family and job',
+      prayerSharingChoiceEnabled ? PrayerAudience.pastor : null,
+    ]);
   });
 
   testWidgets('saving an unchanged request does nothing', (tester) async {

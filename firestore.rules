@@ -50,12 +50,21 @@ service cloud.firestore {
     // The author always sees their own. Requests written before this choice existed
     // have no audience and are treated as 'leaders', which is what they were.
     // Mirrors PrayerAudience in lib/models/prayer_request.dart -- keep in sync.
+    //
+    // For now the church wants ONLY the Pastor to read prayer requests, so sharing
+    // with other leaders is switched off here. Whatever audience a request carries,
+    // only its author and the Pastor can read it. To open sharing again, return
+    // true below and set prayerSharingChoiceEnabled in prayer_request.dart.
+    function prayerSharingOpen() { return false; }
     function canSeePrayer(data) {
       return hasRole('pastor')
-        || (hasRole('elder') && data.get('audience', 'leaders') in ['pastor_elders', 'leaders'])
-        || (canSeeAllPrayer() && data.get('audience', 'leaders') == 'leaders');
+        || (prayerSharingOpen() && (
+              (hasRole('elder') && data.get('audience', 'leaders') in ['pastor_elders', 'leaders'])
+              || (canSeeAllPrayer() && data.get('audience', 'leaders') == 'leaders')));
     }
-    function validPrayerAudience(a) { return a in ['pastor', 'pastor_elders', 'leaders']; }
+    function validPrayerAudience(a) {
+      return prayerSharingOpen() ? a in ['pastor', 'pastor_elders', 'leaders'] : a == 'pastor';
+    }
 
     // Self-service profile edits cannot add or change permissions.
     match /users/{uid} {
@@ -163,8 +172,10 @@ service cloud.firestore {
             && request.resource.data.userId == resource.data.userId
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['request', 'status', 'audience'])
             && request.resource.data.status in ['pending', 'answered']
-            && request.resource.data.get('audience', 'leaders') is string
-            && validPrayerAudience(request.resource.data.get('audience', 'leaders'))
+            // The audience may stay as it is, or become a currently allowed one.
+            && (request.resource.data.get('audience', 'pastor') == resource.data.get('audience', 'pastor')
+                || (request.resource.data.audience is string
+                    && validPrayerAudience(request.resource.data.audience)))
             && request.resource.data.request is string
             && request.resource.data.request.size() > 0
             && request.resource.data.request.size() <= 2000);

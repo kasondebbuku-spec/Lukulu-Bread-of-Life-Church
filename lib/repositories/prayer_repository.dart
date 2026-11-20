@@ -79,9 +79,12 @@ class PrayerRepository extends FirestoreRepository<PrayerRequest> {
   Future<void> updateStatus(String id, String status) =>
       col.doc(id).update({'status': status});
 
-  /// Rewords a request and/or changes who may read it (the author may do this;
-  /// see firestore.rules).
+  /// Rewords a request and, when [audience] is given, changes who may read it
+  /// (the author may do this; see firestore.rules).
   Future<void> updateDetails(String id,
-          {required String text, required PrayerAudience audience}) =>
-      col.doc(id).update({'request': text, 'audience': audience.value});
+          {required String text, PrayerAudience? audience}) =>
+      col.doc(id).update({
+        'request': text,
+        if (audience != null) 'audience': audience.value,
+      });
 }
