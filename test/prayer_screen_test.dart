@@ -13,7 +13,7 @@ import 'package:church_cms/repositories/repository_providers.dart';
 /// Records what the screen asks the repository to do.
 class _FakePrayerRepository implements PrayerRepository {
   final added = <PrayerRequest>[];
-  final edits = <List<String>>[];
+  final edits = <List<Object>>[];
   final statuses = <List<String>>[];
   final deleted = <String>[];
 
@@ -21,7 +21,9 @@ class _FakePrayerRepository implements PrayerRepository {
   Future<void> add(PrayerRequest item) async => added.add(item);
 
   @override
-  Future<void> updateText(String id, String text) async => edits.add([id, text]);
+  Future<void> updateDetails(String id,
+          {required String text, required PrayerAudience audience}) async =>
+      edits.add([id, text, audience]);
 
   @override
   Future<void> updateStatus(String id, String status) async =>
@@ -34,13 +36,16 @@ class _FakePrayerRepository implements PrayerRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-PrayerRequest _request(String id, String owner, {String text = 'Pray for my family'}) =>
+PrayerRequest _request(String id, String owner,
+        {String text = 'Pray for my family',
+        PrayerAudience audience = PrayerAudience.pastor}) =>
     PrayerRequest(
       id: id,
       userId: owner,
       userName: 'Owner $owner',
       request: text,
       status: 'pending',
+      audience: audience,
     );
 
 void main() {
@@ -101,6 +106,64 @@ void main() {
     expect(find.text('Prayer request posted.'), findsOneWidget);
   });
 
+  testWidgets('a new request is private to the Pastor unless the member widens it',
+      (tester) async {
+    await pump(tester, requests: const []);
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+
+    // The most private choice is already selected, and says what it means.
+    expect(find.text('Pastor only'), findsOneWidget);
+    expect(find.text('Only the Pastor (and you) can read this.'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), 'Please pray for my exams');
+    await tester.tap(find.text('Submit'));
+    await tester.pumpAndSettle();
+    expect(repo.added.single.audience, PrayerAudience.pastor);
+  });
+
+  for (final choice in const {
+    'Pastor and Elders': PrayerAudience.pastorElders,
+    'All leaders': PrayerAudience.leaders,
+  }.entries) {
+    testWidgets('a member can choose "${choice.key}"', (tester) async {
+      await pump(tester, requests: const []);
+      await tester.tap(find.byType(FloatingActionButton));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'Prayer for my family');
+      await tester.tap(find.text('Pastor only'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(choice.key).last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Submit'));
+      await tester.pumpAndSettle();
+      expect(repo.added.single.audience, choice.value);
+    });
+  }
+
+  testWidgets('each request shows who can see it', (tester) async {
+    await pump(tester, requests: [
+      _request('r1', 'u1', audience: PrayerAudience.pastorElders),
+    ]);
+    expect(find.text('Pastor and Elders'), findsOneWidget);
+  });
+
+  testWidgets('the author can change who sees a request', (tester) async {
+    await pump(tester, requests: [_request('r1', 'u1')]);
+    await tester.tap(find.byTooltip('Options'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Edit'));
+    await tester.pumpAndSettle();
+    // The dialog opens with the request's current audience selected.
+    await tester.tap(find.text('Pastor only').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('All leaders').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(repo.edits.single, ['r1', 'Pray for my family', PrayerAudience.leaders]);
+  });
+
   testWidgets('an empty request is not submitted', (tester) async {
     await pump(tester, requests: const []);
     await tester.tap(find.byType(FloatingActionButton));
@@ -125,7 +188,8 @@ void main() {
     await tester.enterText(find.byType(TextField), 'Pray for my family and job');
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
-    expect(repo.edits.single, ['r1', 'Pray for my family and job']);
+    expect(repo.edits.single,
+        ['r1', 'Pray for my family and job', PrayerAudience.pastor]);
   });
 
   testWidgets('saving an unchanged request does nothing', (tester) async {

@@ -27,22 +27,23 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
 
   Future<void> _addPrayerRequest() async {
-    final text = await showDialog<String>(
+    final result = await showDialog<_PrayerDraft>(
       context: context,
       builder: (context) => const _PrayerDialog(
         title: 'Prayer Request',
         submitLabel: 'Submit',
       ),
     );
-    if (text == null || !mounted) return;
+    if (result == null || !mounted) return;
 
     try {
       await ref.read(prayerRepositoryProvider).add(PrayerRequest(
             id: '',
             userId: ref.read(currentUserIdProvider) ?? '',
             userName: ref.read(displayNameProvider),
-            request: text,
+            request: result.text,
             status: 'pending',
+            audience: result.audience,
           ));
       if (mounted) _say('Prayer request posted.');
     } catch (_) {
@@ -51,18 +52,24 @@ class _PrayerScreenState extends ConsumerState<PrayerScreen> {
   }
 
   Future<void> _editPrayerRequest(PrayerRequest request) async {
-    final text = await showDialog<String>(
+    final result = await showDialog<_PrayerDraft>(
       context: context,
       builder: (context) => _PrayerDialog(
         title: 'Edit Prayer Request',
         submitLabel: 'Save',
         initialText: request.request,
+        initialAudience: request.audience,
       ),
     );
-    if (text == null || text == request.request || !mounted) return;
+    if (result == null || !mounted) return;
+    if (result.text == request.request && result.audience == request.audience) {
+      return;
+    }
 
     try {
-      await ref.read(prayerRepositoryProvider).updateText(request.id, text);
+      await ref
+          .read(prayerRepositoryProvider)
+          .updateDetails(request.id, text: result.text, audience: result.audience);
       if (mounted) _say('Prayer request updated.');
     } catch (_) {
       if (mounted) _say('Could not save your changes. Please try again.');
@@ -147,11 +154,13 @@ class _PrayerDialog extends StatefulWidget {
     required this.title,
     required this.submitLabel,
     this.initialText = '',
+    this.initialAudience = PrayerAudience.defaultForNew,
   });
 
   final String title;
   final String submitLabel;
   final String initialText;
+  final PrayerAudience initialAudience;
 
   @override
   State<_PrayerDialog> createState() => _PrayerDialogState();
@@ -160,6 +169,7 @@ class _PrayerDialog extends StatefulWidget {
 class _PrayerDialogState extends State<_PrayerDialog> {
   final _formKey = GlobalKey<FormState>();
   late final _controller = TextEditingController(text: widget.initialText);
+  late PrayerAudience _audience = widget.initialAudience;
 
   @override
   void dispose() {
@@ -169,7 +179,8 @@ class _PrayerDialogState extends State<_PrayerDialog> {
 
   void _submit() {
     if (_formKey.currentState!.validate()) {
-      Navigator.pop(context, _controller.text.trim());
+      Navigator.pop(
+          context, _PrayerDraft(_controller.text.trim(), _audience));
     }
   }
 
@@ -183,21 +194,42 @@ class _PrayerDialogState extends State<_PrayerDialog> {
         width: double.maxFinite,
         child: Form(
           key: _formKey,
-          child: TextFormField(
-            controller: _controller,
-            autofocus: true,
-            minLines: 7,
-            maxLines: 14,
-            maxLength: prayerRequestMaxLength,
-            keyboardType: TextInputType.multiline,
-            textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(
-              labelText: 'What would you like prayer for?',
-              hintText: 'Write your prayer point here...',
-              alignLabelWithHint: true,
-            ),
-            validator: (val) =>
-                (val == null || val.trim().isEmpty) ? 'Please write something' : null,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: _controller,
+                autofocus: true,
+                minLines: 7,
+                maxLines: 14,
+                maxLength: prayerRequestMaxLength,
+                keyboardType: TextInputType.multiline,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: const InputDecoration(
+                  labelText: 'What would you like prayer for?',
+                  hintText: 'Write your prayer point here...',
+                  alignLabelWithHint: true,
+                ),
+                validator: (val) => (val == null || val.trim().isEmpty)
+                    ? 'Please write something'
+                    : null,
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<PrayerAudience>(
+                initialValue: _audience,
+                isExpanded: true,
+                decoration: InputDecoration(
+                  labelText: 'Who can see this?',
+                  helperText: _audience.description,
+                  helperMaxLines: 3,
+                ),
+                items: [
+                  for (final a in PrayerAudience.values)
+                    DropdownMenuItem(value: a, child: Text(a.label)),
+                ],
+                onChanged: (value) => setState(() => _audience = value!),
+              ),
+            ],
           ),
         ),
       ),
@@ -208,6 +240,13 @@ class _PrayerDialogState extends State<_PrayerDialog> {
       ],
     );
   }
+}
+
+/// What the writing dialog hands back.
+class _PrayerDraft {
+  const _PrayerDraft(this.text, this.audience);
+  final String text;
+  final PrayerAudience audience;
 }
 
 class _PrayerCard extends StatelessWidget {
@@ -270,6 +309,11 @@ class _PrayerCard extends StatelessWidget {
                         label: request.isAnswered ? 'Answered' : 'Pending',
                         color: request.isAnswered ? AppColors.blue : AppColors.secondaryDark,
                         icon: request.isAnswered ? Icons.check : Icons.hourglass_empty,
+                      ),
+                      TagChip(
+                        label: request.audience.label,
+                        color: AppColors.primary,
+                        icon: Icons.lock_outline,
                       ),
                       if (showRequester)
                         Text('From: ${request.userName}',

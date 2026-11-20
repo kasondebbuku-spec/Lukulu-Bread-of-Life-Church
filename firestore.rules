@@ -43,6 +43,20 @@ service cloud.firestore {
     function canPostAnnouncements() { return isAdmin() || isSecretariat() || isLeadership(); }
     function canSeeAllPrayer() { return isAdmin() || isSecretariat() || isLeadership(); }
 
+    // A prayer request carries the audience its author chose:
+    //   'pastor'         the Pastor only
+    //   'pastor_elders'  the Pastor and Elders
+    //   'leaders'        every leader (Pastor, Elders, Deacons, Deaconesses, Admin, Secretariat)
+    // The author always sees their own. Requests written before this choice existed
+    // have no audience and are treated as 'leaders', which is what they were.
+    // Mirrors PrayerAudience in lib/models/prayer_request.dart -- keep in sync.
+    function canSeePrayer(data) {
+      return hasRole('pastor')
+        || (hasRole('elder') && data.get('audience', 'leaders') in ['pastor_elders', 'leaders'])
+        || (canSeeAllPrayer() && data.get('audience', 'leaders') == 'leaders');
+    }
+    function validPrayerAudience(a) { return a in ['pastor', 'pastor_elders', 'leaders']; }
+
     // Self-service profile edits cannot add or change permissions.
     match /users/{uid} {
       allow read: if isSignedIn() && (request.auth.uid == uid || canManageGiving());
@@ -129,23 +143,32 @@ service cloud.firestore {
       allow update, delete: if canPostAnnouncements();
     }
 
-    // Members only ever see their own prayer requests; leadership tier sees all.
+    // A member always sees their own requests. Everyone else sees only what the
+    // author shared with their group (see canSeePrayer above).
     match /prayer_requests/{id} {
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      // A new request must say who may see it.
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid
+        && request.resource.data.audience is string
+        && validPrayerAudience(request.resource.data.audience);
       allow read: if isSignedIn()
-                  && (resource.data.userId == request.auth.uid || canSeeAllPrayer());
-      // Leaders moderate everything. The person who posted a request may edit its
-      // wording, mark it answered or pending, and delete it -- but cannot change
-      // whose it is or touch anyone else's.
-      allow update: if canSeeAllPrayer()
+                  && (resource.data.userId == request.auth.uid || canSeePrayer(resource.data));
+      // Someone who may see a request can mark it answered or pending, and delete it,
+      // but cannot reword it or widen who sees it. The author may reword it, mark it,
+      // change who sees it, and delete it -- but cannot change whose it is or touch
+      // anyone else's.
+      allow update: if (isSignedIn() && canSeePrayer(resource.data)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+            && request.resource.data.status in ['pending', 'answered'])
         || (isSignedIn() && resource.data.userId == request.auth.uid
             && request.resource.data.userId == resource.data.userId
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['request', 'status'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['request', 'status', 'audience'])
             && request.resource.data.status in ['pending', 'answered']
+            && request.resource.data.get('audience', 'leaders') is string
+            && validPrayerAudience(request.resource.data.get('audience', 'leaders'))
             && request.resource.data.request is string
             && request.resource.data.request.size() > 0
             && request.resource.data.request.size() <= 2000);
-      allow delete: if canSeeAllPrayer()
+      allow delete: if (isSignedIn() && canSeePrayer(resource.data))
         || (isSignedIn() && resource.data.userId == request.auth.uid);
     }
   }
