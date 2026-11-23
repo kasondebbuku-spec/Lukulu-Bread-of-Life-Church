@@ -44,7 +44,6 @@ SundayIncomeForm _form(DateTime date,
       preparedBy: 'a',
       checkedBy: 'b',
       collectedBy: 'c',
-      natsaveBlock: const CategoryBlock(denominationBreakdown: {'10': 5}),
       expensesReserveBlock: CategoryBlock(denominationBreakdown: {'1': reserve}),
       expenseEntries: const [ExpenseEntry(description: 'x', amount: 500)],
     );
@@ -93,7 +92,8 @@ void main() {
     final s = month();
     expect(s.serviceCount, 2);
     expect(s.formTotals.titheOfTithes, 100 + 200);
-    expect(s.formTotals.natsaveDeposit, 50 + 50);
+    // Natsave is the rest of each Sunday: 1000 - 100 - 500 and 2000 - 200 - 500.
+    expect(s.formTotals.natsaveDeposit, 400 + 1300);
     expect(s.formTotals.totalExpenses, 1000);
     // Net amount: the month's giving (1850) less the expenses (1000).
     expect(s.netAmount, 850);

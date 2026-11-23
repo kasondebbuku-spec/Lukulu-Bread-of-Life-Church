@@ -44,11 +44,6 @@ Future<Uint8List> buildIncomeFormPdf(
         if (form.forexEntries.isNotEmpty) _forexSection(form),
         if (form.chequeEntries.isNotEmpty) _chequeSection(form),
         _denominationSection(
-            'Natsave Account Deposit', form.natsaveBlock, valuesByKey),
-        if (form.hasTitheOfTithesCount)
-          _denominationSection('Tithe of Tithes Cash Count',
-              form.titheOfTithesBlock, valuesByKey),
-        _denominationSection(
             'Expenses Cash Count', form.expensesReserveBlock, valuesByKey),
         if (form.expenseEntries.isNotEmpty) _expensesListSection(form),
         _attendanceSection(form),
@@ -287,16 +282,6 @@ pw.Widget _summarySection(SundayIncomeForm form, Map<String, double> valuesByKey
         cellStyle: const pw.TextStyle(fontSize: 10),
         headerStyle: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
       ),
-      if (!form.isTitheOfTithesReconciled(valuesByKey))
-        pw.Padding(
-          padding: const pw.EdgeInsets.only(top: 8),
-          child: pw.Text(
-            'Reconciliation warning: the tithe of tithes cash counted does not '
-            'match 10% of the tithe (variance '
-            '${formatZmw(form.titheOfTithesVariance(valuesByKey))}).',
-            style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
-          ),
-        ),
       if (!form.isExpensesReconciled(valuesByKey))
         pw.Padding(
           padding: const pw.EdgeInsets.only(top: 8),

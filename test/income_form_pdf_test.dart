@@ -10,7 +10,7 @@ void main() {
     '10': 10.0, '5': 5.0, '2': 2.0, '1': 1.0, '0.5': 0.5, '0.1': 0.1, '0.05': 0.05,
   };
 
-  test('renders with Natsave/Expenses Reserve/itemized expenses filled in', () async {
+  test('renders with the expenses cash and itemized expenses filled in', () async {
     final form = SundayIncomeForm(
       id: 'test',
       date: DateTime(2026, 9, 27),
@@ -29,7 +29,6 @@ void main() {
       preparedBy: 'Inambao Nanzila',
       checkedBy: 'Msiska Isaac',
       collectedBy: 'Mabai Mike',
-      natsaveBlock: const CategoryBlock(denominationBreakdown: {'10': 6}),
       expensesReserveBlock: const CategoryBlock(denominationBreakdown: {'1': 3760}),
       expenseEntries: const [ExpenseEntry(description: 'Missions', amount: 3180)],
     );
@@ -38,7 +37,7 @@ void main() {
     expect(bytes.isNotEmpty, isTrue);
   });
 
-  test('renders a form with no Natsave/Expenses data (pre-existing saved forms)', () async {
+  test('renders a form with no expenses data (pre-existing saved forms)', () async {
     final form = SundayIncomeForm(
       id: 'old',
       date: DateTime(2026, 1, 4),

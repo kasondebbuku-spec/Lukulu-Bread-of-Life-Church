@@ -33,9 +33,8 @@ SundayIncomeForm _form(DateTime date, ServiceType service) => SundayIncomeForm(
       preparedBy: 'Inambao, Nanzila',
       checkedBy: 'Msiska Isaac',
       collectedBy: 'Mabai Mike',
-      natsaveBlock: const CategoryBlock(denominationBreakdown: {'10': 6}),
-      expensesReserveBlock: const CategoryBlock(denominationBreakdown: {'1': 3180}),
-      expenseEntries: const [ExpenseEntry(description: 'Missions', amount: 3180)],
+      expensesReserveBlock: const CategoryBlock(denominationBreakdown: {'1': 580}),
+      expenseEntries: const [ExpenseEntry(description: 'Missions', amount: 580)],
     );
 
 void main() {
@@ -120,15 +119,16 @@ void main() {
       expect(col('Tithe'), '2900');
       expect(col('Grand total'), '2900');
       expect(col('Tithe of tithes (10% of tithe)'), '290');
-      expect(col('Natsave deposit'), '60');
-      expect(col('Total collection'), '350');
-      expect(col('Total expenses'), '3180');
-      // Grand total 2900 less expenses 3180.
-      expect(col('Net amount (grand total less expenses)'), '-280');
+      // Natsave is the rest: 2900 less the tithe of tithes (290) less expenses (580).
+      expect(col('Natsave deposit'), '2030');
+      expect(col('Total collection'), '2320');
+      expect(col('Total expenses'), '580');
+      // Grand total 2900 less expenses 580.
+      expect(col('Net amount (grand total less expenses)'), '2320');
       expect(col('Expenses variance'), '0');
-      // No tithe-of-tithes cash was counted, so there is nothing to compare.
-      expect(col('Tithe of tithes cash set aside'), '');
-      expect(col('Tithe of tithes variance'), '');
+      // The tithe of tithes is calculated, so there is no cash count column.
+      expect(header, isNot(contains('Tithe of tithes cash set aside')));
+      expect(header, isNot(contains('Tithe of tithes variance')));
       expect(col('Reconciled'), 'Yes');
       expect(col('Attendance'), '115');
       expect(first, contains('"Inambao, Nanzila"'));

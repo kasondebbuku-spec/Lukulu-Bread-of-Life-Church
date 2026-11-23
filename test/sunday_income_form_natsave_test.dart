@@ -20,9 +20,7 @@ void main() {
   SundayIncomeForm buildForm({
     required Map<String, int> tithe,
     required Map<String, int> expensesReserve,
-    required Map<String, int> natsave,
     required List<ExpenseEntry> expenses,
-    Map<String, int> titheOfTithesCash = const {},
   }) {
     return SundayIncomeForm(
       id: '',
@@ -42,18 +40,15 @@ void main() {
       preparedBy: 'A',
       checkedBy: 'B',
       collectedBy: 'C',
-      natsaveBlock: CategoryBlock(denominationBreakdown: natsave),
       expensesReserveBlock: CategoryBlock(denominationBreakdown: expensesReserve),
-      titheOfTithesBlock: CategoryBlock(denominationBreakdown: titheOfTithesCash),
       expenseEntries: expenses,
     );
   }
 
-  test('titheOfTithes still comes from the tithe category block', () {
+  test('titheOfTithes comes from the tithe category block', () {
     final form = buildForm(
-      tithe: {'100': 29}, // K2900, matches the real NATSAVE sheet's tithe subtotal
+      tithe: {'100': 29}, // K2900
       expensesReserve: const {},
-      natsave: const {},
       expenses: const [],
     );
     expect(form.titheOfTithes(valuesByKey), closeTo(290, 0.001)); // 10% of 2900
@@ -64,7 +59,6 @@ void main() {
     final form = buildForm(
       tithe: {'100': 10}, // K1,000 -> K100
       expensesReserve: const {},
-      natsave: const {},
       expenses: const [ExpenseEntry(description: 'Tissue', amount: 80)],
     );
     expect(form.titheOfTithes(valuesByKey), closeTo(100, 0.001));
@@ -76,30 +70,74 @@ void main() {
         buildForm(
           tithe: const {},
           expensesReserve: const {},
-          natsave: const {},
           expenses: const [],
         ).titheOfTithes(valuesByKey),
         0);
   });
 
-  const threeExpenses = [
-    ExpenseEntry(description: 'Missions', amount: 3000),
-    ExpenseEntry(description: 'Tissue', amount: 80),
-    ExpenseEntry(description: 'Alms giving', amount: 100),
-  ]; // total 3180
-  const expensesCash3180 = {'100': 31, '50': 1, '20': 1, '10': 1}; // 3180
-  const titheOfTithesCash290 = {'100': 2, '50': 1, '20': 2}; // 290
+  group('Natsave deposit: the rest', () {
+    test('is the grand total less the tithe of tithes and less the expenses', () {
+      final form = buildForm(
+        tithe: {'100': 29}, // everything received: K2,900
+        expensesReserve: const {},
+        expenses: const [
+          ExpenseEntry(description: 'Missions', amount: 500),
+          ExpenseEntry(description: 'Tissue', amount: 80),
+        ], // K580
+      );
+      expect(form.grandTotal(valuesByKey), closeTo(2900, 0.001));
+      expect(form.titheOfTithes(valuesByKey), closeTo(290, 0.001));
+      expect(form.totalExpenses, closeTo(580, 0.001));
+      // 2900 - 290 - 580
+      expect(form.natsaveDeposit(valuesByKey), closeTo(2030, 0.001));
+    });
+
+    test('with no expenses it is the grand total less the tithe of tithes', () {
+      final form = buildForm(
+        tithe: {'100': 10}, // K1,000
+        expensesReserve: const {},
+        expenses: const [],
+      );
+      expect(form.natsaveDeposit(valuesByKey), closeTo(900, 0.001));
+    });
+
+    test('with nothing received it is zero', () {
+      final form = buildForm(
+          tithe: const {}, expensesReserve: const {}, expenses: const []);
+      expect(form.natsaveDeposit(valuesByKey), 0);
+    });
+
+    test('goes negative, rather than hiding it, when expenses outrun the money received',
+        () {
+      final form = buildForm(
+        tithe: {'100': 10}, // K1,000, tithe of tithes K100
+        expensesReserve: const {},
+        expenses: const [ExpenseEntry(description: 'Roof', amount: 1200)],
+      );
+      expect(form.natsaveDeposit(valuesByKey), closeTo(-300, 0.001));
+    });
+
+    test('plus the tithe of tithes makes the total collection, which is the net amount',
+        () {
+      final form = buildForm(
+        tithe: {'100': 29},
+        expensesReserve: const {},
+        expenses: const [ExpenseEntry(description: 'Missions', amount: 580)],
+      );
+      expect(form.totalCollection(valuesByKey), closeTo(2320, 0.001));
+      expect(form.totalCollection(valuesByKey),
+          closeTo(form.netAmount(valuesByKey), 0.001));
+    });
+  });
 
   test('the net amount is the grand total less the expenses', () {
     final form = buildForm(
       tithe: {'100': 29}, // grand total 2900
       expensesReserve: const {},
-      natsave: const {},
       expenses: const [
         ExpenseEntry(description: 'Missions', amount: 500),
         ExpenseEntry(description: 'Tissue', amount: 80),
       ], // 580
-      titheOfTithesCash: titheOfTithesCash290,
     );
     expect(form.grandTotal(valuesByKey), closeTo(2900, 0.001));
     expect(form.totalExpenses, closeTo(580, 0.001));
@@ -112,17 +150,22 @@ void main() {
     final form = buildForm(
       tithe: {'100': 29},
       expensesReserve: const {},
-      natsave: const {},
       expenses: const [],
     );
     expect(form.netAmount(valuesByKey), form.grandTotal(valuesByKey));
   });
 
+  const threeExpenses = [
+    ExpenseEntry(description: 'Missions', amount: 3000),
+    ExpenseEntry(description: 'Tissue', amount: 80),
+    ExpenseEntry(description: 'Alms giving', amount: 100),
+  ]; // total 3180
+  const expensesCash3180 = {'100': 31, '50': 1, '20': 1, '10': 1}; // 3180
+
   test('expenses are checked against expenses only', () {
     final form = buildForm(
-      tithe: {'100': 29}, // 2900 -> tithe of tithes 290, kept out of expenses
+      tithe: {'100': 29},
       expensesReserve: expensesCash3180,
-      natsave: {'10': 13, '5': 1}, // 135
       expenses: threeExpenses,
     );
 
@@ -130,18 +173,14 @@ void main() {
     expect(form.totalExpenses, closeTo(3180, 0.001));
     expect(form.expensesVariance(valuesByKey), closeTo(0, 0.001));
     expect(form.isExpensesReconciled(valuesByKey), isTrue);
-    // The tithe of tithes plays no part in the expenses check.
-    expect(form.titheOfTithes(valuesByKey), closeTo(290, 0.001));
+    // The tithe of tithes and the Natsave deposit play no part in this check.
     expect(form.isReconciled(valuesByKey), isTrue);
-    expect(form.natsaveDeposit(valuesByKey), closeTo(135, 0.001));
-    expect(form.totalCollection(valuesByKey), closeTo(425, 0.001)); // 290 + 135
   });
 
   test('flags an expenses variance when a listed expense is missing', () {
     final form = buildForm(
       tithe: {'100': 29},
       expensesReserve: expensesCash3180,
-      natsave: const {},
       expenses: const [
         ExpenseEntry(description: 'Missions', amount: 3000),
         ExpenseEntry(description: 'Tissue', amount: 80),
@@ -152,72 +191,28 @@ void main() {
     expect(form.expensesVariance(valuesByKey), closeTo(100, 0.001));
     expect(form.isExpensesReconciled(valuesByKey), isFalse);
     expect(form.isReconciled(valuesByKey), isFalse);
-    // The tithe of tithes is unaffected by an expenses problem.
-    expect(form.isTitheOfTithesReconciled(valuesByKey), isTrue);
   });
 
-  test('the tithe of tithes cash count is optional and checked on its own', () {
-    // No count entered -> nothing to check.
-    final none = buildForm(
-      tithe: {'100': 29},
-      expensesReserve: expensesCash3180,
-      natsave: const {},
-      expenses: threeExpenses,
-    );
-    expect(none.hasTitheOfTithesCount, isFalse);
-    expect(none.isTitheOfTithesReconciled(valuesByKey), isTrue);
-
-    // A count that matches the calculated 10%.
-    final matching = buildForm(
-      tithe: {'100': 29},
-      expensesReserve: expensesCash3180,
-      natsave: const {},
-      expenses: threeExpenses,
-      titheOfTithesCash: titheOfTithesCash290,
-    );
-    expect(matching.hasTitheOfTithesCount, isTrue);
-    expect(matching.titheOfTithesCashTotal(valuesByKey), closeTo(290, 0.001));
-    expect(matching.titheOfTithesVariance(valuesByKey), closeTo(0, 0.001));
-    expect(matching.isReconciled(valuesByKey), isTrue);
-
-    // A count that is short by K10.
-    final short = buildForm(
-      tithe: {'100': 29},
-      expensesReserve: expensesCash3180,
-      natsave: const {},
-      expenses: threeExpenses,
-      titheOfTithesCash: {'100': 2, '50': 1, '20': 1, '10': 1}, // 280
-    );
-    expect(short.titheOfTithesVariance(valuesByKey), closeTo(-10, 0.001));
-    expect(short.isTitheOfTithesReconciled(valuesByKey), isFalse);
-    expect(short.isReconciled(valuesByKey), isFalse);
-    // ...and that does not disturb the expenses check.
-    expect(short.isExpensesReconciled(valuesByKey), isTrue);
-  });
-
-  test('the tithe of tithes count is saved and reloaded with the form', () {
+  test('the counts that were removed are no longer saved', () {
     final form = buildForm(
       tithe: {'100': 29},
       expensesReserve: expensesCash3180,
-      natsave: const {},
       expenses: threeExpenses,
-      titheOfTithesCash: titheOfTithesCash290,
     );
-    expect(form.toMap()['titheOfTithesBlock'], isNotNull);
-    expect(form.copyWithId('x').titheOfTithesCashTotal(valuesByKey),
-        closeTo(290, 0.001));
+    final map = form.toMap();
+    expect(map.containsKey('natsaveBlock'), isFalse);
+    expect(map.containsKey('titheOfTithesBlock'), isFalse);
+    expect(map['expensesReserveBlock'], isNotNull);
   });
 
-  test('round-trips new fields through toMap without dropping data', () {
+  test('round-trips through toMap and copyWithId without dropping data', () {
     final original = buildForm(
       tithe: {'100': 29},
       expensesReserve: {'100': 37, '10': 6},
-      natsave: {'10': 13, '5': 1},
       expenses: const [ExpenseEntry(description: 'Missions', amount: 3000)],
     );
 
     final map = original.toMap();
-    expect(map['natsaveBlock'], isNotNull);
     expect(map['expensesReserveBlock'], isNotNull);
     expect((map['expenseEntries'] as List).length, 1);
 
@@ -227,7 +222,7 @@ void main() {
     expect(copied.totalExpenses, original.totalExpenses);
   });
 
-  test('a form with no Natsave/expenses data (pre-existing saved forms) defaults cleanly', () {
+  test('a form with no expenses data (pre-existing saved forms) defaults cleanly', () {
     final form = SundayIncomeForm(
       id: 'old',
       date: DateTime(2026, 1, 4),
@@ -242,10 +237,9 @@ void main() {
       checkedBy: '',
       collectedBy: '',
     );
-
-    expect(form.natsaveDeposit(valuesByKey), 0);
     expect(form.expensesReserveTotal(valuesByKey), 0);
+    expect(form.natsaveDeposit(valuesByKey), 0);
     expect(form.totalExpenses, 0);
-    expect(form.isReconciled(valuesByKey), isTrue); // 0 - 0 - 0 = 0
+    expect(form.isReconciled(valuesByKey), isTrue);
   });
 }

@@ -189,7 +189,6 @@ erDiagram
         map categoryBlocks
         array forexEntries
         array chequeEntries
-        map natsaveBlock
         map expensesReserveBlock
         array expenseEntries
         int men

@@ -73,13 +73,7 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
   final List<_ChequeRow> _chequeRows = [_ChequeRow()];
   final List<_ExpenseRow> _expenseRows = [_ExpenseRow()];
 
-  final Map<String, TextEditingController> _natsaveControllers = {
-    for (final d in zmwDenominations) d.key: TextEditingController(),
-  };
   final Map<String, TextEditingController> _expensesReserveControllers = {
-    for (final d in zmwDenominations) d.key: TextEditingController(),
-  };
-  final Map<String, TextEditingController> _titheOfTithesControllers = {
     for (final d in zmwDenominations) d.key: TextEditingController(),
   };
 
@@ -126,9 +120,7 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
     for (final c in GivingCategory.values) {
       _fillDenominations(_controllers[c]!, form.categoryBlocks[c]);
     }
-    _fillDenominations(_natsaveControllers, form.natsaveBlock);
     _fillDenominations(_expensesReserveControllers, form.expensesReserveBlock);
-    _fillDenominations(_titheOfTithesControllers, form.titheOfTithesBlock);
 
     String money(double v) => v == v.roundToDouble() ? v.toStringAsFixed(0) : '$v';
 
@@ -188,13 +180,7 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
     for (final row in _expenseRows) {
       row.dispose();
     }
-    for (final c in _natsaveControllers.values) {
-      c.dispose();
-    }
     for (final c in _expensesReserveControllers.values) {
-      c.dispose();
-    }
-    for (final c in _titheOfTithesControllers.values) {
       c.dispose();
     }
     _menController.dispose();
@@ -232,7 +218,6 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
   double get _chequesTotal => _chequeRows.fold(
       0.0, (total, r) => total + (double.tryParse(r.amountController.text.trim()) ?? 0));
   double get _grandTotal => _cashTotal + _forexTotal + _chequesTotal;
-  double get _natsaveTotal => _denominationTotal(_natsaveControllers);
 
   double get _titheAmount => _denominationTotal(_controllers[GivingCategory.tithe]!);
   double get _titheOfTithes => _titheAmount * titheOfTithesRate;
@@ -240,20 +225,14 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
   double get _expensesTotal => _expenseRows.fold(
       0.0, (total, r) => total + (double.tryParse(r.amountController.text.trim()) ?? 0));
 
-  double get _titheOfTithesCashTotal => _denominationTotal(_titheOfTithesControllers);
-  bool get _hasTitheOfTithesCount => _titheOfTithesControllers.values
-      .any((c) => (int.tryParse(c.text.trim()) ?? 0) > 0);
+  /// What goes into the Natsave account: everything received, less the tithe
+  /// of tithes, less the expenses. Calculated, never typed in.
+  double get _natsaveTotal => _grandTotal - _titheOfTithes - _expensesTotal;
 
   /// Expenses are checked against expenses only: cash set aside minus the
   /// itemised expenses. Zero reconciles.
   double get _expensesVariance => _expensesReserveTotal - _expensesTotal;
   bool get _isExpensesReconciled => _expensesVariance.abs() <= 0.01;
-
-  /// The tithe of tithes is checked on its own, and only when its cash was
-  /// counted: cash counted minus the calculated 10%.
-  double get _titheOfTithesVariance => _titheOfTithesCashTotal - _titheOfTithes;
-  bool get _isTitheOfTithesReconciled =>
-      !_hasTitheOfTithesCount || _titheOfTithesVariance.abs() <= 0.01;
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
@@ -317,17 +296,9 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
             widget.initialForm?.checkedBySignature,
         collectedBySignature: await _signatureBytes(_collectedSignature) ??
             widget.initialForm?.collectedBySignature,
-        natsaveBlock: CategoryBlock(denominationBreakdown: {
-          for (final d in zmwDenominations)
-            d.key: int.tryParse(_natsaveControllers[d.key]!.text.trim()) ?? 0,
-        }),
         expensesReserveBlock: CategoryBlock(denominationBreakdown: {
           for (final d in zmwDenominations)
             d.key: int.tryParse(_expensesReserveControllers[d.key]!.text.trim()) ?? 0,
-        }),
-        titheOfTithesBlock: CategoryBlock(denominationBreakdown: {
-          for (final d in zmwDenominations)
-            d.key: int.tryParse(_titheOfTithesControllers[d.key]!.text.trim()) ?? 0,
         }),
         expenseEntries: _expenseRows
             .map((r) => ExpenseEntry(
@@ -434,40 +405,34 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
               }),
             ),
             const SizedBox(height: 12),
-            _CategoryTable(
-              title: 'Natsave Account Deposit',
-              color: AppColors.primaryDark,
-              controllers: _natsaveControllers,
-              onChanged: () => setState(() {}),
-            ),
-            const SizedBox(height: 12),
-            // Tithe of tithes: calculated for you, with an optional cash count.
-            // Kept apart from the expenses below -- the two never mix.
+            // After everything is received, the tithe of tithes and the expenses
+            // are taken out; the rest goes into the Natsave account. Both are
+            // worked out for you, so there is nothing to count here.
             Card(
-              child: ListTile(
-                leading: const Icon(Icons.volunteer_activism_outlined,
-                    color: AppColors.secondary),
-                title: Text(
-                    'Tithe of Tithes (10% of tithe): ${formatZmw(_titheOfTithes)}'),
-                subtitle: const Text(
-                    'Worked out for you from the tithe. Count the cash set aside '
-                    'for it below if you wish; this is not an expense.'),
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.volunteer_activism_outlined,
+                        color: AppColors.secondary),
+                    title: Text(
+                        'Tithe of Tithes (10% of tithe): ${formatZmw(_titheOfTithes)}'),
+                    subtitle: const Text(
+                        'Worked out for you from the tithe and taken out first. '
+                        'It is not an expense.'),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.account_balance_outlined,
+                        color: AppColors.primaryDark),
+                    title: Text('Natsave Deposit: ${formatZmw(_natsaveTotal)}'),
+                    subtitle: const Text(
+                        'The rest, after the tithe of tithes and the expenses '
+                        'are taken out of everything received. It goes into the '
+                        'Natsave account.'),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 12),
-            _CategoryTable(
-              title: 'Tithe of Tithes Cash Count (optional)',
-              color: AppColors.secondary,
-              controllers: _titheOfTithesControllers,
-              onChanged: () => setState(() {}),
-            ),
-            if (!_isTitheOfTithesReconciled) ...[
-              const SizedBox(height: 12),
-              WarningBox(
-                  'Tithe of tithes cash does not match: expected 10% of the tithe '
-                  '(${formatZmw(_titheOfTithes)}) but ${formatZmw(_titheOfTithesCashTotal)} '
-                  'was counted (variance ${formatZmw(_titheOfTithesVariance)}).'),
-            ],
             const SizedBox(height: 12),
             _CategoryTable(
               title: 'Expenses Cash Count',

@@ -143,17 +143,6 @@ class IncomeFormDetailScreen extends ConsumerWidget {
           if (form.chequeEntries.isNotEmpty)
             _Row(label: 'Cheques', value: form.totalCheques, color: AppColors.primaryDark),
           _Row(
-            label: 'Natsave Account Deposit',
-            value: form.natsaveDeposit(valuesByKey),
-            color: AppColors.primaryDark,
-          ),
-          if (form.hasTitheOfTithesCount)
-            _Row(
-              label: 'Tithe of Tithes Cash',
-              value: form.titheOfTithesCashTotal(valuesByKey),
-              color: AppColors.secondary,
-            ),
-          _Row(
             label: 'Expenses Cash',
             value: form.expensesReserveTotal(valuesByKey),
             color: AppColors.goldInk,
@@ -192,11 +181,6 @@ class IncomeFormDetailScreen extends ConsumerWidget {
             color: AppColors.secondaryDark,
             emphasized: true,
           ),
-          if (!form.isTitheOfTithesReconciled(valuesByKey)) ...[
-            const SizedBox(height: 8),
-            WarningBox('Tithe of tithes cash does not match 10% of the tithe '
-                '(variance ${formatZmw(form.titheOfTithesVariance(valuesByKey))}).'),
-          ],
           if (!form.isExpensesReconciled(valuesByKey)) ...[
             const SizedBox(height: 8),
             WarningBox('Expenses cash does not match the listed expenses '

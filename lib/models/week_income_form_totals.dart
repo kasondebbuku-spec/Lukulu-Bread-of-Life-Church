@@ -1,7 +1,7 @@
 import '../core/utils/week_utils.dart';
 import 'sunday_income_form.dart';
 
-/// Natsave/expenses rollup across every [SundayIncomeForm] dated into one
+/// Tithe of tithes, Natsave and expenses rollup across every [SundayIncomeForm] dated into one
 /// week (a Sunday can have a morning and an evening form).
 class WeekIncomeFormTotals {
   const WeekIncomeFormTotals({

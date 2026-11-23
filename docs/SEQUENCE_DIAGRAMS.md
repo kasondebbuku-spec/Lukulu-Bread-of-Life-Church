@@ -107,7 +107,7 @@ sequenceDiagram
     participant Rules as Security rules
     participant Det as IncomeFormDetailScreen
 
-    F->>Scr: fill counts, forex, cheques, natsave, expenses, attendance, names, signatures
+    F->>Scr: fill counts, forex, cheques, expenses, attendance, names, signatures
     loop each keystroke
         Scr->>Scr: setState() and recompute live totals + reconciliation
     end
@@ -348,7 +348,7 @@ sequenceDiagram
     State->>State: _denominationTotal(controllers) for each table
     State->>State: grand = cash + forex + cheques
     State->>State: expensesVariance = expenses cash - listed expenses
-    State->>State: titheOfTithesVariance = tithe of tithes cash - 10% of tithe (only if counted)
+    State->>State: natsave = grand total - tithe of tithes - expenses (the rest)
     State->>UI: rebuild
     alt |variance| less than or equal to 0.01
         UI-->>F: no banner
