@@ -155,6 +155,11 @@ class SundayIncomeForm {
   double get totalExpenses =>
       expenseEntries.fold(0.0, (total, e) => total + e.amount);
 
+  /// The grand total less the expenses: what is left once they are deducted.
+  /// The tithe of tithes is not deducted here; it stays a separate line.
+  double netAmount(Map<String, double> valuesByKey) =>
+      grandTotal(valuesByKey) - totalExpenses;
+
   /// Mirrors the paper form's own "Total collection" line.
   double totalCollection(Map<String, double> valuesByKey) =>
       titheOfTithes(valuesByKey) + natsaveDeposit(valuesByKey);

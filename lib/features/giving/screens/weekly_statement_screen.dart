@@ -96,6 +96,19 @@ class _WeeklyStatementScreenState extends ConsumerState<WeeklyStatementScreen> {
                 color: AppColors.primaryDark,
                 emphasized: true,
               ),
+              if (formTotals.hasForms) ...[
+                _StatRow(
+                  label: 'Less: Total Expenses',
+                  value: formTotals.totalExpenses,
+                  color: AppColors.goldInk,
+                ),
+                _StatRow(
+                  label: 'Net Amount',
+                  value: summary.grandTotal - formTotals.totalExpenses,
+                  color: AppColors.primaryDark,
+                  emphasized: true,
+                ),
+              ],
               const SizedBox(height: 16),
               TrendCard(comparison: comparison),
               if (formTotals.hasForms) ...[
@@ -122,11 +135,6 @@ class _WeeklyStatementScreenState extends ConsumerState<WeeklyStatementScreen> {
                 _StatRow(
                   label: 'Expenses Cash',
                   value: formTotals.expensesReserve,
-                  color: AppColors.goldInk,
-                ),
-                _StatRow(
-                  label: 'Total Expenses',
-                  value: formTotals.totalExpenses,
                   color: AppColors.goldInk,
                 ),
                 if (formTotals.unreconciledCount > 0)

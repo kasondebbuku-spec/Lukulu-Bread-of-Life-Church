@@ -278,6 +278,8 @@ pw.Widget _summarySection(SundayIncomeForm form, Map<String, double> valuesByKey
             ['Forex (Kwacha value)', formatZmw(form.totalForexKwacha)],
           if (form.chequeEntries.isNotEmpty) ['Cheques', formatZmw(form.totalCheques)],
           ['Grand Total', formatZmw(form.grandTotal(valuesByKey))],
+          ['Less: Total Expenses', formatZmw(form.totalExpenses)],
+          ['Net Amount', formatZmw(form.netAmount(valuesByKey))],
           ['Tithe of Tithes (10% of tithe)', formatZmw(form.titheOfTithes(valuesByKey))],
           ['Natsave Deposit', formatZmw(form.natsaveDeposit(valuesByKey))],
           ['Total Collection', formatZmw(form.totalCollection(valuesByKey))],

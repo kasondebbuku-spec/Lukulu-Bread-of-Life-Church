@@ -123,6 +123,8 @@ void main() {
       expect(col('Natsave deposit'), '60');
       expect(col('Total collection'), '350');
       expect(col('Total expenses'), '3180');
+      // Grand total 2900 less expenses 3180.
+      expect(col('Net amount (grand total less expenses)'), '-280');
       expect(col('Expenses variance'), '0');
       // No tithe-of-tithes cash was counted, so there is nothing to compare.
       expect(col('Tithe of tithes cash set aside'), '');

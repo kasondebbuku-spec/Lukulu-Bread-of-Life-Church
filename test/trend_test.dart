@@ -9,6 +9,7 @@ import 'package:church_cms/core/utils/week_utils.dart';
 import 'package:church_cms/features/giving/pdf/period_summary_pdf.dart';
 import 'package:church_cms/features/giving/screens/period_summary_screen.dart';
 import 'package:church_cms/features/giving/screens/weekly_statement_screen.dart';
+import 'package:church_cms/models/expense_entry.dart';
 import 'package:church_cms/models/giving_record.dart';
 import 'package:church_cms/models/period_summary.dart';
 import 'package:church_cms/models/sunday_income_form.dart';
@@ -28,7 +29,11 @@ GivingRecord _give(DateTime date, double amount,
         date: date,
         category: category);
 
-SundayIncomeForm _form(DateTime date, {int men = 10, int women = 10, int children = 5}) =>
+SundayIncomeForm _form(DateTime date,
+        {int men = 10,
+        int women = 10,
+        int children = 5,
+        List<ExpenseEntry> expenses = const []}) =>
     SundayIncomeForm(
       id: '',
       date: date,
@@ -45,6 +50,7 @@ SundayIncomeForm _form(DateTime date, {int men = 10, int women = 10, int childre
       preparedBy: 'a',
       checkedBy: 'b',
       collectedBy: 'c',
+      expenseEntries: expenses,
     );
 
 void main() {
@@ -284,6 +290,33 @@ void main() {
           findsOneWidget);
       expect(find.text('+10%'), findsWidgets);
       expect(find.text('Strong improvement'), findsWidgets);
+    });
+
+    testWidgets('the weekly statement shows expenses and the net amount after the grand total',
+        (tester) async {
+      final sunday = sundayOnOrBefore(DateTime.now());
+      await pump(tester, const WeeklyStatementScreen(), records: [
+        _give(sunday, 1000),
+      ], forms: [
+        _form(sunday, expenses: const [
+          ExpenseEntry(description: 'Missions', amount: 250),
+        ]),
+      ]);
+      expect(find.text('Grand Total'), findsOneWidget);
+      expect(find.text('Less: Total Expenses'), findsOneWidget);
+      expect(find.text('Net Amount'), findsOneWidget);
+      expect(find.text('ZMW 250.00'), findsWidgets);
+      expect(find.text('ZMW 750.00'), findsOneWidget); // 1000 less 250
+      // Expenses now sit under the grand total, not in the bank-deposit list.
+      expect(find.text('Total Expenses'), findsNothing);
+    });
+
+    testWidgets('the weekly statement has no net amount when no form was saved',
+        (tester) async {
+      final sunday = sundayOnOrBefore(DateTime.now());
+      await pump(tester, const WeeklyStatementScreen(),
+          records: [_give(sunday, 1000)]);
+      expect(find.text('Net Amount'), findsNothing);
     });
 
     testWidgets('the weekly statement says so when the earlier Sunday is empty',

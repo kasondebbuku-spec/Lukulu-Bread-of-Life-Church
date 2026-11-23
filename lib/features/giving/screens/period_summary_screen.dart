@@ -170,6 +170,11 @@ class _PeriodSummaryScreenState extends ConsumerState<PeriodSummaryScreen> {
           const Divider(height: 28),
           _Line('Grand Total', summary.grandTotal, AppColors.primaryDark,
               emphasized: true),
+          if (f.hasForms) ...[
+            _Line('Less: Total Expenses', f.totalExpenses, AppColors.goldInk),
+            _Line('Net Amount', summary.netAmount, AppColors.primaryDark,
+                emphasized: true),
+          ],
           const SizedBox(height: 12),
           TrendCard(comparison: comparison),
           if (f.hasForms) ...[
@@ -183,7 +188,6 @@ class _PeriodSummaryScreenState extends ConsumerState<PeriodSummaryScreen> {
                 emphasized: true),
             _Line('Expenses Cash', f.expensesReserve,
                 AppColors.goldInk),
-            _Line('Total Expenses', f.totalExpenses, AppColors.goldInk),
             if (f.unreconciledCount > 0)
               Container(
                 margin: const EdgeInsets.only(top: 4),

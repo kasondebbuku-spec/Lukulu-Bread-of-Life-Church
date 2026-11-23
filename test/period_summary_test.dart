@@ -95,6 +95,8 @@ void main() {
     expect(s.formTotals.titheOfTithes, 100 + 200);
     expect(s.formTotals.natsaveDeposit, 50 + 50);
     expect(s.formTotals.totalExpenses, 1000);
+    // Net amount: the month's giving (1850) less the expenses (1000).
+    expect(s.netAmount, 850);
     expect(s.totalAttendance, 25 + 50);
     expect(s.averageAttendance, 37.5);
   });

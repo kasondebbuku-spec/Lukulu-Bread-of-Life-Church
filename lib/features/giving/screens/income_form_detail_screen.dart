@@ -166,6 +166,17 @@ class IncomeFormDetailScreen extends ConsumerWidget {
             emphasized: true,
           ),
           _Row(
+            label: 'Less: Total Expenses',
+            value: form.totalExpenses,
+            color: AppColors.goldInk,
+          ),
+          _Row(
+            label: 'Net Amount',
+            value: form.netAmount(valuesByKey),
+            color: AppColors.primaryDark,
+            emphasized: true,
+          ),
+          _Row(
             label: 'Tithe of Tithes (10%)',
             value: form.titheOfTithes(valuesByKey),
             color: AppColors.secondary,

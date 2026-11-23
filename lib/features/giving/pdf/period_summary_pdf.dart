@@ -67,6 +67,10 @@ Future<Uint8List> buildPeriodSummaryPdf(PeriodSummary summary,
           if (summary.otherTotal > 0)
             ['Uncategorized', formatZmw(summary.otherTotal)],
           ['Grand Total', formatZmw(summary.grandTotal)],
+          if (forms.hasForms) ...[
+            ['Less: Total Expenses', formatZmw(forms.totalExpenses)],
+            ['Net Amount', formatZmw(summary.netAmount)],
+          ],
         ]),
         if (comparison != null) ...[
           _heading('Compared with ${comparison.comparedWith}'),
@@ -118,7 +122,6 @@ Future<Uint8List> buildPeriodSummaryPdf(PeriodSummary summary,
             ['Natsave Deposit', formatZmw(forms.natsaveDeposit)],
             ['Total Collection', formatZmw(forms.totalCollection)],
             ['Expenses Cash', formatZmw(forms.expensesReserve)],
-            ['Total Expenses', formatZmw(forms.totalExpenses)],
           ]),
           if (forms.unreconciledCount > 0)
             pw.Padding(

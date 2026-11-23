@@ -49,6 +49,9 @@ class PeriodSummary {
   double get grandTotal =>
       categoryTotals.values.fold(0.0, (sum, v) => sum + v) + otherTotal;
 
+  /// The grand total less the expenses on the Sunday income forms in the period.
+  double get netAmount => grandTotal - formTotals.totalExpenses;
+
   int get serviceCount => formTotals.formCount;
 
   double get averageAttendance =>

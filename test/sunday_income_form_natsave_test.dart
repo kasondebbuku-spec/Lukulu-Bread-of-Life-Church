@@ -90,6 +90,34 @@ void main() {
   const expensesCash3180 = {'100': 31, '50': 1, '20': 1, '10': 1}; // 3180
   const titheOfTithesCash290 = {'100': 2, '50': 1, '20': 2}; // 290
 
+  test('the net amount is the grand total less the expenses', () {
+    final form = buildForm(
+      tithe: {'100': 29}, // grand total 2900
+      expensesReserve: const {},
+      natsave: const {},
+      expenses: const [
+        ExpenseEntry(description: 'Missions', amount: 500),
+        ExpenseEntry(description: 'Tissue', amount: 80),
+      ], // 580
+      titheOfTithesCash: titheOfTithesCash290,
+    );
+    expect(form.grandTotal(valuesByKey), closeTo(2900, 0.001));
+    expect(form.totalExpenses, closeTo(580, 0.001));
+    expect(form.netAmount(valuesByKey), closeTo(2320, 0.001));
+    // The tithe of tithes (290) is not taken off the net amount.
+    expect(form.titheOfTithes(valuesByKey), closeTo(290, 0.001));
+  });
+
+  test('with no expenses the net amount equals the grand total', () {
+    final form = buildForm(
+      tithe: {'100': 29},
+      expensesReserve: const {},
+      natsave: const {},
+      expenses: const [],
+    );
+    expect(form.netAmount(valuesByKey), form.grandTotal(valuesByKey));
+  });
+
   test('expenses are checked against expenses only', () {
     final form = buildForm(
       tithe: {'100': 29}, // 2900 -> tithe of tithes 290, kept out of expenses

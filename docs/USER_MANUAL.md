@@ -184,10 +184,12 @@ the giving records and the attendance record for you.
     **Checked By** and **Collected By**. Under each name there is a box where the
     person can **draw their signature** with a finger or mouse; tap **Clear** to
     redo it. Signatures are optional. (While you draw, the page will not scroll.)
-11. **Totals (live).** The card above the Save button shows cash, forex, cheques,
-    **Grand Total**, tithe of tithes (10% of tithe), Natsave deposit, total collection and total
-    expenses as you work.
-12. Tap **Save Form**.
+12. **Totals (live).** The card above the Save button shows cash, forex, cheques
+    and the **Grand Total**. Straight after it come **Less: Total Expenses** and the
+    **Net Amount**, which is the grand total with the expenses deducted. Below
+    those are the tithe of tithes (10% of tithe, not deducted), the Natsave
+    deposit and the total collection. All of it updates as you work.
+13. Tap **Save Form**.
 
 ### After saving
 - A detail page shows every figure, the expenses list and the signatures.
@@ -234,9 +236,11 @@ attendance and signature sections, suitable for filing at the Pastor's office.
 
 ### Weekly Statement
 **Giving -> Weekly Statement.** Tap the date to choose a Sunday. It shows giving
-by category, the grand total, a **Bank Deposit & Expenses** section (tithe of
-tithes, Natsave, total collection, expenses reserve, total expenses, with a
-warning if a form that week does not reconcile) and the cash denomination breakdown.
+by category, the grand total, then **Less: Total Expenses** and the **Net Amount**
+(the grand total with the expenses deducted; shown once a Sunday income form is
+saved for that week), a **Bank Deposit & Expenses** section (tithe of tithes,
+Natsave, total collection, expenses cash, with a warning if a form that week does
+not reconcile) and the cash denomination breakdown.
 
 A **Compared with the previous Sunday** card sits under the grand total. It sets
 giving, tithe and attendance per service against the Sunday before, each as a
