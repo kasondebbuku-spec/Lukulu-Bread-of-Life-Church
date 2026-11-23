@@ -182,7 +182,7 @@ class _PeriodSummaryScreenState extends ConsumerState<PeriodSummaryScreen> {
             Text('Bank deposit & expenses',
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
-            _Line('Tithe of Tithes (10%)', f.titheOfTithes, AppColors.secondary),
+            _Line('Tithe of Tithes (10% of tithe)', f.titheOfTithes, AppColors.secondary),
             _Line('Natsave Deposit', f.natsaveDeposit, AppColors.primaryDark),
             _Line('Total Collection', f.totalCollection, AppColors.secondaryDark,
                 emphasized: true),

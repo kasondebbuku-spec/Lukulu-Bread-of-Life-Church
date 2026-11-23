@@ -118,7 +118,7 @@ Future<Uint8List> buildPeriodSummaryPdf(PeriodSummary summary,
         if (forms.hasForms) ...[
           _heading('Bank deposit and expenses'),
           _table(['', 'Amount (K)'], [
-            ['Tithe of Tithes (10%)', formatZmw(forms.titheOfTithes)],
+            ['Tithe of Tithes (10% of tithe)', formatZmw(forms.titheOfTithes)],
             ['Natsave Deposit', formatZmw(forms.natsaveDeposit)],
             ['Total Collection', formatZmw(forms.totalCollection)],
             ['Expenses Cash', formatZmw(forms.expensesReserve)],

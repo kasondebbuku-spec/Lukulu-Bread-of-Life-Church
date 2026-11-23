@@ -117,7 +117,7 @@ class _WeeklyStatementScreenState extends ConsumerState<WeeklyStatementScreen> {
                     style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 8),
                 _StatRow(
-                  label: 'Tithe of Tithes (10%)',
+                  label: 'Tithe of Tithes (10% of tithe)',
                   value: formTotals.titheOfTithes,
                   color: AppColors.secondary,
                 ),
@@ -222,12 +222,15 @@ class _StatRow extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              label,
-              style: emphasized
-                  ? Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)
-                  : Theme.of(context).textTheme.bodyLarge,
+            Expanded(
+              child: Text(
+                label,
+                style: emphasized
+                    ? Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)
+                    : Theme.of(context).textTheme.bodyLarge,
+              ),
             ),
+            const SizedBox(width: 8),
             Text(
               formatZmw(value),
               style: TextStyle(

@@ -166,7 +166,7 @@ class IncomeFormDetailScreen extends ConsumerWidget {
             emphasized: true,
           ),
           _Row(
-            label: 'Tithe of Tithes (10%)',
+            label: 'Tithe of Tithes (10% of tithe)',
             value: form.titheOfTithes(valuesByKey),
             color: AppColors.secondary,
           ),
@@ -282,12 +282,15 @@ class _Row extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              label,
-              style: emphasized
-                  ? Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)
-                  : Theme.of(context).textTheme.bodyLarge,
+            Expanded(
+              child: Text(
+                label,
+                style: emphasized
+                    ? Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)
+                    : Theme.of(context).textTheme.bodyLarge,
+              ),
             ),
+            const SizedBox(width: 8),
             Text(
               formatZmw(value),
               style: TextStyle(

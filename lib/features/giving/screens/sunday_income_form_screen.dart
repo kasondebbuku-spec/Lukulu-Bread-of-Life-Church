@@ -405,28 +405,6 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
               }),
             ),
             const SizedBox(height: 12),
-            // After everything is received, the tithe of tithes and the expenses
-            // are taken out; the rest goes into the Natsave account. Both are
-            // worked out for you, so there is nothing to count here.
-            Card(
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.volunteer_activism_outlined,
-                        color: AppColors.secondary),
-                    title: Text(
-                        'Tithe of Tithes (10% of tithe): ${formatZmw(_titheOfTithes)}'),
-                  ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.account_balance_outlined,
-                        color: AppColors.primaryDark),
-                    title: Text('Natsave Deposit: ${formatZmw(_natsaveTotal)}'),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
             _CategoryTable(
               title: 'Expenses Cash Count',
               color: AppColors.goldInk,
@@ -452,6 +430,28 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
                   '(variance ${formatZmw(_expensesVariance)}).'),
               const SizedBox(height: 12),
             ],
+            // After everything is received, the tithe of tithes and the expenses
+            // are taken out; the rest goes into the Natsave account. Both are
+            // worked out for you, so there is nothing to count here.
+            Card(
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.volunteer_activism_outlined,
+                        color: AppColors.secondary),
+                    title: Text(
+                        'Tithe of Tithes (10% of tithe): ${formatZmw(_titheOfTithes)}'),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.account_balance_outlined,
+                        color: AppColors.primaryDark),
+                    title: Text('Natsave Deposit: ${formatZmw(_natsaveTotal)}'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(12),
@@ -560,7 +560,7 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
                     _TotalLine('Net Amount', _grandTotal - _expensesTotal,
                         emphasized: true),
                     const Divider(),
-                    _TotalLine('Tithe of Tithes (10%)', _titheOfTithes),
+                    _TotalLine('Tithe of Tithes (10% of tithe)', _titheOfTithes),
                     _TotalLine('Natsave Deposit', _natsaveTotal),
                     _TotalLine('Total Collection', _titheOfTithes + _natsaveTotal,
                         emphasized: true),
@@ -605,7 +605,12 @@ class _TotalLine extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [Text(label, style: style), Text(formatZmw(value), style: style)],
+        children: [
+          // The label wraps rather than overflowing on a narrow phone.
+          Expanded(child: Text(label, style: style)),
+          const SizedBox(width: 8),
+          Text(formatZmw(value), style: style),
+        ],
       ),
     );
   }
