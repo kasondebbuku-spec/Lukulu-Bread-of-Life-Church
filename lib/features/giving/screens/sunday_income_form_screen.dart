@@ -416,19 +416,12 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
                         color: AppColors.secondary),
                     title: Text(
                         'Tithe of Tithes (10% of tithe): ${formatZmw(_titheOfTithes)}'),
-                    subtitle: const Text(
-                        'Worked out for you from the tithe and taken out first. '
-                        'It is not an expense.'),
                   ),
                   const Divider(height: 1),
                   ListTile(
                     leading: const Icon(Icons.account_balance_outlined,
                         color: AppColors.primaryDark),
                     title: Text('Natsave Deposit: ${formatZmw(_natsaveTotal)}'),
-                    subtitle: const Text(
-                        'The rest, after the tithe of tithes and the expenses '
-                        'are taken out of everything received. It goes into the '
-                        'Natsave account.'),
                   ),
                 ],
               ),
