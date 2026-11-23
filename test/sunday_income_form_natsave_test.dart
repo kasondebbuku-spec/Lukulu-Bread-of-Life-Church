@@ -47,46 +47,69 @@ void main() {
     );
   }
 
-  test('twentyPercentOfTithe still comes from the tithe category block', () {
+  test('titheOfTithes still comes from the tithe category block', () {
     final form = buildForm(
       tithe: {'100': 29}, // K2900, matches the real NATSAVE sheet's tithe subtotal
       expensesReserve: const {},
       natsave: const {},
       expenses: const [],
     );
-    expect(form.twentyPercentOfTithe(valuesByKey), closeTo(580, 0.001));
+    expect(form.titheOfTithes(valuesByKey), closeTo(290, 0.001)); // 10% of 2900
   });
 
-  test('reconciles when reserve minus expenses equals 20% of tithe', () {
+  test('the tithe of tithes is exactly 10% of the tithe, and not an expense', () {
+    expect(titheOfTithesRate, 0.10);
     final form = buildForm(
-      tithe: {'100': 29}, // 2900 -> 20% = 580
-      expensesReserve: {'100': 37, '10': 6}, // 3700 + 60 = 3760
+      tithe: {'100': 10}, // K1,000 -> K100
+      expensesReserve: const {},
+      natsave: const {},
+      expenses: const [ExpenseEntry(description: 'Tissue', amount: 80)],
+    );
+    expect(form.titheOfTithes(valuesByKey), closeTo(100, 0.001));
+    // It is calculated, so it never appears among the itemised expenses.
+    expect(form.totalExpenses, 80);
+    expect(form.expenseEntries.map((e) => e.description), ['Tissue']);
+    // No tithe, no tithe of tithes.
+    expect(
+        buildForm(
+          tithe: const {},
+          expensesReserve: const {},
+          natsave: const {},
+          expenses: const [],
+        ).titheOfTithes(valuesByKey),
+        0);
+  });
+
+  test('reconciles when reserve minus expenses equals the tithe of tithes', () {
+    final form = buildForm(
+      tithe: {'100': 29}, // 2900 -> 10% = 290
+      expensesReserve: {'100': 34, '50': 1, '20': 1}, // 3400 + 50 + 20 = 3470
       natsave: {'10': 13, '5': 1}, // 130 + 5 = 135
       expenses: const [
         ExpenseEntry(description: 'Missions', amount: 3000),
         ExpenseEntry(description: 'Tissue', amount: 80),
         ExpenseEntry(description: 'Alms giving', amount: 100),
-      ], // total 3180; 3760 - 3180 = 580, matches 20% of tithe exactly
+      ], // total 3180; 3470 - 3180 = 290, matches 10% of tithe exactly
     );
 
-    expect(form.expensesReserveTotal(valuesByKey), closeTo(3760, 0.001));
+    expect(form.expensesReserveTotal(valuesByKey), closeTo(3470, 0.001));
     expect(form.totalExpenses, closeTo(3180, 0.001));
     expect(form.natsaveDeposit(valuesByKey), closeTo(135, 0.001));
-    expect(form.totalCollection(valuesByKey), closeTo(715, 0.001)); // 580 + 135
+    expect(form.totalCollection(valuesByKey), closeTo(425, 0.001)); // 290 + 135
     expect(form.reconciliationVariance(valuesByKey), closeTo(0, 0.001));
     expect(form.isReconciled(valuesByKey), isTrue);
   });
 
   test('flags a variance when the reserve does not cover expenses plus tithe-of-tithes', () {
     final form = buildForm(
-      tithe: {'100': 29}, // 20% = 580
-      expensesReserve: {'100': 37, '10': 6}, // 3760
+      tithe: {'100': 29}, // 10% = 290
+      expensesReserve: {'100': 34, '50': 1, '20': 1}, // 3470
       natsave: const {},
       expenses: const [
         ExpenseEntry(description: 'Missions', amount: 3000),
         ExpenseEntry(description: 'Tissue', amount: 80),
         // Alms giving line forgotten -- reserve no longer reconciles.
-      ], // total 3080; 3760 - 3080 = 680, expected 580 -> variance 100
+      ], // total 3080; 3470 - 3080 = 390, expected 290 -> variance 100
     );
 
     expect(form.reconciliationVariance(valuesByKey), closeTo(100, 0.001));

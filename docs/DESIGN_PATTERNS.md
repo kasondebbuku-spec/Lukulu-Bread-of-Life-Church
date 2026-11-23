@@ -14,7 +14,7 @@ patterns that result. For each item it states **where it lives in the code**,
 
 | Where | How |
 |---|---|
-| `SundayIncomeForm` (`models/sunday_income_form.dart`) | It owns the counts, entries and names, so it computes `grandTotal`, `twentyPercentOfTithe`, `natsaveDeposit`, `totalCollection`, `reconciliationVariance`, `isReconciled`, `attendanceTotal`. |
+| `SundayIncomeForm` (`models/sunday_income_form.dart`) | It owns the counts, entries and names, so it computes `grandTotal`, `titheOfTithes`, `natsaveDeposit`, `totalCollection`, `reconciliationVariance`, `isReconciled`, `attendanceTotal`. |
 | `CategoryBlock.amount()` | The block holding a denomination breakdown computes its own amount. |
 | `ForexEntry.kwachaValue` | The entry holding currency and amount converts itself. |
 | `UserAccess` / `UserRole` (`core/providers/user_role_provider.dart`) | The role knows what it may do (`canManageGiving`); `UserAccess` combines several roles with `any`. |

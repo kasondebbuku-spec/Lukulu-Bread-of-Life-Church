@@ -347,7 +347,7 @@ sequenceDiagram
     Tf->>State: onChanged() then setState()
     State->>State: _denominationTotal(controllers) for each table
     State->>State: grand = cash + forex + cheques
-    State->>State: variance = (reserve - expenses) - 20% of tithe
+    State->>State: variance = (reserve - expenses) - tithe of tithes (10% of tithe)
     State->>UI: rebuild
     alt |variance| less than or equal to 0.01
         UI-->>F: no banner

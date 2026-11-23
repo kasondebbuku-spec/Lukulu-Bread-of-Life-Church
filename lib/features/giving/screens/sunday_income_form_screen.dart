@@ -227,15 +227,15 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
   double get _natsaveTotal => _denominationTotal(_natsaveControllers);
 
   double get _titheAmount => _denominationTotal(_controllers[GivingCategory.tithe]!);
-  double get _twentyPercentOfTithe => _titheAmount * 0.20;
+  double get _titheOfTithes => _titheAmount * titheOfTithesRate;
   double get _expensesReserveTotal => _denominationTotal(_expensesReserveControllers);
   double get _expensesTotal => _expenseRows.fold(
       0.0, (total, r) => total + (double.tryParse(r.amountController.text.trim()) ?? 0));
 
   /// How far the counted expenses-reserve cash is from covering the itemized
-  /// expenses plus the required 20%-of-tithe remittance. Zero reconciles.
+  /// expenses plus the tithe of tithes. Zero reconciles.
   double get _reconciliationVariance =>
-      (_expensesReserveTotal - _expensesTotal) - _twentyPercentOfTithe;
+      (_expensesReserveTotal - _expensesTotal) - _titheOfTithes;
   bool get _isReconciled => _reconciliationVariance.abs() <= 0.01;
 
   Future<void> _pickDate() async {
@@ -451,8 +451,9 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Expenses reserve does not reconcile: expected 20% of tithe '
-                        '(${formatZmw(_twentyPercentOfTithe)}) but reserve minus '
+                        'Expenses reserve does not reconcile: expected the tithe of '
+                        'tithes, 10% of tithe '
+                        '(${formatZmw(_titheOfTithes)}) but reserve minus '
                         'expenses is ${formatZmw(_expensesReserveTotal - _expensesTotal)} '
                         '(variance ${formatZmw(_reconciliationVariance)}).',
                         style: const TextStyle(color: AppColors.goldInk),
@@ -567,9 +568,9 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
                     _TotalLine('Cheques', _chequesTotal),
                     _TotalLine('Grand Total', _grandTotal, emphasized: true),
                     const Divider(),
-                    _TotalLine('20% of Tithe (remittance)', _twentyPercentOfTithe),
+                    _TotalLine('Tithe of Tithes (10% of tithe)', _titheOfTithes),
                     _TotalLine('Natsave Deposit', _natsaveTotal),
-                    _TotalLine('Total Collection', _twentyPercentOfTithe + _natsaveTotal,
+                    _TotalLine('Total Collection', _titheOfTithes + _natsaveTotal,
                         emphasized: true),
                     _TotalLine('Total Expenses', _expensesTotal),
                   ],

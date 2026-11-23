@@ -19,7 +19,7 @@ class WeekIncomeFormTotals {
   final double totalExpenses;
   final double titheOfTithes;
 
-  /// Forms whose reserve minus expenses doesn't match the 20%-of-tithe figure.
+  /// Forms whose reserve minus expenses doesn't match the tithe of tithes.
   final int unreconciledCount;
 
   bool get hasForms => formCount > 0;
@@ -53,7 +53,7 @@ class WeekIncomeFormTotals {
       natsave += form.natsaveDeposit(valuesByKey);
       reserve += form.expensesReserveTotal(valuesByKey);
       expenses += form.totalExpenses;
-      titheOfTithes += form.twentyPercentOfTithe(valuesByKey);
+      titheOfTithes += form.titheOfTithes(valuesByKey);
       if (!form.isReconciled(valuesByKey)) unreconciled++;
     }
 

@@ -275,7 +275,7 @@ pw.Widget _summarySection(SundayIncomeForm form, Map<String, double> valuesByKey
             ['Forex (Kwacha value)', formatZmw(form.totalForexKwacha)],
           if (form.chequeEntries.isNotEmpty) ['Cheques', formatZmw(form.totalCheques)],
           ['Grand Total', formatZmw(form.grandTotal(valuesByKey))],
-          ['20% of Tithe (remittance)', formatZmw(form.twentyPercentOfTithe(valuesByKey))],
+          ['Tithe of Tithes (10% of tithe)', formatZmw(form.titheOfTithes(valuesByKey))],
           ['Natsave Deposit', formatZmw(form.natsaveDeposit(valuesByKey))],
           ['Total Collection', formatZmw(form.totalCollection(valuesByKey))],
         ],
@@ -287,7 +287,7 @@ pw.Widget _summarySection(SundayIncomeForm form, Map<String, double> valuesByKey
           padding: const pw.EdgeInsets.only(top: 8),
           child: pw.Text(
             'Reconciliation warning: expenses reserve minus expenses does not '
-            'match the 20%-of-tithe remittance (variance '
+            'match the tithe of tithes (variance '
             '${formatZmw(form.reconciliationVariance(valuesByKey))}).',
             style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
           ),

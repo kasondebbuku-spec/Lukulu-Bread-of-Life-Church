@@ -250,7 +250,7 @@ can address exactly them: `<formId>_<category>` for giving and
 `<formId>_attendance` for attendance. Forms saved before this scheme
 (`recordsKeyedById` false) are read-only.
 
-**Derived values are never stored.** Totals, the 20% tithe remittance, Natsave
+**Derived values are never stored.** Totals, the tithe of tithes (10% of the tithe), Natsave
 deposit, reconciliation variance, attendance total and so on are computed from
 the stored counts each time, so they cannot disagree with the source data.
 

@@ -26,7 +26,7 @@ GivingRecord _give(DateTime date, double amount,
     );
 
 SundayIncomeForm _form(DateTime date,
-        {int tithe100 = 10, int men = 10, int women = 10, int children = 5, int reserve = 700}) =>
+        {int tithe100 = 10, int men = 10, int women = 10, int children = 5, int reserve = 600}) =>
     SundayIncomeForm(
       id: '',
       date: date,
@@ -60,7 +60,7 @@ void main() {
     _give(DateTime(2025, 10, 5), 111), // previous year
   ];
   final forms = [
-    // 20% of 1000 = 200 and 700 - 500 = 200 -> reconciles.
+    // 10% of 1000 = 100 and 600 - 500 = 100 -> reconciles.
     _form(DateTime(2026, 10, 4)),
     _form(DateTime(2026, 10, 11), tithe100: 20, men: 20, women: 20, children: 10),
     _form(DateTime(2026, 9, 27)),
@@ -92,7 +92,7 @@ void main() {
   test('forms in the month feed deposits, expenses and attendance', () {
     final s = month();
     expect(s.serviceCount, 2);
-    expect(s.formTotals.titheOfTithes, 200 + 400);
+    expect(s.formTotals.titheOfTithes, 100 + 200);
     expect(s.formTotals.natsaveDeposit, 50 + 50);
     expect(s.formTotals.totalExpenses, 1000);
     expect(s.totalAttendance, 25 + 50);

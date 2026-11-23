@@ -44,14 +44,14 @@ void main() {
 
   test('sums only forms dated into the selected week', () {
     final forms = [
-      // Balanced: reserve 3760 - 3180 = 580 = 20% of 2900.
-      form(date: sunday, tithe100: 29, natsave10: 6, reserve1: 3760, expense: 3180),
-      // Evening service, same Sunday, also balanced: 20% of 1000 = 200.
+      // Balanced: reserve 3470 - 3180 = 290 = 10% of 2900.
+      form(date: sunday, tithe100: 29, natsave10: 6, reserve1: 3470, expense: 3180),
+      // Evening service, same Sunday, also balanced: 10% of 1000 = 100.
       form(
           date: sunday,
           tithe100: 10,
           natsave10: 4,
-          reserve1: 500,
+          reserve1: 400,
           expense: 300,
           service: ServiceType.evening),
       // Different week -- must be ignored.
@@ -66,10 +66,10 @@ void main() {
     final totals = WeekIncomeFormTotals.compute(sunday, forms, valuesByKey);
 
     expect(totals.formCount, 2);
-    expect(totals.titheOfTithes, closeTo(780, 0.001)); // 580 + 200
+    expect(totals.titheOfTithes, closeTo(390, 0.001)); // 290 + 100
     expect(totals.natsaveDeposit, closeTo(100, 0.001)); // 60 + 40
-    expect(totals.totalCollection, closeTo(880, 0.001)); // 780 + 100
-    expect(totals.expensesReserve, closeTo(4260, 0.001)); // 3760 + 500
+    expect(totals.totalCollection, closeTo(490, 0.001)); // 390 + 100
+    expect(totals.expensesReserve, closeTo(3870, 0.001)); // 3470 + 400
     expect(totals.totalExpenses, closeTo(3480, 0.001)); // 3180 + 300
     expect(totals.unreconciledCount, 0);
   });

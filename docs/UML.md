@@ -59,7 +59,7 @@ members directory.
 | **Preconditions** | Actor is signed in with the Finance or Admin role |
 | **Trigger** | Cash from a service has been counted |
 | **Main success scenario** | 1. Open Giving, choose Sunday Income Form. 2. Pick the Sunday and service. 3. Enter note/coin counts per category. 4. Enter forex and cheques. 5. Enter Natsave and expenses-reserve counts and the expenses list. 6. Enter attendance and sign-off names; optionally draw signatures. 7. System shows live totals and reconciliation status. 8. Actor saves. 9. System atomically stores the form, one giving record per category, one attendance record and an audit entry. 10. System shows the saved form. |
-| **Extensions** | 7a. Reserve minus expenses is not 20% of tithe: warning shown; actor may correct or save anyway. 8a. Required field missing: save is blocked with a message. 9a. Write refused or network fails: nothing is saved, error shown. |
+| **Extensions** | 7a. Reserve minus expenses is not the tithe of tithes (10% of the tithe): warning shown; actor may correct or save anyway. 8a. Required field missing: save is blocked with a message. 9a. Write refused or network fails: nothing is saved, error shown. |
 | **Postconditions** | Form, derived records and audit entry exist, or none do |
 | **Special requirements** | Amounts derived from counts; ASCII-safe PDF; works on phone and desktop |
 
@@ -124,7 +124,7 @@ classDiagram
         checkedBy
         collectedBy
         grandTotal()
-        twentyPercentOfTithe()
+        titheOfTithes()
         natsaveDeposit()
         totalCollection()
         reconciliationVariance()
@@ -280,7 +280,7 @@ classDiagram
     direction LR
     class SundayIncomeForm {
         +grandTotal(values)
-        +twentyPercentOfTithe(values)
+        +titheOfTithes(values)
         +natsaveDeposit(values)
         +reconciliationVariance(values)
         +isReconciled(values)

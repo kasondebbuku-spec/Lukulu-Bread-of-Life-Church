@@ -10,6 +10,12 @@ import 'giving_record.dart';
 
 enum ServiceType { morning, evening }
 
+/// The tithe of tithes is this share of the total tithe (10%). It is worked out
+/// from the tithe count, never typed in, and it is not an expense: the reserve
+/// check only asks that the cash set aside covers the expenses plus this amount.
+/// Change the rate here and the labels in the screens, PDFs and CSV header.
+const titheOfTithesRate = 0.10;
+
 extension ServiceTypeX on ServiceType {
   String get label => this == ServiceType.morning ? 'Morning' : 'Evening';
 }
@@ -78,12 +84,12 @@ class SundayIncomeForm {
   final String collectedBy;
 
   /// Cash counted for deposit into the church's NATSAVE bank account --
-  /// all income except the tithe-of-tithes remittance and local expenses.
+  /// all income except the tithe of tithes and local expenses.
   final CategoryBlock natsaveBlock;
 
   /// Cash held back locally to cover [expenseEntries] plus the
-  /// tithe-of-tithes remittance. Its total minus [totalExpenses] should
-  /// reconcile with [twentyPercentOfTithe] -- see [isReconciled].
+  /// tithe of tithes. Its total minus [totalExpenses] should
+  /// reconcile with [titheOfTithes] -- see [isReconciled].
   final CategoryBlock expensesReserveBlock;
   final List<ExpenseEntry> expenseEntries;
 
@@ -130,8 +136,9 @@ class SundayIncomeForm {
   double grandTotal(Map<String, double> valuesByKey) =>
       overallCashTotal(valuesByKey) + totalForexKwacha + totalCheques;
 
-  double twentyPercentOfTithe(Map<String, double> valuesByKey) =>
-      categoryAmount(GivingCategory.tithe, valuesByKey) * 0.20;
+  /// 10% of the total tithe. Shown as its own line; never an expense entry.
+  double titheOfTithes(Map<String, double> valuesByKey) =>
+      categoryAmount(GivingCategory.tithe, valuesByKey) * titheOfTithesRate;
 
   double natsaveDeposit(Map<String, double> valuesByKey) =>
       natsaveBlock.amount(valuesByKey);
@@ -144,14 +151,14 @@ class SundayIncomeForm {
 
   /// Mirrors the paper form's own "Total collection" line.
   double totalCollection(Map<String, double> valuesByKey) =>
-      twentyPercentOfTithe(valuesByKey) + natsaveDeposit(valuesByKey);
+      titheOfTithes(valuesByKey) + natsaveDeposit(valuesByKey);
 
   /// How far the counted [expensesReserveBlock] is from covering
-  /// [totalExpenses] plus the required [twentyPercentOfTithe] remittance.
+  /// [totalExpenses] plus the [titheOfTithes].
   /// Zero means the cash physically set aside reconciles exactly.
   double reconciliationVariance(Map<String, double> valuesByKey) =>
       (expensesReserveTotal(valuesByKey) - totalExpenses) -
-      twentyPercentOfTithe(valuesByKey);
+      titheOfTithes(valuesByKey);
 
   bool isReconciled(Map<String, double> valuesByKey, {double epsilon = 0.01}) =>
       reconciliationVariance(valuesByKey).abs() <= epsilon;

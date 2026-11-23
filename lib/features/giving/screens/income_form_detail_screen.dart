@@ -159,8 +159,8 @@ class IncomeFormDetailScreen extends ConsumerWidget {
             emphasized: true,
           ),
           _Row(
-            label: '20% of Tithe (remittance)',
-            value: form.twentyPercentOfTithe(valuesByKey),
+            label: 'Tithe of Tithes (10% of tithe)',
+            value: form.titheOfTithes(valuesByKey),
             color: AppColors.secondary,
           ),
           _Row(
@@ -190,7 +190,7 @@ class IncomeFormDetailScreen extends ConsumerWidget {
                   Expanded(
                     child: Text(
                       'Expenses reserve does not reconcile with expenses plus '
-                      'the 20%-of-tithe remittance (variance '
+                      'the tithe of tithes (variance '
                       '${formatZmw(form.reconciliationVariance(valuesByKey))}).',
                       style: const TextStyle(color: AppColors.goldInk),
                     ),
