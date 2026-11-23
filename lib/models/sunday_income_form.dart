@@ -60,6 +60,7 @@ class SundayIncomeForm {
     required this.collectedBy,
     this.natsaveBlock = const CategoryBlock(denominationBreakdown: {}),
     this.expensesReserveBlock = const CategoryBlock(denominationBreakdown: {}),
+    this.titheOfTithesBlock = const CategoryBlock(denominationBreakdown: {}),
     this.expenseEntries = const [],
     this.preparedBySignature,
     this.checkedBySignature,
@@ -87,10 +88,15 @@ class SundayIncomeForm {
   /// all income except the tithe of tithes and local expenses.
   final CategoryBlock natsaveBlock;
 
-  /// Cash held back locally to cover [expenseEntries] plus the
-  /// tithe of tithes. Its total minus [totalExpenses] should
-  /// reconcile with [titheOfTithes] -- see [isReconciled].
+  /// Cash held back locally to cover [expenseEntries], and nothing else. Its
+  /// total should equal [totalExpenses] -- see [isExpensesReconciled].
   final CategoryBlock expensesReserveBlock;
+
+  /// Optional count of the cash set aside as the tithe of tithes. When it is
+  /// filled in, its total should equal [titheOfTithes] -- see
+  /// [isTitheOfTithesReconciled]. Kept apart from the expenses cash so the two
+  /// never mix.
+  final CategoryBlock titheOfTithesBlock;
   final List<ExpenseEntry> expenseEntries;
 
   /// Drawn signatures (PNG bytes), stored base64 in the document. Optional --
@@ -153,15 +159,39 @@ class SundayIncomeForm {
   double totalCollection(Map<String, double> valuesByKey) =>
       titheOfTithes(valuesByKey) + natsaveDeposit(valuesByKey);
 
-  /// How far the counted [expensesReserveBlock] is from covering
-  /// [totalExpenses] plus the [titheOfTithes].
-  /// Zero means the cash physically set aside reconciles exactly.
-  double reconciliationVariance(Map<String, double> valuesByKey) =>
-      (expensesReserveTotal(valuesByKey) - totalExpenses) -
-      titheOfTithes(valuesByKey);
+  /// Cash counted for the tithe of tithes (zero when no count was entered).
+  double titheOfTithesCashTotal(Map<String, double> valuesByKey) =>
+      titheOfTithesBlock.amount(valuesByKey);
 
+  /// Whether anyone counted cash for the tithe of tithes. The count is
+  /// optional, so with none there is nothing to check.
+  bool get hasTitheOfTithesCount =>
+      titheOfTithesBlock.denominationBreakdown.values.any((n) => n > 0);
+
+  /// Cash set aside for expenses minus the itemised expenses. Zero reconciles.
+  double expensesVariance(Map<String, double> valuesByKey) =>
+      expensesReserveTotal(valuesByKey) - totalExpenses;
+
+  bool isExpensesReconciled(Map<String, double> valuesByKey,
+          {double epsilon = 0.01}) =>
+      expensesVariance(valuesByKey).abs() <= epsilon;
+
+  /// Cash counted for the tithe of tithes minus the calculated 10%.
+  double titheOfTithesVariance(Map<String, double> valuesByKey) =>
+      titheOfTithesCashTotal(valuesByKey) - titheOfTithes(valuesByKey);
+
+  /// True when no cash was counted for the tithe of tithes, or the count
+  /// matches the calculated 10%.
+  bool isTitheOfTithesReconciled(Map<String, double> valuesByKey,
+          {double epsilon = 0.01}) =>
+      !hasTitheOfTithesCount ||
+      titheOfTithesVariance(valuesByKey).abs() <= epsilon;
+
+  /// Both checks pass. They are separate: expenses against expenses, tithe of
+  /// tithes against the calculated 10%.
   bool isReconciled(Map<String, double> valuesByKey, {double epsilon = 0.01}) =>
-      reconciliationVariance(valuesByKey).abs() <= epsilon;
+      isExpensesReconciled(valuesByKey, epsilon: epsilon) &&
+      isTitheOfTithesReconciled(valuesByKey, epsilon: epsilon);
 
   /// Returns a copy with a different id — used once the server assigns one
   /// on save, so the caller doesn't have to rebuild the whole object by hand.
@@ -180,6 +210,7 @@ class SundayIncomeForm {
         collectedBy: collectedBy,
         natsaveBlock: natsaveBlock,
         expensesReserveBlock: expensesReserveBlock,
+        titheOfTithesBlock: titheOfTithesBlock,
         expenseEntries: expenseEntries,
         preparedBySignature: preparedBySignature,
         checkedBySignature: checkedBySignature,
@@ -234,6 +265,10 @@ class SundayIncomeForm {
           ? CategoryBlock.fromMap(
               Map<String, dynamic>.from(data['expensesReserveBlock'] as Map))
           : const CategoryBlock(denominationBreakdown: {}),
+      titheOfTithesBlock: data['titheOfTithesBlock'] is Map
+          ? CategoryBlock.fromMap(
+              Map<String, dynamic>.from(data['titheOfTithesBlock'] as Map))
+          : const CategoryBlock(denominationBreakdown: {}),
       expenseEntries: ((data['expenseEntries'] as List?) ?? [])
           .map((e) => ExpenseEntry.fromMap(Map<String, dynamic>.from(e as Map)))
           .toList(),
@@ -261,6 +296,7 @@ class SundayIncomeForm {
         'collectedBy': collectedBy,
         'natsaveBlock': natsaveBlock.toMap(),
         'expensesReserveBlock': expensesReserveBlock.toMap(),
+        'titheOfTithesBlock': titheOfTithesBlock.toMap(),
         'expenseEntries': expenseEntries.map((e) => e.toMap()).toList(),
         if (preparedBySignature != null)
           'preparedBySignature': base64Encode(preparedBySignature!),

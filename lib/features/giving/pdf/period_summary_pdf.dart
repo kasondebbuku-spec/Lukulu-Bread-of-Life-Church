@@ -72,7 +72,7 @@ Future<Uint8List> buildPeriodSummaryPdf(PeriodSummary summary) async {
             ['Tithe of Tithes (10%)', formatZmw(forms.titheOfTithes)],
             ['Natsave Deposit', formatZmw(forms.natsaveDeposit)],
             ['Total Collection', formatZmw(forms.totalCollection)],
-            ['Expenses + Tithe of Tithes Reserve', formatZmw(forms.expensesReserve)],
+            ['Expenses Cash', formatZmw(forms.expensesReserve)],
             ['Total Expenses', formatZmw(forms.totalExpenses)],
           ]),
           if (forms.unreconciledCount > 0)

@@ -151,7 +151,7 @@ class _PeriodSummaryScreenState extends ConsumerState<PeriodSummaryScreen> {
             _Line('Natsave Deposit', f.natsaveDeposit, AppColors.primaryDark),
             _Line('Total Collection', f.totalCollection, AppColors.secondaryDark,
                 emphasized: true),
-            _Line('Expenses + Tithe of Tithes Reserve', f.expensesReserve,
+            _Line('Expenses Cash', f.expensesReserve,
                 AppColors.goldInk),
             _Line('Total Expenses', f.totalExpenses, AppColors.goldInk),
             if (f.unreconciledCount > 0)

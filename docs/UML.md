@@ -59,7 +59,7 @@ members directory.
 | **Preconditions** | Actor is signed in with the Finance or Admin role |
 | **Trigger** | Cash from a service has been counted |
 | **Main success scenario** | 1. Open Giving, choose Sunday Income Form. 2. Pick the Sunday and service. 3. Enter note/coin counts per category. 4. Enter forex and cheques. 5. Enter Natsave and expenses-reserve counts and the expenses list. 6. Enter attendance and sign-off names; optionally draw signatures. 7. System shows live totals and reconciliation status. 8. Actor saves. 9. System atomically stores the form, one giving record per category, one attendance record and an audit entry. 10. System shows the saved form. |
-| **Extensions** | 7a. Reserve minus expenses is not the tithe of tithes (10% of the tithe): warning shown; actor may correct or save anyway. 8a. Required field missing: save is blocked with a message. 9a. Write refused or network fails: nothing is saved, error shown. |
+| **Extensions** | 7a. The expenses cash does not match the listed expenses, or a counted tithe of tithes does not match 10% of the tithe (two separate checks): warning shown; actor may correct or save anyway. 8a. Required field missing: save is blocked with a message. 9a. Write refused or network fails: nothing is saved, error shown. |
 | **Postconditions** | Form, derived records and audit entry exist, or none do |
 | **Special requirements** | Amounts derived from counts; ASCII-safe PDF; works on phone and desktop |
 
@@ -127,7 +127,8 @@ classDiagram
         titheOfTithes()
         natsaveDeposit()
         totalCollection()
-        reconciliationVariance()
+        expensesVariance()
+        titheOfTithesVariance()
         isReconciled()
     }
     class CategoryBlock {
@@ -185,6 +186,7 @@ classDiagram
     SundayIncomeForm "1" *-- "5" CategoryBlock : counts per category
     SundayIncomeForm "1" *-- "1" CategoryBlock : natsave
     SundayIncomeForm "1" *-- "1" CategoryBlock : expenses reserve
+    SundayIncomeForm "1" *-- "1" CategoryBlock : tithe of tithes cash (optional)
     SundayIncomeForm "1" *-- "0..*" ForexEntry
     SundayIncomeForm "1" *-- "0..*" ChequeEntry
     SundayIncomeForm "1" *-- "0..*" ExpenseEntry
@@ -282,7 +284,8 @@ classDiagram
         +grandTotal(values)
         +titheOfTithes(values)
         +natsaveDeposit(values)
-        +reconciliationVariance(values)
+        +expensesVariance(values)
+        +titheOfTithesVariance(values)
         +isReconciled(values)
     }
     class WeekSummary {
@@ -369,7 +372,7 @@ flowchart TD
     count --> extra[Add forex and cheques if any]
     extra --> bank[Count Natsave deposit and expenses reserve]
     bank --> exp[List expenses]
-    exp --> check{Reserve minus expenses<br/>equals 20 percent of tithe?}
+    exp --> check{Expenses cash equals listed expenses,<br/>and any tithe of tithes cash equals 10 percent of tithe?}
     check -- yes --> att[Enter attendance and sign-off names]
     check -- no --> fix{Counting mistake?}
     fix -- yes --> count

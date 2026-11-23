@@ -7,6 +7,7 @@ import '../../../core/providers/audit_actor_provider.dart';
 import '../../../core/providers/user_role_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_format.dart';
+import '../../../core/widgets/warning_box.dart';
 import '../../../models/giving_record.dart';
 import '../../../models/sunday_income_form.dart';
 import '../../../repositories/repository_providers.dart';
@@ -146,8 +147,14 @@ class IncomeFormDetailScreen extends ConsumerWidget {
             value: form.natsaveDeposit(valuesByKey),
             color: AppColors.primaryDark,
           ),
+          if (form.hasTitheOfTithesCount)
+            _Row(
+              label: 'Tithe of Tithes Cash',
+              value: form.titheOfTithesCashTotal(valuesByKey),
+              color: AppColors.secondary,
+            ),
           _Row(
-            label: 'Expenses + Tithe of Tithes Reserve',
+            label: 'Expenses Cash',
             value: form.expensesReserveTotal(valuesByKey),
             color: AppColors.goldInk,
           ),
@@ -159,7 +166,7 @@ class IncomeFormDetailScreen extends ConsumerWidget {
             emphasized: true,
           ),
           _Row(
-            label: 'Tithe of Tithes (10% of tithe)',
+            label: 'Tithe of Tithes (10%)',
             value: form.titheOfTithes(valuesByKey),
             color: AppColors.secondary,
           ),
@@ -174,30 +181,15 @@ class IncomeFormDetailScreen extends ConsumerWidget {
             color: AppColors.secondaryDark,
             emphasized: true,
           ),
-          if (!form.isReconciled(valuesByKey)) ...[
+          if (!form.isTitheOfTithesReconciled(valuesByKey)) ...[
             const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.goldInk.withValues(alpha: 0.12),
-                border: Border.all(color: AppColors.goldInk),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.warning_amber_outlined, color: AppColors.goldInk),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Expenses reserve does not reconcile with expenses plus '
-                      'the tithe of tithes (variance '
-                      '${formatZmw(form.reconciliationVariance(valuesByKey))}).',
-                      style: const TextStyle(color: AppColors.goldInk),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            WarningBox('Tithe of tithes cash does not match 10% of the tithe '
+                '(variance ${formatZmw(form.titheOfTithesVariance(valuesByKey))}).'),
+          ],
+          if (!form.isExpensesReconciled(valuesByKey)) ...[
+            const SizedBox(height: 8),
+            WarningBox('Expenses cash does not match the listed expenses '
+                '(variance ${formatZmw(form.expensesVariance(valuesByKey))}).'),
           ],
           if (form.expenseEntries.isNotEmpty) ...[
             const SizedBox(height: 16),

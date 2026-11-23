@@ -165,16 +165,22 @@ the giving records and the attendance record for you.
 4. **Cheques.** Name, cheque number and amount. **Add row** for more.
 5. **Natsave Account Deposit.** Count the cash being banked in the church's
    NATSAVE account (all income except the tithe of tithes and expenses).
-6. **Expenses + Tithe of Tithes Reserve.** Count the cash held back locally to
-   cover expenses and the tithe of tithes.
-7. **Expenses.** List each expense (for example *Missions*, *Tissue*,
+6. **Tithe of Tithes.** The form works out the **tithe of tithes** for you: 10%
+   of the tithe you counted. It is never typed in and it is not an expense.
+   Below it, **Tithe of Tithes Cash Count (optional)** lets you count the cash
+   set aside for it. If you fill it in and it does not match the 10%, a gold
+   warning shows the difference. Leave it empty if you do not count it.
+7. **Expenses Cash Count.** Count the cash held back locally to pay expenses.
+   This is for expenses only; it does not include the tithe of tithes.
+8. **Expenses.** List each expense (for example *Missions*, *Tissue*,
    *Alms giving*) with its amount. **Add row** for more.
-8. **Check the reconciliation message.** The reserve minus the listed expenses
-   should equal the **tithe of tithes (10% of the tithe)**. It is worked out for you and is never typed in as an expense. If it does not, a gold warning shows the
+9. **Check the warnings.** The expenses cash should equal the listed expenses,
+   and the tithe of tithes cash (if counted) should equal the 10%. The two are
+   checked separately. If either does not match, a gold warning shows the
    difference. You can still save - discrepancies must be recorded, not hidden -
    but check your counts first.
-9. **Attendance.** Enter **Men**, **Women** and **Children**.
-10. **Sign-off.** Fill in **Prepared By** (pre-filled with your name),
+10. **Attendance.** Enter **Men**, **Women** and **Children**.
+11. **Sign-off.** Fill in **Prepared By** (pre-filled with your name),
     **Checked By** and **Collected By**. Under each name there is a box where the
     person can **draw their signature** with a finger or mouse; tap **Clear** to
     redo it. Signatures are optional. (While you draw, the page will not scroll.)
@@ -340,7 +346,7 @@ out), and only an Admin can change roles.
 | The page looks old after an update | Refresh the browser (Ctrl+F5, or clear the site's cache). |
 | **Print** does nothing | Use **Download PDF** and print the file. |
 | I cannot edit a form | Only Finance and Admin can, and only forms saved after editing was introduced. |
-| The reconciliation warning will not go away | Reserve minus expenses must equal the tithe of tithes (10% of the tithe). Recount the reserve or add any missing expense. You may still save if the difference is genuine. |
+| The reconciliation warning will not go away | There are two separate checks. The **expenses cash** must equal the listed expenses: recount it or add any missing expense. The **tithe of tithes cash** (only if you counted it) must equal 10% of the tithe: recount it or clear the count. You may still save if the difference is genuine. |
 | A signature will not draw | Draw inside the white box. On a phone, keep your finger on the box until the stroke ends. |
 | I forgot my password | Use **Forgot password?** on the login page. |
 | I deleted a form by mistake | It cannot be restored from the app. The Activity log shows what it contained (date, service, total); re-enter it. Export backups help. |

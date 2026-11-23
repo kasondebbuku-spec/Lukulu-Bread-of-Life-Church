@@ -104,7 +104,7 @@ class _WeeklyStatementScreenState extends ConsumerState<WeeklyStatementScreen> {
                   emphasized: true,
                 ),
                 _StatRow(
-                  label: 'Expenses + Tithe of Tithes Reserve',
+                  label: 'Expenses Cash',
                   value: formTotals.expensesReserve,
                   color: AppColors.goldInk,
                 ),

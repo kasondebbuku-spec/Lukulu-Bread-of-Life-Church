@@ -45,8 +45,11 @@ Future<Uint8List> buildIncomeFormPdf(
         if (form.chequeEntries.isNotEmpty) _chequeSection(form),
         _denominationSection(
             'Natsave Account Deposit', form.natsaveBlock, valuesByKey),
-        _denominationSection('Expenses + Tithe of Tithes Reserve',
-            form.expensesReserveBlock, valuesByKey),
+        if (form.hasTitheOfTithesCount)
+          _denominationSection('Tithe of Tithes Cash Count',
+              form.titheOfTithesBlock, valuesByKey),
+        _denominationSection(
+            'Expenses Cash Count', form.expensesReserveBlock, valuesByKey),
         if (form.expenseEntries.isNotEmpty) _expensesListSection(form),
         _attendanceSection(form),
         _summarySection(form, valuesByKey),
@@ -282,13 +285,23 @@ pw.Widget _summarySection(SundayIncomeForm form, Map<String, double> valuesByKey
         cellStyle: const pw.TextStyle(fontSize: 10),
         headerStyle: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
       ),
-      if (!form.isReconciled(valuesByKey))
+      if (!form.isTitheOfTithesReconciled(valuesByKey))
         pw.Padding(
           padding: const pw.EdgeInsets.only(top: 8),
           child: pw.Text(
-            'Reconciliation warning: expenses reserve minus expenses does not '
-            'match the tithe of tithes (variance '
-            '${formatZmw(form.reconciliationVariance(valuesByKey))}).',
+            'Reconciliation warning: the tithe of tithes cash counted does not '
+            'match 10% of the tithe (variance '
+            '${formatZmw(form.titheOfTithesVariance(valuesByKey))}).',
+            style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
+          ),
+        ),
+      if (!form.isExpensesReconciled(valuesByKey))
+        pw.Padding(
+          padding: const pw.EdgeInsets.only(top: 8),
+          child: pw.Text(
+            'Reconciliation warning: the expenses cash counted does not match '
+            'the listed expenses (variance '
+            '${formatZmw(form.expensesVariance(valuesByKey))}).',
             style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
           ),
         ),

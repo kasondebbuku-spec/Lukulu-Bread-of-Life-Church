@@ -34,7 +34,7 @@ SundayIncomeForm _form(DateTime date, ServiceType service) => SundayIncomeForm(
       checkedBy: 'Msiska Isaac',
       collectedBy: 'Mabai Mike',
       natsaveBlock: const CategoryBlock(denominationBreakdown: {'10': 6}),
-      expensesReserveBlock: const CategoryBlock(denominationBreakdown: {'1': 3470}),
+      expensesReserveBlock: const CategoryBlock(denominationBreakdown: {'1': 3180}),
       expenseEntries: const [ExpenseEntry(description: 'Missions', amount: 3180)],
     );
 
@@ -123,7 +123,10 @@ void main() {
       expect(col('Natsave deposit'), '60');
       expect(col('Total collection'), '350');
       expect(col('Total expenses'), '3180');
-      expect(col('Reserve variance'), '0');
+      expect(col('Expenses variance'), '0');
+      // No tithe-of-tithes cash was counted, so there is nothing to compare.
+      expect(col('Tithe of tithes cash set aside'), '');
+      expect(col('Tithe of tithes variance'), '');
       expect(col('Reconciled'), 'Yes');
       expect(col('Attendance'), '115');
       expect(first, contains('"Inambao, Nanzila"'));

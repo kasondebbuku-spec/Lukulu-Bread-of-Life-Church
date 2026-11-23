@@ -312,7 +312,7 @@ as an alternative host.)
 
 | Attribute | How it is addressed |
 |---|---|
-| **Correctness of money** | Derived values only; unit tests replicate the real paper form's figures (2900 tithe, 580 remittance, 3760-3180 reserve). |
+| **Correctness of money** | Derived values only; unit tests replicate the real paper form's figures (2900 tithe, 290 tithe of tithes at 10%, 3180 expenses). |
 | **Security** | Server-side rules, immutable audit log, role separation, tested. |
 | **Auditability** | Who/what/when for every form change, with before/after totals. |
 | **Usability** | Live totals while typing, reconciliation warning, role-tailored navigation, responsive layout. |

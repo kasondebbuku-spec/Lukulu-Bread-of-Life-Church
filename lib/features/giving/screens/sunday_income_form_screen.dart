@@ -9,6 +9,7 @@ import '../../../core/providers/display_name_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../core/utils/week_utils.dart';
+import '../../../core/widgets/warning_box.dart';
 import '../../../models/cheque_entry.dart';
 import '../../../models/expense_entry.dart';
 import '../../../models/forex_entry.dart';
@@ -78,6 +79,9 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
   final Map<String, TextEditingController> _expensesReserveControllers = {
     for (final d in zmwDenominations) d.key: TextEditingController(),
   };
+  final Map<String, TextEditingController> _titheOfTithesControllers = {
+    for (final d in zmwDenominations) d.key: TextEditingController(),
+  };
 
   final _menController = TextEditingController();
   final _womenController = TextEditingController();
@@ -124,6 +128,7 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
     }
     _fillDenominations(_natsaveControllers, form.natsaveBlock);
     _fillDenominations(_expensesReserveControllers, form.expensesReserveBlock);
+    _fillDenominations(_titheOfTithesControllers, form.titheOfTithesBlock);
 
     String money(double v) => v == v.roundToDouble() ? v.toStringAsFixed(0) : '$v';
 
@@ -189,6 +194,9 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
     for (final c in _expensesReserveControllers.values) {
       c.dispose();
     }
+    for (final c in _titheOfTithesControllers.values) {
+      c.dispose();
+    }
     _menController.dispose();
     _womenController.dispose();
     _childrenController.dispose();
@@ -232,11 +240,20 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
   double get _expensesTotal => _expenseRows.fold(
       0.0, (total, r) => total + (double.tryParse(r.amountController.text.trim()) ?? 0));
 
-  /// How far the counted expenses-reserve cash is from covering the itemized
-  /// expenses plus the tithe of tithes. Zero reconciles.
-  double get _reconciliationVariance =>
-      (_expensesReserveTotal - _expensesTotal) - _titheOfTithes;
-  bool get _isReconciled => _reconciliationVariance.abs() <= 0.01;
+  double get _titheOfTithesCashTotal => _denominationTotal(_titheOfTithesControllers);
+  bool get _hasTitheOfTithesCount => _titheOfTithesControllers.values
+      .any((c) => (int.tryParse(c.text.trim()) ?? 0) > 0);
+
+  /// Expenses are checked against expenses only: cash set aside minus the
+  /// itemised expenses. Zero reconciles.
+  double get _expensesVariance => _expensesReserveTotal - _expensesTotal;
+  bool get _isExpensesReconciled => _expensesVariance.abs() <= 0.01;
+
+  /// The tithe of tithes is checked on its own, and only when its cash was
+  /// counted: cash counted minus the calculated 10%.
+  double get _titheOfTithesVariance => _titheOfTithesCashTotal - _titheOfTithes;
+  bool get _isTitheOfTithesReconciled =>
+      !_hasTitheOfTithesCount || _titheOfTithesVariance.abs() <= 0.01;
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
@@ -307,6 +324,10 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
         expensesReserveBlock: CategoryBlock(denominationBreakdown: {
           for (final d in zmwDenominations)
             d.key: int.tryParse(_expensesReserveControllers[d.key]!.text.trim()) ?? 0,
+        }),
+        titheOfTithesBlock: CategoryBlock(denominationBreakdown: {
+          for (final d in zmwDenominations)
+            d.key: int.tryParse(_titheOfTithesControllers[d.key]!.text.trim()) ?? 0,
         }),
         expenseEntries: _expenseRows
             .map((r) => ExpenseEntry(
@@ -420,8 +441,36 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
               onChanged: () => setState(() {}),
             ),
             const SizedBox(height: 12),
+            // Tithe of tithes: calculated for you, with an optional cash count.
+            // Kept apart from the expenses below -- the two never mix.
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.volunteer_activism_outlined,
+                    color: AppColors.secondary),
+                title: Text(
+                    'Tithe of Tithes (10% of tithe): ${formatZmw(_titheOfTithes)}'),
+                subtitle: const Text(
+                    'Worked out for you from the tithe. Count the cash set aside '
+                    'for it below if you wish; this is not an expense.'),
+              ),
+            ),
+            const SizedBox(height: 12),
             _CategoryTable(
-              title: 'Expenses + Tithe of Tithes Reserve',
+              title: 'Tithe of Tithes Cash Count (optional)',
+              color: AppColors.secondary,
+              controllers: _titheOfTithesControllers,
+              onChanged: () => setState(() {}),
+            ),
+            if (!_isTitheOfTithesReconciled) ...[
+              const SizedBox(height: 12),
+              WarningBox(
+                  'Tithe of tithes cash does not match: expected 10% of the tithe '
+                  '(${formatZmw(_titheOfTithes)}) but ${formatZmw(_titheOfTithesCashTotal)} '
+                  'was counted (variance ${formatZmw(_titheOfTithesVariance)}).'),
+            ],
+            const SizedBox(height: 12),
+            _CategoryTable(
+              title: 'Expenses Cash Count',
               color: AppColors.goldInk,
               controllers: _expensesReserveControllers,
               onChanged: () => setState(() {}),
@@ -437,32 +486,14 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
               }),
             ),
             const SizedBox(height: 12),
-            if (!_isReconciled)
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.goldInk.withValues(alpha: 0.12),
-                  border: Border.all(color: AppColors.goldInk),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.warning_amber_outlined, color: AppColors.goldInk),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Expenses reserve does not reconcile: expected the tithe of '
-                        'tithes, 10% of tithe '
-                        '(${formatZmw(_titheOfTithes)}) but reserve minus '
-                        'expenses is ${formatZmw(_expensesReserveTotal - _expensesTotal)} '
-                        '(variance ${formatZmw(_reconciliationVariance)}).',
-                        style: const TextStyle(color: AppColors.goldInk),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            if (!_isReconciled) const SizedBox(height: 12),
+            if (!_isExpensesReconciled) ...[
+              WarningBox(
+                  'Expenses cash does not match the listed expenses: '
+                  '${formatZmw(_expensesReserveTotal)} counted against '
+                  '${formatZmw(_expensesTotal)} listed '
+                  '(variance ${formatZmw(_expensesVariance)}).'),
+              const SizedBox(height: 12),
+            ],
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(12),
@@ -568,7 +599,7 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
                     _TotalLine('Cheques', _chequesTotal),
                     _TotalLine('Grand Total', _grandTotal, emphasized: true),
                     const Divider(),
-                    _TotalLine('Tithe of Tithes (10% of tithe)', _titheOfTithes),
+                    _TotalLine('Tithe of Tithes (10%)', _titheOfTithes),
                     _TotalLine('Natsave Deposit', _natsaveTotal),
                     _TotalLine('Total Collection', _titheOfTithes + _natsaveTotal,
                         emphasized: true),
