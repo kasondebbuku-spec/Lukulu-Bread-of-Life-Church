@@ -7,10 +7,12 @@ import '../../../core/utils/date_format.dart';
 import '../../../models/giving_record.dart';
 import '../../../models/period_summary.dart';
 import '../../../models/sunday_income_form.dart';
+import '../../../models/trend.dart';
 import '../../../repositories/repository_providers.dart';
 import '../giving_theme.dart';
 import '../pdf/pdf_actions.dart';
 import '../pdf/period_summary_pdf.dart';
+import '../widgets/trend_card.dart';
 import '../zmw_denominations.dart';
 
 /// Monthly and yearly roll-up of giving, bank deposits, expenses and
@@ -62,19 +64,45 @@ class _PeriodSummaryScreenState extends ConsumerState<PeriodSummaryScreen> {
         body: Center(child: Text('Error: $e')),
       ),
       data: (data) {
+        final values = {for (final d in zmwDenominations) d.key: d.value};
         final summary = PeriodSummary.compute(
           start: _start,
           isYear: _yearly,
           records: data,
           forms: forms,
-          valuesByKey: {for (final d in zmwDenominations) d.key: d.value},
+          valuesByKey: values,
         );
-        return _buildScaffold(context, summary);
+        // The month (or year) before, for the comparison. While this period is
+        // still in progress, only the same stretch of the earlier one is used,
+        // so a part-month is not set against a whole month.
+        final now = DateTime.now();
+        final ongoing = summary.endExclusive.isAfter(now);
+        final previousStart = _shift(_start, -1);
+        final previous = PeriodSummary.compute(
+          start: previousStart,
+          isYear: _yearly,
+          records: data,
+          forms: forms,
+          valuesByKey: values,
+          endExclusive: ongoing
+              ? PeriodSummary.sameStretchEnd(
+                  start: _start, previousStart: previousStart, now: now)
+              : null,
+        );
+        final comparison = PeriodComparison.compare(
+          current: PeriodFigures.fromPeriod(summary),
+          previous: PeriodFigures.fromPeriod(previous),
+          comparedWith:
+              ongoing ? 'the same days of ${previous.label}' : previous.label,
+          ongoing: ongoing,
+        );
+        return _buildScaffold(context, summary, comparison);
       },
     );
   }
 
-  Widget _buildScaffold(BuildContext context, PeriodSummary summary) {
+  Widget _buildScaffold(
+      BuildContext context, PeriodSummary summary, PeriodComparison comparison) {
     final f = summary.formTotals;
     return Scaffold(
       appBar: AppBar(
@@ -85,14 +113,14 @@ class _PeriodSummaryScreenState extends ConsumerState<PeriodSummaryScreen> {
             tooltip: 'Download PDF',
             onPressed: () => downloadPdf(context,
                 filename: summary.pdfFilename,
-                build: () => buildPeriodSummaryPdf(summary)),
+                build: () => buildPeriodSummaryPdf(summary, comparison: comparison)),
           ),
           IconButton(
             icon: const Icon(Icons.print_outlined),
             tooltip: 'Print',
             onPressed: () => printPdf(context,
                 filename: summary.pdfFilename,
-                build: () => buildPeriodSummaryPdf(summary)),
+                build: () => buildPeriodSummaryPdf(summary, comparison: comparison)),
           ),
         ],
       ),
@@ -142,6 +170,8 @@ class _PeriodSummaryScreenState extends ConsumerState<PeriodSummaryScreen> {
           const Divider(height: 28),
           _Line('Grand Total', summary.grandTotal, AppColors.primaryDark,
               emphasized: true),
+          const SizedBox(height: 12),
+          TrendCard(comparison: comparison),
           if (f.hasForms) ...[
             const SizedBox(height: 20),
             Text('Bank deposit & expenses',

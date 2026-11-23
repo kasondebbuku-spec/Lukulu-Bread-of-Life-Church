@@ -7,6 +7,7 @@ import '../../../core/utils/currency_format.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../models/giving_record.dart';
 import '../../../models/period_summary.dart';
+import '../../../models/trend.dart';
 
 // Text here must stay plain ASCII: the built-in PDF font has no Unicode glyphs.
 
@@ -32,7 +33,8 @@ pw.Widget _table(List<String> headers, List<List<String>> rows) =>
     );
 
 /// A clean, printable summary of one month or year for filing with the Pastor.
-Future<Uint8List> buildPeriodSummaryPdf(PeriodSummary summary) async {
+Future<Uint8List> buildPeriodSummaryPdf(PeriodSummary summary,
+    {PeriodComparison? comparison}) async {
   final doc = pw.Document();
   final forms = summary.formTotals;
 
@@ -66,6 +68,49 @@ Future<Uint8List> buildPeriodSummaryPdf(PeriodSummary summary) async {
             ['Uncategorized', formatZmw(summary.otherTotal)],
           ['Grand Total', formatZmw(summary.grandTotal)],
         ]),
+        if (comparison != null) ...[
+          _heading('Compared with ${comparison.comparedWith}'),
+          if (!comparison.hasEarlierFigures)
+            pw.Text(
+                'Nothing was recorded then, so there is nothing to compare with yet.',
+                style: _cell)
+          else ...[
+            pw.Text(comparison.headline, style: _head),
+            pw.SizedBox(height: 6),
+            _table(['', 'Now', 'Before', 'Change', 'Remark'], [
+              [
+                'Giving',
+                formatZmw(comparison.giving.current),
+                formatZmw(comparison.giving.previous),
+                comparison.giving.percentText,
+                comparison.giving.word,
+              ],
+              [
+                'Tithe',
+                formatZmw(comparison.tithe.current),
+                formatZmw(comparison.tithe.previous),
+                comparison.tithe.percentText,
+                comparison.tithe.word,
+              ],
+              [
+                'Attendance per service',
+                comparison.attendance.current.toStringAsFixed(1),
+                comparison.attendance.previous.toStringAsFixed(1),
+                comparison.attendance.percentText,
+                comparison.attendance.word,
+              ],
+            ]),
+          ],
+          if (comparison.ongoing)
+            pw.Padding(
+              padding: const pw.EdgeInsets.only(top: 6),
+              child: pw.Text(
+                  'This period is not over yet, so only the same stretch of the '
+                  'earlier one is compared. The figures will change as more '
+                  'Sundays are recorded.',
+                  style: _cell),
+            ),
+        ],
         if (forms.hasForms) ...[
           _heading('Bank deposit and expenses'),
           _table(['', 'Amount (K)'], [

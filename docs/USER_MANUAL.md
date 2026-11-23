@@ -238,13 +238,42 @@ by category, the grand total, a **Bank Deposit & Expenses** section (tithe of
 tithes, Natsave, total collection, expenses reserve, total expenses, with a
 warning if a form that week does not reconcile) and the cash denomination breakdown.
 
+A **Compared with the previous Sunday** card sits under the grand total. It sets
+giving, tithe and attendance per service against the Sunday before, each as a
+percentage and a remark in words (see *How the comparison remarks work* below).
+
 ### Monthly and Yearly Summary
 **Giving -> Monthly & Yearly Summary.**
 1. Choose **Month** or **Year**.
 2. Use the arrows to move to earlier periods (you cannot go past the present).
 3. Read giving by category, bank deposit and expenses, attendance (services,
    total, average) and giving week by week.
-4. Use **Download PDF** or **Print** to produce a filing copy.
+4. A **Compared with** card shows giving, tithe and attendance against the
+   month (or year) before. The PDF carries the same comparison.
+5. Use **Download PDF** or **Print** to produce a filing copy.
+
+### How the comparison remarks work
+Each figure is compared with the same figure in the period before it. The change
+is shown as a percentage, with a remark in words:
+
+| Change | Remark |
+|---|---|
+| Up 10% or more | **Strong improvement** |
+| Up 2% to under 10% | **Improved** |
+| Within 2% either way | **Steady** |
+| Down 2% to under 10% | **Slightly down** |
+| Down 10% or more | **Needs attention** |
+
+- **Giving** and **Tithe** are the totals for the period. **Attendance** is the
+  average per service, so a month with five Sundays is not unfairly set against
+  one with four.
+- If nothing was recorded in the earlier period, the card says there is nothing
+  to compare with yet.
+- While the current month or year is still in progress, it is compared with the
+  **same days** of the earlier one (for example 1-23 November against 1-23
+  October), so a part-month is never set against a whole month.
+- A month with an extra Sunday will naturally show more giving. The remark is a
+  prompt to look, not a judgement.
 
 ### Export to a spreadsheet (backup)
 **Giving -> Export data.**

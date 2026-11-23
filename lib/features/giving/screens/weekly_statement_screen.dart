@@ -6,11 +6,13 @@ import '../../../core/utils/date_format.dart';
 import '../../../core/utils/week_utils.dart';
 import '../../../models/giving_record.dart';
 import '../../../models/sunday_income_form.dart';
+import '../../../models/trend.dart';
 import '../../../models/week_income_form_totals.dart';
 import '../../../repositories/repository_providers.dart';
 import '../zmw_denominations.dart';
 import '../../../core/utils/currency_format.dart';
 import '../giving_theme.dart';
+import '../widgets/trend_card.dart';
 
 class WeeklyStatementScreen extends ConsumerStatefulWidget {
   const WeeklyStatementScreen({super.key});
@@ -52,6 +54,18 @@ class _WeeklyStatementScreenState extends ConsumerState<WeeklyStatementScreen> {
             {for (final d in zmwDenominations) d.key: d.value},
           );
 
+          // Sunday to Sunday: this week against the one before it.
+          final previousSunday = DateTime(
+              _selectedSunday.year, _selectedSunday.month, _selectedSunday.day - 7);
+          final comparison = PeriodComparison.compare(
+            current: PeriodFigures.fromWeek(summary,
+                forms.where((f) => sundayOnOrBefore(f.date) == _selectedSunday)),
+            previous: PeriodFigures.fromWeek(
+                ref.watch(weekSummaryProvider(previousSunday)),
+                forms.where((f) => sundayOnOrBefore(f.date) == previousSunday)),
+            comparedWith: 'the previous Sunday (${formatDate(previousSunday)})',
+          );
+
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
@@ -82,6 +96,8 @@ class _WeeklyStatementScreenState extends ConsumerState<WeeklyStatementScreen> {
                 color: AppColors.primaryDark,
                 emphasized: true,
               ),
+              const SizedBox(height: 16),
+              TrendCard(comparison: comparison),
               if (formTotals.hasForms) ...[
                 const SizedBox(height: 24),
                 Text('Bank Deposit & Expenses',

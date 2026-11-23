@@ -64,16 +64,32 @@ class PeriodSummary {
 
   static DateTime monthStart(int year, int month) => DateTime(year, month);
 
+  /// Where the previous period should stop so it covers the same stretch as a
+  /// period still in progress (1-23 November against 1-23 October), rather
+  /// than a part-month being set against a whole one. Never later than the
+  /// start of the current period, so a shorter previous month is not overrun.
+  static DateTime sameStretchEnd({
+    required DateTime start,
+    required DateTime previousStart,
+    required DateTime now,
+  }) {
+    final days = DateTime(now.year, now.month, now.day + 1).difference(start).inDays;
+    final candidate =
+        DateTime(previousStart.year, previousStart.month, previousStart.day + days);
+    return candidate.isBefore(start) ? candidate : start;
+  }
+
   factory PeriodSummary.compute({
     required DateTime start,
     required bool isYear,
     required List<GivingRecord> records,
     required List<SundayIncomeForm> forms,
     required Map<String, double> valuesByKey,
+    DateTime? endExclusive,
   }) {
-    final end = isYear
-        ? DateTime(start.year + 1)
-        : DateTime(start.year, start.month + 1);
+    // [endExclusive] cuts the period short; see [sameStretchEnd].
+    final end = endExclusive ??
+        (isYear ? DateTime(start.year + 1) : DateTime(start.year, start.month + 1));
     bool inRange(DateTime d) => !d.isBefore(start) && d.isBefore(end);
 
     final totals = {for (final c in GivingCategory.values) c: 0.0};
