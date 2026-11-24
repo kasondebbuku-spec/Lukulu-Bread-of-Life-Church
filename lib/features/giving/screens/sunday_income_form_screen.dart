@@ -7,6 +7,7 @@ import 'package:signature/signature.dart';
 
 import '../../../core/providers/audit_actor_provider.dart';
 import '../../../core/providers/display_name_provider.dart';
+import '../../../core/providers/file_upload_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../core/utils/week_utils.dart';
@@ -20,6 +21,7 @@ import '../../../repositories/repository_providers.dart';
 import '../zmw_denominations.dart';
 import '../../../core/utils/currency_format.dart';
 import '../giving_theme.dart';
+import '../import/income_sheet_parser.dart';
 import '../widgets/overall_income_card.dart';
 import '../widgets/signature_pad_field.dart';
 import 'income_form_detail_screen.dart';
@@ -98,6 +100,11 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
   String? _saveMessage;
   final _attendanceKey = GlobalKey();
   final _signoffKey = GlobalKey();
+
+  /// What the last Excel import read (and anything worth checking), or why it
+  /// could not be read. Shown at the top of the form until dismissed.
+  List<String>? _importNotes;
+  String? _importError;
 
   @override
   void initState() {
@@ -269,6 +276,137 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
 
   Future<Uint8List?> _signatureBytes(SignatureController c) async =>
       c.isEmpty ? null : c.toPngBytes();
+
+  bool get _hasEntries =>
+      _controllers.values
+          .any((byNote) => byNote.values.any((c) => c.text.trim().isNotEmpty)) ||
+      _expenseRows.any((r) =>
+          r.descriptionController.text.trim().isNotEmpty ||
+          r.amountController.text.trim().isNotEmpty);
+
+  /// Lets the person choose the Sunday income sheet (.xlsx) and fills the form
+  /// from it. It never saves: the figures are there to be checked first.
+  Future<void> _importFromSheet() async {
+    final picker = ref.read(spreadsheetPickerProvider);
+    final IncomeSheetImport result;
+    try {
+      final bytes = await picker();
+      if (bytes == null || !mounted) return; // chooser closed without a file
+      result = parseIncomeSheet(bytes);
+    } on IncomeSheetFormatException catch (e) {
+      if (mounted) {
+        setState(() {
+          _importNotes = null;
+          _importError = e.message;
+        });
+      }
+      return;
+    } on UnsupportedError {
+      if (mounted) {
+        setState(() =>
+            _importError = 'Importing a sheet only works in the web app.');
+      }
+      return;
+    } catch (_) {
+      if (mounted) {
+        setState(() => _importError =
+            'That file could not be read. Please choose the Sunday income sheet saved as an Excel .xlsx file.');
+      }
+      return;
+    }
+    if (!mounted) return;
+
+    if (_hasEntries) {
+      final replace = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Replace what you have entered?'),
+          content: const Text(
+              'The counts and expenses already on this form will be replaced by the sheet.'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Keep mine')),
+            ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Replace')),
+          ],
+        ),
+      );
+      if (replace != true || !mounted) return;
+    }
+    _applyImport(result);
+  }
+
+  void _applyImport(IncomeSheetImport r) {
+    String money(double v) => v == v.roundToDouble() ? v.toStringAsFixed(0) : '$v';
+    final notes = <String>[];
+
+    setState(() {
+      // Every category: those the sheet has are filled, the rest are cleared, so
+      // nothing typed earlier is left mixed in with the sheet's figures.
+      for (final c in GivingCategory.values) {
+        final byNote = r.counts[c] ?? const <String, int>{};
+        for (final d in zmwDenominations) {
+          _controllers[c]![d.key]!.text = _count(byNote[d.key]);
+        }
+      }
+
+      for (final row in _expenseRows) {
+        row.dispose();
+      }
+      _expenseRows
+        ..clear()
+        ..addAll(r.expenses.isEmpty
+            ? [_ExpenseRow()]
+            : r.expenses.map((e) => _ExpenseRow()
+              ..descriptionController.text = e.description
+              ..amountController.text = money(e.amount)));
+
+      if (r.preparedBy != null) _preparedByController.text = r.preparedBy!;
+      if (r.checkedBy != null) _checkedByController.text = r.checkedBy!;
+      if (r.collectedBy != null) _collectedByController.text = r.collectedBy!;
+
+      if (r.date != null) {
+        final sunday = sundayOnOrBefore(r.date!);
+        _serviceDate = sunday;
+        if (sunday != DateTime(r.date!.year, r.date!.month, r.date!.day)) {
+          notes.add("The sheet's date (${formatDate(r.date!)}) is not a Sunday, "
+              'so the Sunday before it was used.');
+        }
+      } else {
+        notes.add('No date was found on the sheet; check the service Sunday above.');
+      }
+      if (r.service != null) {
+        _service = r.service!;
+      } else {
+        notes.add('No service (Morning or Evening) was found on the sheet; check it above.');
+      }
+
+      final read = [
+        for (final c in GivingCategory.values)
+          if ((r.counts[c] ?? const {}).isNotEmpty)
+            '${c.label} ${formatZmw(_denominationTotal(_controllers[c]!))}',
+      ];
+      notes.insert(
+          0, 'Read from the sheet: ${read.join(', ')}. Overall cash ${formatZmw(_cashTotal)}.');
+      notes.insert(
+          1,
+          r.expenses.isEmpty
+              ? 'No expenses were found on the sheet.'
+              : '${r.expenses.length} expense${r.expenses.length == 1 ? '' : 's'} read, '
+                  'total ${formatZmw(_expensesTotal)}.');
+      notes.addAll(r.warnings);
+      final missing = _missingRequired();
+      if (missing.isNotEmpty) {
+        notes.add('Not on the sheet, so please fill in: ${missing.join(', ')}.');
+      }
+
+      _importError = null;
+      _importNotes = notes;
+      _saveMessage = null;
+    });
+  }
 
   /// The required fields still empty, in the order they appear on the form.
   List<String> _missingRequired() => [
@@ -456,7 +594,61 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
+            // Fill the form from the Finance team's Excel sheet instead of typing
+            // it all again. New forms only; an edit keeps what was saved.
+            if (!_editing) ...[
+              OutlinedButton.icon(
+                key: const Key('import-sheet'),
+                onPressed: _saving ? null : _importFromSheet,
+                icon: const Icon(Icons.upload_file),
+                label: const Text('Import from Excel sheet'),
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (_importError != null) ...[
+              WarningBox(_importError!),
+              const SizedBox(height: 12),
+            ],
+            if (_importNotes != null) ...[
+              Card(
+                key: const Key('import-notes'),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.fact_check_outlined,
+                              color: AppColors.primary),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                                'Filled in from the Excel sheet. Please check every figure, then Save.',
+                                style: Theme.of(context).textTheme.titleSmall),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      for (final note in _importNotes!)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Text(note),
+                        ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () => setState(() => _importNotes = null),
+                          child: const Text('Dismiss'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             for (final c in GivingCategory.values) ...[
               _CategoryTable(
                 title: c.label,

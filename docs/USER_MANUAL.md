@@ -151,6 +151,31 @@ the giving records and the attendance record for you.
 ### Open it
 **Giving -> + -> Sunday Income Form.**
 
+### Fill it in from the Excel sheet (instead of typing)
+If the counts are already on the church's Sunday income sheet (the Excel file
+*Income Analysis Breakdown (Form 2)*), the form can read it for you.
+1. On a **new** Sunday Income Form, tap **Import from Excel sheet** and choose
+   the `.xlsx` file.
+2. The form fills in the date and service, the counts for **Offering, Seed,
+   Thanks Giving, Tithe and Pledges**, the **expenses**, and the **Prepared By,
+   Checked By and Collected By** names.
+3. A box at the top says what was read and anything to check.
+4. Add what the sheet does not have: **attendance** (Men, Women, Children), and
+   any forex or cheques.
+5. Check every figure, then tap **Save Form**.
+
+Good to know:
+- **The import never saves.** It only fills in the form, so you can check it
+  first. If you had already typed counts, it asks before replacing them.
+- The file is read in your browser; it is not sent anywhere.
+- The sheet's own totals and its "20% of tithe" line are ignored. The app works
+  out the totals itself (and the tithe of tithes at 10% of the tithe). If the
+  sheet's OVERALL total does not match its own tables, the box warns you.
+- It must be an **.xlsx** file. If it is an older `.xls` or a CSV, open it in
+  Excel and choose *Save As -> Excel Workbook (.xlsx)*.
+- If the file is not the income sheet, you get a plain message and nothing on
+  the form changes.
+
 ### Step by step
 
 1. **Service Sunday and service.** Pick the Sunday (only Sundays can be chosen)

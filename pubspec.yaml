@@ -18,6 +18,8 @@ dependencies:
   printing: ^5.14.3
   signature: ^6.4.0
   web: ^1.1.1
+  archive: ^4.0.0               # opens .xlsx files (a zip of XML) for the income sheet import
+  xml: ^6.5.0
 
 dev_dependencies:
   flutter_test:
