@@ -19,6 +19,7 @@ import '../../../repositories/repository_providers.dart';
 import '../zmw_denominations.dart';
 import '../../../core/utils/currency_format.dart';
 import '../giving_theme.dart';
+import '../widgets/overall_income_card.dart';
 import '../widgets/signature_pad_field.dart';
 import 'income_form_detail_screen.dart';
 
@@ -197,6 +198,16 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
 
   Map<String, double> get _valuesByKey => {
         for (final d in zmwDenominations) d.key: d.value,
+      };
+
+  /// All the K500s, all the K200s ... counted across tithe, offering, seed,
+  /// thanksgiving and pledge together.
+  Map<String, int> get _overallCounts => {
+        for (final d in zmwDenominations)
+          d.key: GivingCategory.values.fold(
+              0,
+              (sum, c) =>
+                  sum + (int.tryParse(_controllers[c]![d.key]!.text.trim()) ?? 0)),
       };
 
   double _denominationTotal(Map<String, TextEditingController> controllers) =>
@@ -385,6 +396,8 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
               ),
               const SizedBox(height: 12),
             ],
+            OverallIncomeCard(counts: _overallCounts),
+            const SizedBox(height: 12),
             _ForexSection(
               rows: _forexRows,
               onChanged: () => setState(() {}),

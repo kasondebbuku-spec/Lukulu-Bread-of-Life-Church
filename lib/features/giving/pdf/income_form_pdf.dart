@@ -175,7 +175,7 @@ pw.Widget _overallSection(SundayIncomeForm form, Map<String, double> valuesByKey
   return pw.Column(
     crossAxisAlignment: pw.CrossAxisAlignment.start,
     children: [
-      _sectionHeading('Overall (combined denominations)'),
+      _sectionHeading('Sunday Service Overall Income (all categories combined)'),
       if (rows.isEmpty)
         pw.Text('No entries.', style: const pw.TextStyle(fontSize: 10))
       else

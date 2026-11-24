@@ -16,6 +16,7 @@ import '../pdf/pdf_actions.dart';
 import '../zmw_denominations.dart';
 import '../../../core/utils/currency_format.dart';
 import '../giving_theme.dart';
+import '../widgets/overall_income_card.dart';
 import 'sunday_income_form_screen.dart';
 
 class IncomeFormDetailScreen extends ConsumerWidget {
@@ -142,6 +143,9 @@ class IncomeFormDetailScreen extends ConsumerWidget {
             ),
           if (form.chequeEntries.isNotEmpty)
             _Row(label: 'Cheques', value: form.totalCheques, color: AppColors.primaryDark),
+          const SizedBox(height: 8),
+          OverallIncomeCard(counts: form.overallDenominationCounts()),
+          const SizedBox(height: 8),
           _Row(
             label: 'Expenses Cash',
             value: form.expensesReserveTotal(valuesByKey),
