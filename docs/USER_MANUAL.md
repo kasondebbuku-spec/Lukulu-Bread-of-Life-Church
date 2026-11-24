@@ -193,27 +193,23 @@ Good to know:
    **expenses** are taken out, and **the rest goes into the Natsave account**.
    The form works both out and shows them in a card, so there is nothing to
    count or type for either. The tithe of tithes is not an expense.
-6. **Expenses Cash Count.** Count the cash held back locally to pay expenses.
-   This is for expenses only.
-7. **Expenses.** List each expense (for example *Missions*, *Tissue*,
-   *Alms giving*) with its amount. **Add row** for more. The Natsave deposit
-   changes as you add expenses.
-8. **Check the warning.** The expenses cash should equal the listed expenses. If
-   it does not, a gold warning shows the difference. You can still save -
-   discrepancies must be recorded, not hidden - but check your counts first.
-9. **Attendance.** Enter **Men**, **Women** and **Children**.
-10. **Sign-off.** Fill in **Prepared By** (pre-filled with your name),
+6. **Expenses.** List each expense (for example *Missions*, *Tissue*,
+   *Alms giving*) with its amount. **Add row** for more. There is no cash count
+   for the expenses: they are just listed. The total is taken off the grand
+   total, and the Natsave deposit changes as you add expenses.
+7. **Attendance.** Enter **Men**, **Women** and **Children**.
+8. **Sign-off.** Fill in **Prepared By** (pre-filled with your name),
     **Checked By** and **Collected By**. Under each name there is a box where the
     person can **draw their signature** with a finger or mouse; tap **Clear** to
     redo it. Signatures are optional. (While you draw, the page will not scroll.)
-11. **Totals (live).** The card above the Save button shows cash, forex, cheques
+9. **Totals (live).** The card above the Save button shows cash, forex, cheques
     and the **Grand Total**. Straight after it come **Less: Total Expenses** and the
     **Net Amount**, which is the grand total with the expenses deducted. Below
     those are the tithe of tithes (10% of tithe), the **Natsave Deposit** (the
     net amount less the tithe of tithes) and the total collection (the tithe of
     tithes plus the Natsave deposit, so it equals the net amount). All of it
     updates as you work.
-12. Tap **Save Form**.
+10. Tap **Save Form**.
     - If something required is still empty, the form is **not** saved. A gold
       message just above the button says exactly what is missing (for example
       *Not saved yet. Please fill in: Men, Women, Children, Checked By*), and the
@@ -283,9 +279,8 @@ attendance and signature sections, suitable for filing at the Pastor's office.
 **Giving -> Weekly Statement.** Tap the date to choose a Sunday. It shows giving
 by category, the grand total, then **Less: Total Expenses** and the **Net Amount**
 (the grand total with the expenses deducted; shown once a Sunday income form is
-saved for that week), a **Bank Deposit & Expenses** section (tithe of tithes,
-Natsave, total collection, expenses cash, with a warning if a form that week does
-not reconcile) and the cash denomination breakdown.
+saved for that week), a **Bank Deposit** section (tithe of tithes, Natsave and
+total collection) and the cash denomination breakdown.
 
 A **Compared with the previous Sunday** card sits under the grand total. It sets
 giving, tithe and attendance per service against the Sunday before, each as a
@@ -424,7 +419,6 @@ out), and only an Admin can change roles.
 | The page looks old after an update | Refresh the browser (Ctrl+F5, or clear the site's cache). |
 | **Print** does nothing | Use **Download PDF** and print the file. |
 | I cannot edit a form | Only Finance and Admin can, and only forms saved after editing was introduced. |
-| The reconciliation warning will not go away | The **expenses cash** must equal the listed expenses: recount it or add any missing expense. You may still save if the difference is genuine. (The tithe of tithes and the Natsave deposit are worked out for you, so they have no count to check.) |
 | A signature will not draw | Draw inside the white box. On a phone, keep your finger on the box until the stroke ends. |
 | I forgot my password | Use **Forgot password?** on the login page. |
 | I deleted a form by mistake | It cannot be restored from the app. The Activity log shows what it contained (date, service, total); re-enter it. Export backups help. |
@@ -436,7 +430,7 @@ out), and only an Admin can change roles.
 1. **Two people count.** Prepared By, Checked By and Collected By should be three
    people (or at least two) who each take responsibility.
 2. **Enter the form the same day** while counts are fresh.
-3. **Resolve warnings before filing.** Investigate any reconciliation difference.
+3. **Check the figures before filing.** Look over the totals, the expenses and the Natsave deposit.
 4. **Print or download a PDF** for the Pastor's file after each service.
 5. **Export a backup monthly** and store it safely.
 6. **Review the Activity log** regularly for unexpected edits or deletions.

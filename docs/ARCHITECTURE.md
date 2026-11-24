@@ -189,7 +189,6 @@ erDiagram
         map categoryBlocks
         array forexEntries
         array chequeEntries
-        map expensesReserveBlock
         array expenseEntries
         int men
         int women
@@ -250,7 +249,7 @@ can address exactly them: `<formId>_<category>` for giving and
 (`recordsKeyedById` false) are read-only.
 
 **Derived values are never stored.** Totals, the tithe of tithes (10% of the tithe), Natsave
-deposit, reconciliation variance, attendance total and so on are computed from
+deposit, net amount, attendance total and so on are computed from
 the stored counts each time, so they cannot disagree with the source data.
 
 ## 7. Security architecture
@@ -314,7 +313,7 @@ as an alternative host.)
 | **Correctness of money** | Derived values only; unit tests replicate the real paper form's figures (2900 tithe, 290 tithe of tithes at 10%, 3180 expenses). |
 | **Security** | Server-side rules, immutable audit log, role separation, tested. |
 | **Auditability** | Who/what/when for every form change, with before/after totals. |
-| **Usability** | Live totals while typing, reconciliation warning, role-tailored navigation, responsive layout. |
+| **Usability** | Live totals while typing, a clear message when Save cannot proceed, role-tailored navigation, responsive layout. |
 | **Reliability** | Atomic multi-document writes; print falls back to download. |
 | **Maintainability** | Layered structure, small reusable widgets, 75+ automated app tests plus 70 rules tests, documentation. |
 | **Portability** | Web today; the model/repository layers are platform-neutral. |
@@ -323,7 +322,7 @@ as an alternative host.)
 
 | Level | Tool | Examples |
 |---|---|---|
-| Unit | `flutter_test` | Totals, reconciliation, period roll-ups, CSV escaping, role merging |
+| Unit | `flutter_test` | Totals, net amount and Natsave, period roll-ups, CSV escaping, role merging |
 | Widget | `flutter_test` + provider overrides | Dashboard layouts at 3 sizes, edit/delete visibility, signature pad drawing, auth form |
 | Security rules | `@firebase/rules-unit-testing` on the Firestore emulator | Every role against every collection, atomic batches |
 | Static analysis | `flutter analyze` | Zero issues required |

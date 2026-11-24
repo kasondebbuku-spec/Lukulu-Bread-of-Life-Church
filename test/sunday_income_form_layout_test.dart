@@ -29,20 +29,17 @@ void main() {
       (tester) async {
     await pumpForm(tester);
 
-    final expensesCash = find.text('Expenses Cash Count');
     final expenses = find.text('Expenses');
     final titheOfTithes = find.textContaining('Tithe of Tithes (10% of tithe):');
     final natsave = find.textContaining('Natsave Deposit: ZMW');
     final attendance = find.text('Attendance');
 
-    expect(expensesCash, findsOneWidget);
     expect(expenses, findsOneWidget);
     expect(titheOfTithes, findsOneWidget);
     expect(natsave, findsOneWidget);
 
-    // Order down the page: expenses cash, expenses list, then the worked-out
-    // lines, then attendance.
-    expect(top(tester, titheOfTithes), greaterThan(top(tester, expensesCash)));
+    // Order down the page: the expenses list, then the worked-out lines, then
+    // attendance.
     expect(top(tester, titheOfTithes), greaterThan(top(tester, expenses)));
     expect(top(tester, natsave), greaterThan(top(tester, titheOfTithes)));
     expect(top(tester, attendance), greaterThan(top(tester, natsave)));
@@ -57,11 +54,14 @@ void main() {
     expect(find.textContaining('goes into the Natsave account'), findsNothing);
   });
 
-  testWidgets('there are no cash counts for Natsave or the tithe of tithes',
+  testWidgets('there are no cash counts for Natsave, the tithe of tithes or the expenses',
       (tester) async {
     await pumpForm(tester);
     expect(find.text('Natsave Account Deposit'), findsNothing);
     expect(find.textContaining('Tithe of Tithes Cash Count'), findsNothing);
+    // Expenses are only listed (a description and an amount each).
+    expect(find.text('Expenses Cash Count'), findsNothing);
+    expect(find.text('Expenses'), findsOneWidget);
   });
 
   testWidgets('the totals name the tithe of tithes with its 10% in brackets',

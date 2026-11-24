@@ -33,7 +33,6 @@ SundayIncomeForm _form(DateTime date, ServiceType service) => SundayIncomeForm(
       preparedBy: 'Inambao, Nanzila',
       checkedBy: 'Msiska Isaac',
       collectedBy: 'Mabai Mike',
-      expensesReserveBlock: const CategoryBlock(denominationBreakdown: {'1': 580}),
       expenseEntries: const [ExpenseEntry(description: 'Missions', amount: 580)],
     );
 
@@ -125,11 +124,13 @@ void main() {
       expect(col('Total expenses'), '580');
       // Grand total 2900 less expenses 580.
       expect(col('Net amount (grand total less expenses)'), '2320');
-      expect(col('Expenses variance'), '0');
+      // The expenses are just listed (no cash count), so nothing to reconcile.
+      expect(header, isNot(contains('Expenses cash set aside')));
+      expect(header, isNot(contains('Expenses variance')));
+      expect(header, isNot(contains('Reconciled')));
       // The tithe of tithes is calculated, so there is no cash count column.
       expect(header, isNot(contains('Tithe of tithes cash set aside')));
       expect(header, isNot(contains('Tithe of tithes variance')));
-      expect(col('Reconciled'), 'Yes');
       expect(col('Attendance'), '115');
       expect(first, contains('"Inambao, Nanzila"'));
     });

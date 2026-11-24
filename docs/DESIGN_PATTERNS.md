@@ -14,7 +14,7 @@ patterns that result. For each item it states **where it lives in the code**,
 
 | Where | How |
 |---|---|
-| `SundayIncomeForm` (`models/sunday_income_form.dart`) | It owns the counts, entries and names, so it computes `grandTotal`, `titheOfTithes`, `natsaveDeposit`, `totalCollection`, `netAmount`, `expensesVariance`, `isReconciled`, `attendanceTotal`. |
+| `SundayIncomeForm` (`models/sunday_income_form.dart`) | It owns the counts, entries and names, so it computes `grandTotal`, `titheOfTithes`, `natsaveDeposit`, `totalCollection`, `netAmount`, `attendanceTotal`. |
 | `CategoryBlock.amount()` | The block holding a denomination breakdown computes its own amount. |
 | `ForexEntry.kwachaValue` | The entry holding currency and amount converts itself. |
 | `UserAccess` / `UserRole` (`core/providers/user_role_provider.dart`) | The role knows what it may do (`canManageGiving`); `UserAccess` combines several roles with `any`. |
@@ -160,7 +160,7 @@ much; see the recommendations at the end.
 |---|---|---|---|
 | 1 | `SundayIncomeFormScreen` mixes state, validation, assembly of the form and layout | High Cohesion, Controller | Extract a `SundayIncomeFormController` (Riverpod `Notifier`) holding the draft; keep the screen presentational |
 | 2 | `userRoleProvider` and `userProfileNameProvider` read Firestore directly | Low Coupling, Indirection | Add a `UserProfileRepository`; both providers use it |
-| 3 | Money is held as `double`, with a 0.01 tolerance in `isReconciled` | Protected Variations | Introduce a `Money` value object storing whole **ngwee** (integers); convert at the edges |
+| 3 | Money is held as `double`, so totals can carry tiny rounding error | Protected Variations | Introduce a `Money` value object storing whole **ngwee** (integers); convert at the edges |
 | 4 | Permission logic exists twice (Dart getters and `firestore.rules`) | Single Source of Truth | Keep both (the server must enforce) but add a test matrix that runs the same role/action table against each |
 | 5 | `models` and `core` reference each other slightly (`AuditActor`) | Low Coupling | Move `AuditActor` into `core` |
 | 6 | Forms saved before keyed records are read-only | Protected Variations | A one-off migration that renames derived records and sets `recordsKeyedById` |
@@ -177,7 +177,7 @@ the money logic is unit-tested against the real paper form's figures.
 
 | Concern | Test file |
 |---|---|
-| Information Expert (form maths, reconciliation) | `sunday_income_form_natsave_test.dart` |
+| Information Expert (form maths) | `sunday_income_form_natsave_test.dart` |
 | Creator / Factory (period, statement, weekly roll-ups) | `period_summary_test.dart`, `member_statement_test.dart`, `week_income_form_totals_test.dart` |
 | Unit of Work and Controller wiring | `income_form_edit_test.dart`, rules tests (`rules-tests/rules.test.mjs`) |
 | Event log | `audit_log_test.dart` and the `audit_log` rules tests |

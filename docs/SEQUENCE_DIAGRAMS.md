@@ -109,7 +109,7 @@ sequenceDiagram
 
     F->>Scr: fill counts, forex, cheques, expenses, attendance, names, signatures
     loop each keystroke
-        Scr->>Scr: setState() and recompute live totals + reconciliation
+        Scr->>Scr: setState() and recompute live totals
     end
     F->>Scr: Save Form
     Scr->>Scr: validate (attendance and sign-off names required)
@@ -334,7 +334,7 @@ sequenceDiagram
 
 ---
 
-## 12. Live totals while typing (reconciliation)
+## 12. Live totals while typing
 
 ```mermaid
 sequenceDiagram
@@ -347,7 +347,7 @@ sequenceDiagram
     Tf->>State: onChanged() then setState()
     State->>State: _denominationTotal(controllers) for each table
     State->>State: grand = cash + forex + cheques
-    State->>State: expensesVariance = expenses cash - listed expenses
+    State->>State: net = grand total - listed expenses
     State->>State: natsave = grand total - tithe of tithes - expenses (the rest)
     State->>UI: rebuild
     alt |variance| less than or equal to 0.01

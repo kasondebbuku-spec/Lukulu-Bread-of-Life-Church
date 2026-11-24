@@ -29,7 +29,6 @@ void main() {
       preparedBy: 'Inambao Nanzila',
       checkedBy: 'Msiska Isaac',
       collectedBy: 'Mabai Mike',
-      expensesReserveBlock: const CategoryBlock(denominationBreakdown: {'1': 3760}),
       expenseEntries: const [ExpenseEntry(description: 'Missions', amount: 3180)],
     );
 

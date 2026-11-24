@@ -58,7 +58,6 @@ class SundayIncomeForm {
     required this.preparedBy,
     required this.checkedBy,
     required this.collectedBy,
-    this.expensesReserveBlock = const CategoryBlock(denominationBreakdown: {}),
     this.expenseEntries = const [],
     this.enteredBy = '',
     this.enteredByUid = '',
@@ -84,9 +83,8 @@ class SundayIncomeForm {
   final String checkedBy;
   final String collectedBy;
 
-  /// Cash held back locally to cover [expenseEntries], and nothing else. Its
-  /// total should equal [totalExpenses] -- see [isExpensesReconciled].
-  final CategoryBlock expensesReserveBlock;
+  /// The itemised expenses (a description and an amount each). Their total is
+  /// taken off the grand total; there is no separate cash count for them.
   final List<ExpenseEntry> expenseEntries;
 
   /// Who typed this form into the app (their account name and id), recorded
@@ -152,9 +150,6 @@ class SundayIncomeForm {
   double natsaveDeposit(Map<String, double> valuesByKey) =>
       grandTotal(valuesByKey) - titheOfTithes(valuesByKey) - totalExpenses;
 
-  double expensesReserveTotal(Map<String, double> valuesByKey) =>
-      expensesReserveBlock.amount(valuesByKey);
-
   double get totalExpenses =>
       expenseEntries.fold(0.0, (total, e) => total + e.amount);
 
@@ -168,20 +163,6 @@ class SundayIncomeForm {
   /// the same as the [netAmount].
   double totalCollection(Map<String, double> valuesByKey) =>
       titheOfTithes(valuesByKey) + natsaveDeposit(valuesByKey);
-
-  /// Cash set aside for expenses minus the itemised expenses. Zero reconciles.
-  double expensesVariance(Map<String, double> valuesByKey) =>
-      expensesReserveTotal(valuesByKey) - totalExpenses;
-
-  bool isExpensesReconciled(Map<String, double> valuesByKey,
-          {double epsilon = 0.01}) =>
-      expensesVariance(valuesByKey).abs() <= epsilon;
-
-  /// The one remaining check: the expenses cash matches the listed expenses.
-  /// (The tithe of tithes and the Natsave deposit are calculated, so there is
-  /// nothing to count or check for them.)
-  bool isReconciled(Map<String, double> valuesByKey, {double epsilon = 0.01}) =>
-      isExpensesReconciled(valuesByKey, epsilon: epsilon);
 
   /// Returns a copy with a different id — used once the server assigns one
   /// on save, so the caller doesn't have to rebuild the whole object by hand.
@@ -198,7 +179,6 @@ class SundayIncomeForm {
         preparedBy: preparedBy,
         checkedBy: checkedBy,
         collectedBy: collectedBy,
-        expensesReserveBlock: expensesReserveBlock,
         expenseEntries: expenseEntries,
         enteredBy: enteredBy,
         enteredByUid: enteredByUid,
@@ -248,10 +228,6 @@ class SundayIncomeForm {
       preparedBy: data['preparedBy'] as String? ?? '',
       checkedBy: data['checkedBy'] as String? ?? '',
       collectedBy: data['collectedBy'] as String? ?? '',
-      expensesReserveBlock: data['expensesReserveBlock'] is Map
-          ? CategoryBlock.fromMap(
-              Map<String, dynamic>.from(data['expensesReserveBlock'] as Map))
-          : const CategoryBlock(denominationBreakdown: {}),
       expenseEntries: ((data['expenseEntries'] as List?) ?? [])
           .map((e) => ExpenseEntry.fromMap(Map<String, dynamic>.from(e as Map)))
           .toList(),
@@ -279,7 +255,6 @@ class SundayIncomeForm {
         'preparedBy': preparedBy,
         'checkedBy': checkedBy,
         'collectedBy': collectedBy,
-        'expensesReserveBlock': expensesReserveBlock.toMap(),
         'expenseEntries': expenseEntries.map((e) => e.toMap()).toList(),
         if (enteredBy.isNotEmpty) 'enteredBy': enteredBy,
         if (enteredByUid.isNotEmpty) 'enteredByUid': enteredByUid,

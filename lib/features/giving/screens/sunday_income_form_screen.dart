@@ -77,10 +77,6 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
   final List<_ChequeRow> _chequeRows = [_ChequeRow()];
   final List<_ExpenseRow> _expenseRows = [_ExpenseRow()];
 
-  final Map<String, TextEditingController> _expensesReserveControllers = {
-    for (final d in zmwDenominations) d.key: TextEditingController(),
-  };
-
   final _menController = TextEditingController();
   final _womenController = TextEditingController();
   final _childrenController = TextEditingController();
@@ -135,7 +131,6 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
     for (final c in GivingCategory.values) {
       _fillDenominations(_controllers[c]!, form.categoryBlocks[c]);
     }
-    _fillDenominations(_expensesReserveControllers, form.expensesReserveBlock);
 
     String money(double v) => v == v.roundToDouble() ? v.toStringAsFixed(0) : '$v';
 
@@ -195,9 +190,6 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
     for (final row in _expenseRows) {
       row.dispose();
     }
-    for (final c in _expensesReserveControllers.values) {
-      c.dispose();
-    }
     _menController.dispose();
     _womenController.dispose();
     _childrenController.dispose();
@@ -246,18 +238,12 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
 
   double get _titheAmount => _denominationTotal(_controllers[GivingCategory.tithe]!);
   double get _titheOfTithes => _titheAmount * titheOfTithesRate;
-  double get _expensesReserveTotal => _denominationTotal(_expensesReserveControllers);
   double get _expensesTotal => _expenseRows.fold(
       0.0, (total, r) => total + (double.tryParse(r.amountController.text.trim()) ?? 0));
 
   /// What goes into the Natsave account: everything received, less the tithe
   /// of tithes, less the expenses. Calculated, never typed in.
   double get _natsaveTotal => _grandTotal - _titheOfTithes - _expensesTotal;
-
-  /// Expenses are checked against expenses only: cash set aside minus the
-  /// itemised expenses. Zero reconciles.
-  double get _expensesVariance => _expensesReserveTotal - _expensesTotal;
-  bool get _isExpensesReconciled => _expensesVariance.abs() <= 0.01;
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
@@ -504,10 +490,6 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
             widget.initialForm?.checkedBySignature,
         collectedBySignature: await _signatureBytes(_collectedSignature) ??
             widget.initialForm?.collectedBySignature,
-        expensesReserveBlock: CategoryBlock(denominationBreakdown: {
-          for (final d in zmwDenominations)
-            d.key: int.tryParse(_expensesReserveControllers[d.key]!.text.trim()) ?? 0,
-        }),
         expenseEntries: _expenseRows
             .map((r) => ExpenseEntry(
                   description: r.descriptionController.text.trim(),
@@ -680,13 +662,6 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
               }),
             ),
             const SizedBox(height: 12),
-            _CategoryTable(
-              title: 'Expenses Cash Count',
-              color: AppColors.goldInk,
-              controllers: _expensesReserveControllers,
-              onChanged: () => setState(() {}),
-            ),
-            const SizedBox(height: 12),
             _ExpenseSection(
               rows: _expenseRows,
               onChanged: () => setState(() {}),
@@ -697,14 +672,6 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
               }),
             ),
             const SizedBox(height: 12),
-            if (!_isExpensesReconciled) ...[
-              WarningBox(
-                  'Expenses cash does not match the listed expenses: '
-                  '${formatZmw(_expensesReserveTotal)} counted against '
-                  '${formatZmw(_expensesTotal)} listed '
-                  '(variance ${formatZmw(_expensesVariance)}).'),
-              const SizedBox(height: 12),
-            ],
             // After everything is received, the tithe of tithes and the expenses
             // are taken out; the rest goes into the Natsave account. Both are
             // worked out for you, so there is nothing to count here.

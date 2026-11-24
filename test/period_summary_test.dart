@@ -26,7 +26,7 @@ GivingRecord _give(DateTime date, double amount,
     );
 
 SundayIncomeForm _form(DateTime date,
-        {int tithe100 = 10, int men = 10, int women = 10, int children = 5, int reserve = 500}) =>
+        {int tithe100 = 10, int men = 10, int women = 10, int children = 5}) =>
     SundayIncomeForm(
       id: '',
       date: date,
@@ -44,7 +44,6 @@ SundayIncomeForm _form(DateTime date,
       preparedBy: 'a',
       checkedBy: 'b',
       collectedBy: 'c',
-      expensesReserveBlock: CategoryBlock(denominationBreakdown: {'1': reserve}),
       expenseEntries: const [ExpenseEntry(description: 'x', amount: 500)],
     );
 
@@ -59,7 +58,6 @@ void main() {
     _give(DateTime(2025, 10, 5), 111), // previous year
   ];
   final forms = [
-    // The expenses cash (500) matches the listed expenses (500) -> reconciles.
     _form(DateTime(2026, 10, 4)),
     _form(DateTime(2026, 10, 11), tithe100: 20, men: 20, women: 20, children: 10),
     _form(DateTime(2026, 9, 27)),

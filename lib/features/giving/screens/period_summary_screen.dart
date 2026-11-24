@@ -179,38 +179,13 @@ class _PeriodSummaryScreenState extends ConsumerState<PeriodSummaryScreen> {
           TrendCard(comparison: comparison),
           if (f.hasForms) ...[
             const SizedBox(height: 20),
-            Text('Bank deposit & expenses',
+            Text('Bank deposit',
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             _Line('Tithe of Tithes (10% of tithe)', f.titheOfTithes, AppColors.secondary),
             _Line('Natsave Deposit', f.natsaveDeposit, AppColors.primaryDark),
             _Line('Total Collection', f.totalCollection, AppColors.secondaryDark,
                 emphasized: true),
-            _Line('Expenses Cash', f.expensesReserve,
-                AppColors.goldInk),
-            if (f.unreconciledCount > 0)
-              Container(
-                margin: const EdgeInsets.only(top: 4),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.goldInk.withValues(alpha: 0.12),
-                  border: Border.all(color: AppColors.goldInk),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.warning_amber_outlined, color: AppColors.goldInk),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        '${f.unreconciledCount} of ${f.formCount} form(s) in this '
-                        'period do not reconcile.',
-                        style: const TextStyle(color: AppColors.goldInk),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             const SizedBox(height: 20),
             Text('Attendance', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),

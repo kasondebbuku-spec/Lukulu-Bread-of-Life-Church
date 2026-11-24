@@ -116,22 +116,12 @@ Future<Uint8List> buildPeriodSummaryPdf(PeriodSummary summary,
             ),
         ],
         if (forms.hasForms) ...[
-          _heading('Bank deposit and expenses'),
+          _heading('Bank deposit'),
           _table(['', 'Amount (K)'], [
             ['Tithe of Tithes (10% of tithe)', formatZmw(forms.titheOfTithes)],
             ['Natsave Deposit', formatZmw(forms.natsaveDeposit)],
             ['Total Collection', formatZmw(forms.totalCollection)],
-            ['Expenses Cash', formatZmw(forms.expensesReserve)],
           ]),
-          if (forms.unreconciledCount > 0)
-            pw.Padding(
-              padding: const pw.EdgeInsets.only(top: 6),
-              child: pw.Text(
-                '${forms.unreconciledCount} of ${forms.formCount} form(s) in this '
-                'period do not reconcile.',
-                style: _head,
-              ),
-            ),
           _heading('Attendance'),
           _table(['', 'Value'], [
             ['Services recorded', '${summary.serviceCount}'],

@@ -113,7 +113,7 @@ class _WeeklyStatementScreenState extends ConsumerState<WeeklyStatementScreen> {
               TrendCard(comparison: comparison),
               if (formTotals.hasForms) ...[
                 const SizedBox(height: 24),
-                Text('Bank Deposit & Expenses',
+                Text('Bank Deposit',
                     style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 8),
                 _StatRow(
@@ -132,35 +132,6 @@ class _WeeklyStatementScreenState extends ConsumerState<WeeklyStatementScreen> {
                   color: AppColors.secondaryDark,
                   emphasized: true,
                 ),
-                _StatRow(
-                  label: 'Expenses Cash',
-                  value: formTotals.expensesReserve,
-                  color: AppColors.goldInk,
-                ),
-                if (formTotals.unreconciledCount > 0)
-                  Container(
-                    margin: const EdgeInsets.only(top: 4),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.goldInk.withValues(alpha: 0.12),
-                      border: Border.all(color: AppColors.goldInk),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.warning_amber_outlined, color: AppColors.goldInk),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            '${formTotals.unreconciledCount} of ${formTotals.formCount} '
-                            'form(s) this week do not reconcile — open the Sunday '
-                            'Income Form to review the variance.',
-                            style: const TextStyle(color: AppColors.goldInk),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
               ],
               const SizedBox(height: 24),
               Text('Offering Denomination Breakdown',

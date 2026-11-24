@@ -7,7 +7,6 @@ import '../../../core/providers/audit_actor_provider.dart';
 import '../../../core/providers/user_role_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_format.dart';
-import '../../../core/widgets/warning_box.dart';
 import '../../../models/giving_record.dart';
 import '../../../models/sunday_income_form.dart';
 import '../../../repositories/repository_providers.dart';
@@ -146,11 +145,6 @@ class IncomeFormDetailScreen extends ConsumerWidget {
           const SizedBox(height: 8),
           OverallIncomeCard(counts: form.overallDenominationCounts()),
           const SizedBox(height: 8),
-          _Row(
-            label: 'Expenses Cash',
-            value: form.expensesReserveTotal(valuesByKey),
-            color: AppColors.goldInk,
-          ),
           const Divider(height: 32),
           _Row(
             label: 'Grand Total',
@@ -185,11 +179,6 @@ class IncomeFormDetailScreen extends ConsumerWidget {
             color: AppColors.secondaryDark,
             emphasized: true,
           ),
-          if (!form.isExpensesReconciled(valuesByKey)) ...[
-            const SizedBox(height: 8),
-            WarningBox('Expenses cash does not match the listed expenses '
-                '(variance ${formatZmw(form.expensesVariance(valuesByKey))}).'),
-          ],
           if (form.expenseEntries.isNotEmpty) ...[
             const SizedBox(height: 16),
             Card(
