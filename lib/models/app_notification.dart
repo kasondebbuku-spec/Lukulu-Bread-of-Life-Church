@@ -2,7 +2,7 @@ import '../core/utils/date_format.dart';
 import 'announcement.dart';
 import 'church_event.dart';
 
-enum NotificationKind { announcement, event }
+enum NotificationKind { announcement, event, incomeForm }
 
 /// One "something new was posted" entry. Derived from announcements and events,
 /// never stored, so it can never disagree with them.
@@ -27,10 +27,15 @@ const notificationWindow = Duration(days: 30);
 
 /// New announcements and events from the last [notificationWindow], newest first.
 /// Items without a posted time (still being saved) are left out until they have one.
+///
+/// [extra] carries other already-built entries (such as a Sunday income form
+/// saved by the finance officer, for people who may see giving); they get the
+/// same window and ordering.
 List<AppNotification> buildNotifications({
   required List<Announcement> announcements,
   required List<ChurchEvent> events,
   required DateTime now,
+  List<AppNotification> extra = const [],
 }) {
   final cutoff = now.subtract(notificationWindow);
   final items = <AppNotification>[
@@ -53,6 +58,8 @@ List<AppNotification> buildNotifications({
           ].join(' - '),
           at: e.createdAt!,
         ),
+    for (final x in extra)
+      if (x.at.isAfter(cutoff)) x,
   ];
   items.sort((a, b) => b.at.compareTo(a.at));
   return items;

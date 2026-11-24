@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:church_cms/core/providers/firebase_providers.dart';
 import 'package:church_cms/core/providers/notifications_provider.dart';
 import 'package:church_cms/core/providers/user_profile_provider.dart';
 import 'package:church_cms/core/providers/user_role_provider.dart';
@@ -109,6 +110,8 @@ void main() {
       overrides: [
         announcementsProvider.overrideWith((ref) => Stream.value(announcements)),
         eventsProvider.overrideWith((ref) => Stream.value(events)),
+        authStateChangesProvider.overrideWith((ref) => Stream.value(null)),
+        incomeFormsProvider.overrideWith((ref) => Stream.value([])),
         userProfileProvider.overrideWith((ref) => Stream.value({
               if (seenAt != null) 'notificationsSeenAt': Timestamp.fromDate(seenAt),
               ...?profile,

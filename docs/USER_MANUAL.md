@@ -189,6 +189,27 @@ the giving records and the attendance record for you.
     tithes plus the Natsave deposit, so it equals the net amount). All of it
     updates as you work.
 12. Tap **Save Form**.
+    - If something required is still empty, the form is **not** saved. A gold
+      message just above the button says exactly what is missing (for example
+      *Not saved yet. Please fill in: Men, Women, Children, Checked By*), and the
+      form scrolls to the first section that needs it.
+    - If the save fails (no connection, or the account is not allowed to save),
+      a message says **Could not save** and why, and nothing is stored.
+    - When it works you see **Saved. You can find it again in Giving > Sunday
+      Income Forms.** and the saved form opens.
+
+### Finding what was entered
+Every saved form records **who entered it and when**.
+- **Giving -> Sunday Income Forms** (a card at the top of the Giving screen, and
+  the receipt icon in its top bar) lists every Sunday, newest saved first, with
+  the grand total, the net amount, *Entered by* and the time it was saved. Tap
+  one to open it, print it or download the PDF.
+- **Home** shows a **Sunday Income Forms** card with the latest Sunday and who
+  entered it. Admin, Finance Officer, Pastor and Financial Oversight see it.
+- The **bell** tells Admin, Pastor and Financial Oversight (and the Finance
+  Officer, for forms someone else saved) when a new Sunday Income Form is saved.
+- The **Activity log** keeps the full history of who created, changed or deleted
+  each form.
 
 ### After saving
 - A detail page shows every figure, the expenses list and the signatures.

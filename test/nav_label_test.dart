@@ -34,6 +34,7 @@ void main() {
           eventsProvider.overrideWith((ref) => Stream.value([])),
           announcementsProvider.overrideWith((ref) => Stream.value([])),
           prayerRequestsProvider.overrideWith((ref) => Stream.value([])),
+          incomeFormsProvider.overrideWith((ref) => Stream.value([])),
         ],
         child: MaterialApp(theme: AppTheme.lightTheme, home: const AppShell()),
       ));
@@ -66,6 +67,7 @@ void main() {
         eventsProvider.overrideWith((ref) => Stream.value([])),
         announcementsProvider.overrideWith((ref) => Stream.value([])),
         prayerRequestsProvider.overrideWith((ref) => Stream.value([])),
+        incomeFormsProvider.overrideWith((ref) => Stream.value([])),
       ],
       child: MaterialApp(theme: AppTheme.lightTheme, home: const AppShell()),
     ));

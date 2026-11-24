@@ -11,6 +11,17 @@ import '../../../core/utils/currency_format.dart';
 import 'audit_log_screen.dart';
 import 'income_form_detail_screen.dart';
 
+/// "Entered by Mary Banda  *  saved Nov 22, 2026 10:42" -- who put it in and when.
+String _enteredLine(SundayIncomeForm form) {
+  String two(int n) => n.toString().padLeft(2, '0');
+  final saved = form.createdAt;
+  final when = saved == null
+      ? ''
+      : 'saved ${formatDate(saved)} ${two(saved.hour)}:${two(saved.minute)}';
+  final who = form.enteredByLabel.isEmpty ? '' : 'Entered by ${form.enteredByLabel}';
+  return [who, when].where((p) => p.isNotEmpty).join('  \u2022  ');
+}
+
 class IncomeFormsListScreen extends ConsumerWidget {
   const IncomeFormsListScreen({super.key});
 
@@ -50,8 +61,11 @@ class IncomeFormsListScreen extends ConsumerWidget {
                 child: ListTile(
                   leading: const CircleAvatar(child: Icon(Icons.receipt_long_outlined)),
                   title: Text('${formatDate(form.date)} — ${form.service.label}'),
+                  isThreeLine: true,
                   subtitle: Text(
-                      'Grand Total: ${formatZmw(form.grandTotal(valuesByKey))}'),
+                      'Grand Total: ${formatZmw(form.grandTotal(valuesByKey))}'
+                      '  \u2022  Net: ${formatZmw(form.netAmount(valuesByKey))}\n'
+                      '${_enteredLine(form)}'),
                   trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
                   onTap: () => Navigator.push(
                     context,

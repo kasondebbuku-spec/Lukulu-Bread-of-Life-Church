@@ -366,6 +366,22 @@ class _GivingScreenState extends ConsumerState<GivingScreen> {
               ),
             ),
           ),
+          // The saved Sunday forms are what the finance officer entered; make them
+          // easy to find rather than only behind a toolbar icon.
+          Card(
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: ListTile(
+              leading: const Icon(Icons.receipt_long_outlined, color: AppColors.blue),
+              title: const Text('Sunday Income Forms'),
+              subtitle: const Text('What was entered each Sunday, by whom'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const IncomeFormsListScreen()),
+              ),
+            ),
+          ),
           Expanded(
             child: AsyncValueView<List<GivingRecord>>(
               value: recordsAsync,

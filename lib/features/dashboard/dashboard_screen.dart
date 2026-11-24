@@ -9,12 +9,14 @@ import '../../core/providers/firebase_providers.dart';
 import '../../core/providers/user_role_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/currency_format.dart';
+import '../../core/utils/date_format.dart';
 import '../../core/utils/greeting.dart';
 import '../../repositories/repository_providers.dart';
 import '../announcements/screens/announcements_screen.dart';
 import '../attendance/screens/attendance_screen.dart';
 import '../events/screens/events_screen.dart';
 import '../giving/screens/giving_screen.dart';
+import '../giving/screens/income_forms_list_screen.dart';
 import '../members/screens/members_screen.dart';
 import '../prayer/screens/prayer_screen.dart';
 import 'widgets/daily_verse_card.dart';
@@ -231,6 +233,24 @@ class DashboardScreen extends ConsumerWidget {
         icon: Icons.account_balance_wallet,
         accentColor: AppColors.goldInk,
         onTap: () => openScreen(const GivingScreen()),
+      ));
+
+      // What the finance officer entered, at a glance: the latest Sunday and who
+      // put it in. (Forms are newest-saved first.)
+      final forms = ref.watch(incomeFormsProvider);
+      cards.add(_DashboardCard(
+        title: 'Sunday Income Forms',
+        subtitle: forms.maybeWhen(
+          data: (f) => f.isEmpty
+              ? 'None entered yet'
+              : 'Latest: ${formatDate(f.first.date)}'
+                  '${f.first.enteredByLabel.isEmpty ? '' : ' by ${f.first.enteredByLabel}'}',
+          orElse: () => 'Loading\u2026',
+        ),
+        count: forms.maybeWhen(data: (f) => '${f.length}', orElse: () => '\u2026'),
+        icon: Icons.receipt_long,
+        accentColor: AppColors.blue,
+        onTap: () => openScreen(const IncomeFormsListScreen()),
       ));
     }
 

@@ -60,6 +60,8 @@ class SundayIncomeForm {
     required this.collectedBy,
     this.expensesReserveBlock = const CategoryBlock(denominationBreakdown: {}),
     this.expenseEntries = const [],
+    this.enteredBy = '',
+    this.enteredByUid = '',
     this.preparedBySignature,
     this.checkedBySignature,
     this.collectedBySignature,
@@ -86,6 +88,16 @@ class SundayIncomeForm {
   /// total should equal [totalExpenses] -- see [isExpensesReconciled].
   final CategoryBlock expensesReserveBlock;
   final List<ExpenseEntry> expenseEntries;
+
+  /// Who typed this form into the app (their account name and id), recorded
+  /// when it is first saved so leaders can see who entered what. Empty on forms
+  /// saved before this was recorded; [preparedBy] is the fallback name there.
+  final String enteredBy;
+  final String enteredByUid;
+
+  /// The name to show for "entered by": the person who saved it, or the
+  /// prepared-by name on older forms.
+  String get enteredByLabel => enteredBy.isNotEmpty ? enteredBy : preparedBy;
 
   /// Drawn signatures (PNG bytes), stored base64 in the document. Optional --
   /// a form can still be saved with only the typed names.
@@ -188,6 +200,8 @@ class SundayIncomeForm {
         collectedBy: collectedBy,
         expensesReserveBlock: expensesReserveBlock,
         expenseEntries: expenseEntries,
+        enteredBy: enteredBy,
+        enteredByUid: enteredByUid,
         preparedBySignature: preparedBySignature,
         checkedBySignature: checkedBySignature,
         collectedBySignature: collectedBySignature,
@@ -241,6 +255,8 @@ class SundayIncomeForm {
       expenseEntries: ((data['expenseEntries'] as List?) ?? [])
           .map((e) => ExpenseEntry.fromMap(Map<String, dynamic>.from(e as Map)))
           .toList(),
+      enteredBy: data['enteredBy'] as String? ?? '',
+      enteredByUid: data['enteredByUid'] as String? ?? '',
       preparedBySignature: _decodeSignature(data['preparedBySignature']),
       checkedBySignature: _decodeSignature(data['checkedBySignature']),
       collectedBySignature: _decodeSignature(data['collectedBySignature']),
@@ -265,6 +281,8 @@ class SundayIncomeForm {
         'collectedBy': collectedBy,
         'expensesReserveBlock': expensesReserveBlock.toMap(),
         'expenseEntries': expenseEntries.map((e) => e.toMap()).toList(),
+        if (enteredBy.isNotEmpty) 'enteredBy': enteredBy,
+        if (enteredByUid.isNotEmpty) 'enteredByUid': enteredByUid,
         if (preparedBySignature != null)
           'preparedBySignature': base64Encode(preparedBySignature!),
         if (checkedBySignature != null)

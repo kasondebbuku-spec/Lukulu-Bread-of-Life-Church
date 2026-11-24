@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:firebase_core/firebase_core.dart' show FirebaseException;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:signature/signature.dart';
@@ -91,6 +92,12 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
 
   bool _saving = false;
   bool _signing = false;
+
+  /// Why the last Save did nothing (missing fields) or failed, shown right above
+  /// the Save button where the person is looking.
+  String? _saveMessage;
+  final _attendanceKey = GlobalKey();
+  final _signoffKey = GlobalKey();
 
   @override
   void initState() {
@@ -263,11 +270,63 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
   Future<Uint8List?> _signatureBytes(SignatureController c) async =>
       c.isEmpty ? null : c.toPngBytes();
 
+  /// The required fields still empty, in the order they appear on the form.
+  List<String> _missingRequired() => [
+        if (int.tryParse(_menController.text.trim()) == null) 'Men',
+        if (int.tryParse(_womenController.text.trim()) == null) 'Women',
+        if (int.tryParse(_childrenController.text.trim()) == null) 'Children',
+        if (_preparedByController.text.trim().isEmpty) 'Prepared By',
+        if (_checkedByController.text.trim().isEmpty) 'Checked By',
+        if (_collectedByController.text.trim().isEmpty) 'Collected By',
+      ];
+
+  /// Takes the person to the first section that needs filling in.
+  void _scrollToProblem(List<String> missing) {
+    final attendanceMissing =
+        missing.any((m) => m == 'Men' || m == 'Women' || m == 'Children');
+    final target = (attendanceMissing ? _attendanceKey : _signoffKey).currentContext;
+    if (target != null) {
+      Scrollable.ensureVisible(target,
+          duration: const Duration(milliseconds: 350), alignment: 0.05);
+    }
+  }
+
+  String _friendlyError(Object e) {
+    if (e is StateError) return e.message;
+    if (e is FirebaseException) {
+      if (e.code == 'permission-denied') {
+        return 'your account is not allowed to save Sunday income forms.';
+      }
+      if (e.code == 'unavailable') {
+        return 'there is no connection right now.';
+      }
+    }
+    return 'please check your connection and try again.';
+  }
+
   Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _saving = true);
+    final messenger = ScaffoldMessenger.of(context);
+    if (!_formKey.currentState!.validate()) {
+      // Saving did not happen. Say so where the person is looking (the Save
+      // button is at the bottom, the empty fields are higher up), then take
+      // them to the first one.
+      final missing = _missingRequired();
+      setState(() => _saveMessage = missing.isEmpty
+          ? 'Not saved yet. Please check the highlighted fields above.'
+          : 'Not saved yet. Please fill in: ${missing.join(', ')}.');
+      _scrollToProblem(missing);
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _saveMessage = null;
+    });
 
     try {
+      final actor = ref.read(auditActorProvider);
+      if (actor == null) {
+        throw StateError('You must be signed in to save a form.');
+      }
       final valuesByKey = _valuesByKey;
       final form = SundayIncomeForm(
         id: widget.initialForm?.id ?? '',
@@ -318,12 +377,11 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
                 ))
             .where((e) => e.amount > 0)
             .toList(),
+        // Who typed it in: the person saving it now, or whoever first saved it.
+        enteredBy: widget.initialForm?.enteredBy ?? actor.name,
+        enteredByUid: widget.initialForm?.enteredByUid ?? actor.uid,
       );
 
-      final actor = ref.read(auditActorProvider);
-      if (actor == null) {
-        throw StateError('You must be signed in to save a form.');
-      }
       final repository = ref.read(incomeFormRepositoryProvider);
       final String id;
       if (_editing) {
@@ -335,12 +393,21 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
       }
 
       if (!mounted) return;
+      messenger.showSnackBar(const SnackBar(
+        content: Text('Saved. You can find it again in Giving > Sunday Income Forms.'),
+      ));
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (context) => IncomeFormDetailScreen(form: form.copyWithId(id)),
         ),
       );
+    } catch (e) {
+      // Nothing was saved: say so in words, instead of failing silently.
+      if (mounted) {
+        setState(() =>
+            _saveMessage = 'Could not save: ${_friendlyError(e)} Nothing was saved.');
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -354,6 +421,9 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
       body: Form(
         key: _formKey,
         child: ListView(
+          // Build the whole form so Save can scroll to a field that needs filling
+          // in, however far up it is.
+          cacheExtent: 30000,
           physics: _signing ? const NeverScrollableScrollPhysics() : null,
           padding: const EdgeInsets.all(16),
           children: [
@@ -466,6 +536,7 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
             ),
             const SizedBox(height: 12),
             Card(
+              key: _attendanceKey,
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(
@@ -512,6 +583,7 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
             ),
             const SizedBox(height: 12),
             Card(
+              key: _signoffKey,
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(
@@ -582,6 +654,10 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
               ),
             ),
             const SizedBox(height: 24),
+            if (_saveMessage != null) ...[
+              WarningBox(_saveMessage!),
+              const SizedBox(height: 12),
+            ],
             ElevatedButton(
               onPressed: _saving ? null : _save,
               child: _saving
