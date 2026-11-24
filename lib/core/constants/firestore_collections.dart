@@ -9,5 +9,6 @@ abstract final class FirestoreCollections {
   static const events = 'events';
   static const announcements = 'announcements';
   static const prayerRequests = 'prayer_requests';
+  static const pledges = 'pledges';
   static const auditLog = 'audit_log';
 }
