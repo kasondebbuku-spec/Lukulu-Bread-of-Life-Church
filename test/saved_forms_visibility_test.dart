@@ -239,10 +239,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('Entered by Mary Banda'), findsOneWidget);
-      expect(find.textContaining('saved Nov 22, 2026 10:42'), findsOneWidget);
+      expect(find.textContaining('Saved Nov 22, 2026 10:42'), findsOneWidget);
       // An older form has no recorded saver, so the prepared-by name is shown.
       expect(find.textContaining('Entered by Peter Kabwe'), findsOneWidget);
-      expect(find.textContaining('Net: ZMW 2900.00'), findsNWidgets(2));
+      expect(find.textContaining('Net Amount: ZMW 2900.00'), findsNWidgets(2));
     });
   });
 

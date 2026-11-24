@@ -11,15 +11,16 @@ import '../../../core/utils/currency_format.dart';
 import 'audit_log_screen.dart';
 import 'income_form_detail_screen.dart';
 
-/// "Entered by Mary Banda  *  saved Nov 22, 2026 10:42" -- who put it in and when.
-String _enteredLine(SundayIncomeForm form) {
+/// Two short lines, "Entered by Mary Banda" and "Saved Nov 22, 2026 10:42": who
+/// put it in and when. Each on its own line so they read cleanly on a phone.
+String _enteredLines(SundayIncomeForm form) {
   String two(int n) => n.toString().padLeft(2, '0');
   final saved = form.createdAt;
-  final when = saved == null
-      ? ''
-      : 'saved ${formatDate(saved)} ${two(saved.hour)}:${two(saved.minute)}';
-  final who = form.enteredByLabel.isEmpty ? '' : 'Entered by ${form.enteredByLabel}';
-  return [who, when].where((p) => p.isNotEmpty).join('  \u2022  ');
+  return [
+    if (form.enteredByLabel.isNotEmpty) 'Entered by ${form.enteredByLabel}',
+    if (saved != null)
+      'Saved ${formatDate(saved)} ${two(saved.hour)}:${two(saved.minute)}',
+  ].join('\n');
 }
 
 class IncomeFormsListScreen extends ConsumerWidget {
@@ -63,9 +64,9 @@ class IncomeFormsListScreen extends ConsumerWidget {
                   title: Text('${formatDate(form.date)} — ${form.service.label}'),
                   isThreeLine: true,
                   subtitle: Text(
-                      'Grand Total: ${formatZmw(form.grandTotal(valuesByKey))}'
-                      '  \u2022  Net: ${formatZmw(form.netAmount(valuesByKey))}\n'
-                      '${_enteredLine(form)}'),
+                      'Grand Total: ${formatZmw(form.grandTotal(valuesByKey))}\n'
+                      'Net Amount: ${formatZmw(form.netAmount(valuesByKey))}\n'
+                      '${_enteredLines(form)}'),
                   trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
                   onTap: () => Navigator.push(
                     context,
