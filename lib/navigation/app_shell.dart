@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/providers/display_name_provider.dart';
-import '../core/providers/firebase_providers.dart';
+import '../core/providers/push_providers.dart';
 import '../core/providers/user_role_provider.dart';
 import '../features/announcements/screens/announcements_screen.dart';
 import '../features/attendance/screens/attendance_screen.dart';
@@ -133,7 +133,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                   onSelected: (i) => setState(() => _selectedIndex = i),
                   userName: userName,
                   roleLabel: role.label,
-                  onLogout: () => ref.read(firebaseAuthProvider).signOut(),
+                  onLogout: () => ref.read(signOutProvider)(),
                 ),
                 Expanded(child: allDestinations[index].builder()),
               ],

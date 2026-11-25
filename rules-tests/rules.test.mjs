@@ -936,6 +936,49 @@ async function main() {
   await check('an Admin CAN delete a report', () =>
     assertSucceeds(deleteDoc(rRef('admin1', 'mr_admin_del'))));
 
+  console.log('\n--- Phone notification devices ---');
+  const device = (uid, extra = {}) => ({ uid, updatedAt: serverTimestamp(), ...extra });
+  const dev = (uid, id) => doc(ctxFor(uid), 'push_tokens/' + id);
+  await seedDoc('push_tokens/tok_member2', { uid: 'member2', updatedAt: ts('2026-11-01') });
+  await seedDoc('push_tokens/tok_old', { uid: 'member2', updatedAt: ts('2026-11-01') });
+  await seedDoc('push_tokens/tok_del', { uid: 'member2', updatedAt: ts('2026-11-01') });
+
+  await check('a person CAN register their own device', () =>
+    assertSucceeds(setDoc(dev('member1', 'tok_member1'), device('member1'))));
+  await check('a person CANNOT register a device under someone else\'s name', () =>
+    assertFails(setDoc(dev('member1', 'tok_fake'), device('member2'))));
+  await check('a device record CANNOT carry extra fields', () =>
+    assertFails(setDoc(dev('member1', 'tok_extra'), device('member1', { role: 'admin' }))));
+  await check('a device record CANNOT carry a made-up time', () =>
+    assertFails(setDoc(dev('member1', 'tok_time'), device('member1', { updatedAt: ts('2020-01-01') }))));
+  await check('someone not signed in CANNOT register a device', () =>
+    assertFails(setDoc(doc(testEnv.unauthenticatedContext().firestore(), 'push_tokens/tok_anon'), device('member1'))));
+
+  await check('a person CAN read their own device record', () =>
+    assertSucceeds(getDoc(dev('member2', 'tok_member2'))));
+  await check('a person CAN ask about a device that is not registered yet', () =>
+    assertSucceeds(getDoc(dev('member1', 'tok_never_registered'))));
+  await check('a person CANNOT read someone else\'s device record', () =>
+    assertFails(getDoc(dev('member1', 'tok_member2'))));
+  for (const who of ['pastor1', 'admin1', 'finance1']) {
+    await check(who + ' CANNOT read other people\'s devices', () =>
+      assertFails(getDoc(dev(who, 'tok_member2'))));
+  }
+  await check('a person CANNOT list every device', () =>
+    assertFails(getDocs(collection(ctxFor('member1'), 'push_tokens'))));
+  await check('a person CAN list their own devices', () =>
+    assertSucceeds(getDocs(query(collection(ctxFor('member2'), 'push_tokens'), where('uid', '==', 'member2')))));
+
+  await check('signing in on a phone another person used takes it over', () =>
+    assertSucceeds(setDoc(dev('member1', 'tok_old'), device('member1'))));
+  await check('a person CANNOT hand a device to someone else', () =>
+    assertFails(updateDoc(dev('member1', 'tok_member1'), { uid: 'member2', updatedAt: serverTimestamp() })));
+
+  await check('a person CANNOT remove someone else\'s device', () =>
+    assertFails(deleteDoc(dev('member1', 'tok_del'))));
+  await check('a person CAN remove their own device', () =>
+    assertSucceeds(deleteDoc(dev('member2', 'tok_del'))));
+
   console.log('\n--- Members editing and deleting their own prayer requests ---');
   await seedUser('member3', 'member');
   const prayer = (uid) => ({ userId: uid, userName: uid, request: 'original', status: 'pending' });

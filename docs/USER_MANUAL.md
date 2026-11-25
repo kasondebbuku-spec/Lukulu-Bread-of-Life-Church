@@ -23,6 +23,7 @@ This manual explains how to use the church app. Start with
 11. [Troubleshooting and FAQ](#11-troubleshooting-and-faq)
 12. [Good practice for financial records](#12-good-practice-for-financial-records)
 13. [Leaders and ministry reports](#13-leaders-and-ministry-reports)
+14. [Phone notifications](#14-phone-notifications)
 
 ---
 
@@ -551,3 +552,28 @@ given a role before the directory existed, tap the **refresh** button at the top
 **Leaders** once to fill it from the accounts.
 
 > Rosters of ministry members and ministry finances are not part of the app yet.
+
+---
+
+## 14. Phone notifications
+
+Besides the bell inside the app, the church app can send a **notification to your
+phone**, even when the app is closed.
+
+1. Open **Notifications** (the bell on Home, or **Notices** on a phone).
+2. Tap **Turn on alerts** and choose **Allow** when your browser asks.
+3. To stop them, open the same screen and tap **Turn off**.
+
+You are told about: new events and announcements; and, depending on your role, a
+ministry report to review (Pastor, Admin), your report being reviewed (leaders), a role or
+position waiting for approval (Admin), and a Sunday income form being saved (Finance,
+Financial Oversight, Pastor, Admin). Notifications about money say who and when, never an amount,
+because they can show on a locked screen.
+
+* Alerts are **per phone**. Signing out turns them off on that phone.
+* If you tapped **Block** by mistake, allow notifications for the site in your browser
+  settings, then come back and turn them on.
+* **iPhone:** add the app to your Home Screen first (**Share -> Add to Home Screen**) and
+  open it from there; otherwise iPhones cannot receive them.
+* This feature is switched on by the church's administrator (see
+  `docs/PUSH_NOTIFICATIONS_SETUP.md`). Until then the card does not appear.

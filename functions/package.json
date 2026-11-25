@@ -1,0 +1,16 @@
+{
+  "name": "lukulu-functions",
+  "private": true,
+  "description": "Sends phone notifications for the Lukulu Bread of Life Church app",
+  "main": "index.js",
+  "engines": {
+    "node": "20"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^6.1.1"
+  }
+}

@@ -300,6 +300,20 @@ service cloud.firestore {
         && ((resource.data.authorUid == request.auth.uid && resource.data.status == 'sent') || isAdmin());
     }
 
+    // Phone notifications: each device that turned alerts on is listed here (document
+    // id = its notification address) with the person it belongs to. The server that
+    // sends the alerts reads this list with its own credentials, so people can only
+    // add, move and remove their own devices. Someone signing in on a phone that
+    // another person used takes it over (the same address, now under their id).
+    match /push_tokens/{token} {
+      allow read: if isSignedIn() && (resource == null || resource.data.uid == request.auth.uid);
+      allow create, update: if isSignedIn()
+        && request.resource.data.keys().hasOnly(['uid', 'updatedAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+
     // Events are public to every signed-in member; only certain roles edit them.
     match /events/{id} {
       allow read: if isSignedIn();

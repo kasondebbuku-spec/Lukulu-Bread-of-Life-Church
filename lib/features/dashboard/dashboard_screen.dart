@@ -5,7 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/daily_verses.dart';
 import '../../core/constants/social_links.dart';
 import '../../core/providers/display_name_provider.dart';
-import '../../core/providers/firebase_providers.dart';
+import '../../core/providers/push_providers.dart';
 import '../../core/providers/user_role_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/currency_format.dart';
@@ -71,7 +71,7 @@ class DashboardScreen extends ConsumerWidget {
                     greeting: '${greetingFor(now)}, $firstName',
                     userName: userName,
                     role: role,
-                    onLogout: () => ref.read(firebaseAuthProvider).signOut(),
+                    onLogout: () => ref.read(signOutProvider)(),
                   ),
                   const PendingRoleBanner(),
                   const PledgeReminderBanner(),

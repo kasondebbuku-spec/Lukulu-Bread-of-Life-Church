@@ -11,6 +11,7 @@ import '../../announcements/screens/announcements_screen.dart';
 import '../../events/screens/events_screen.dart';
 import '../../giving/screens/income_forms_list_screen.dart';
 import '../../giving/screens/my_giving_screen.dart';
+import '../widgets/push_opt_in_card.dart';
 
 /// New announcements and events. Opening it marks everything as seen, but the
 /// items that were new when you arrived stay highlighted until you leave.
@@ -49,7 +50,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final items = ref.watch(notificationsProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('Notifications')),
-      body: items.isEmpty
+      body: Column(children: [
+        const PushOptInCard(),
+        Expanded(
+          child: items.isEmpty
           ? const EmptyState(
               icon: Icons.notifications_none,
               message: 'You are all caught up.\nNew announcements and events will appear here.',
@@ -98,6 +102,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                 );
               },
             ),
+        ),
+      ]),
     );
   }
 }
