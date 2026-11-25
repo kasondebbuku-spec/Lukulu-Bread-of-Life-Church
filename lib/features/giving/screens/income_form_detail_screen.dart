@@ -66,10 +66,16 @@ class IncomeFormDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final valuesByKey = _valuesByKey;
-    final canManage = ref.watch(userRoleProvider).maybeWhen(
-          data: (role) => role.canManageGiving,
-          orElse: () => false,
-        );
+    final access = ref.watch(userRoleProvider);
+    // The Pastor can enter and correct a form but not delete one.
+    final canManage = access.maybeWhen(
+      data: (role) => role.canEnterIncomeForms,
+      orElse: () => false,
+    );
+    final canDelete = access.maybeWhen(
+      data: (role) => role.canManageGiving,
+      orElse: () => false,
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -86,11 +92,12 @@ class IncomeFormDetailScreen extends ConsumerWidget {
                 ),
               ),
             ),
-            IconButton(
-              icon: const Icon(Icons.delete_outline),
-              tooltip: 'Delete',
-              onPressed: () => _confirmDelete(context, ref),
-            ),
+            if (canDelete)
+              IconButton(
+                icon: const Icon(Icons.delete_outline),
+                tooltip: 'Delete',
+                onPressed: () => _confirmDelete(context, ref),
+              ),
           ],
           IconButton(
             icon: const Icon(Icons.download_outlined),

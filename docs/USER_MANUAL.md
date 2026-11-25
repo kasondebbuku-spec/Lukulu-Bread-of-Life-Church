@@ -27,6 +27,13 @@ This manual explains how to use the church app. Start with
 
 ## 1. Getting started
 
+### Getting the app on your phone (QR code)
+For a service or training, show **https://lukulu-bread-of-life.web.app/join.html** on
+the projector: it is a full-screen QR code. Everyone points their phone camera at it,
+taps the link, and can then **Add to Home screen** so it opens like an app. A copy of
+the code as a picture (for slides or printing) is in the project at
+`docs/lukulu-app-qr.png`.
+
 ### Create an account
 1. Open **https://lukulu-bread-of-life.web.app**.
 2. Tap **Need an account? Sign up**.
@@ -66,7 +73,7 @@ get everything either role allows.
 |---|:-:|:-:|:-:|:-:|:-:|:-:|
 | **Member** | - | Own giving only | - | View | Read (public) | Own requests (edit, delete) |
 | **Elder / Deacon / Deaconess** | - | - | Record | View | Post and read | See all |
-| **Pastor** | Manage | **View only** | Record | Manage | Post and read | See all |
+| **Pastor** | Manage | **View only** (and can enter a Sunday Income Form) | Record | Manage | Post and read | See all |
 | **Secretariat** | Manage | - | Record | Manage | Post and read | See all |
 | **Hospitality** | Manage | - | - | View | Read (public) | Own requests |
 | **Finance Officer** | - | Manage | - | View | Read (public) | Own requests |
@@ -75,7 +82,9 @@ get everything either role allows.
 
 Notes:
 - **Financial records are confidential.** Only Admin and Finance can enter or change
-  them. The Pastor and Financial Oversight can read them but cannot change anything.
+  them. The Pastor and Financial Oversight can read them. The one exception: the
+  **Pastor can also enter a Sunday Income Form** (and correct it), but cannot record
+  other giving or delete a form. Financial Oversight cannot change anything.
   Elders, Deacons and Deaconesses do **not** see finances unless they also hold
   Finance or Oversight.
 - These rules are enforced by the server, not just hidden in the screens.
@@ -249,8 +258,10 @@ Tap the **bin** on the form and confirm. This also removes the giving and
 attendance records that form created. **This cannot be undone**, though the
 deletion is permanently listed in the Activity log.
 
-> **Who can edit or delete:** Finance and Admin only. Financial Oversight can open
-> and read forms but sees no edit or delete buttons.
+> **Who can enter, edit or delete:** Finance and Admin can do all three. The **Pastor
+> can enter and edit** a form (a **Sunday Income Form** button appears on the Giving
+> screen) but not delete one. Financial Oversight can open and read forms but sees no
+> edit or delete buttons.
 >
 > **Older forms:** forms saved before editing was introduced show **Read-only**.
 > They cannot be changed from the app; ask the developer if one needs correcting.

@@ -108,8 +108,8 @@ async function main() {
     assertSucceeds(getDoc(doc(ctxFor('pastor1'), 'income_forms/f1'))));
   await check('pastor CANNOT update giving', () =>
     assertFails(updateDoc(doc(ctxFor('pastor1'), 'giving/own1'), { amount: 900 })));
-  await check('pastor CANNOT create income forms', () =>
-    assertFails(setDoc(doc(ctxFor('pastor1'), 'income_forms/newp'), { amount: 100 })));
+  await check('pastor CAN enter an income form (see the section below)', () =>
+    assertSucceeds(setDoc(doc(ctxFor('pastor1'), 'income_forms/newp'), { amount: 100 })));
   await check('pastor CANNOT delete giving', () =>
     assertFails(deleteDoc(doc(ctxFor('pastor1'), 'giving/own1'))));
   await check('pastor CAN register a directory member', () =>
@@ -676,6 +676,88 @@ async function main() {
     batch.delete(doc(db, 'attendance/aud1_attendance'));
     batch.delete(doc(db, 'income_forms/aud1'));
     batch.set(doc(db, 'audit_log/del1'), entry('finance1', 'delete'));
+    return assertSucceeds(batch.commit());
+  });
+
+  console.log('\n--- Pastor entering a Sunday Income Form ---');
+  const aEntry = (uid, action, extra = {}) => ({
+    action, entity: 'income_form', entityId: 'pf', summary: 'Nov 29, 2026',
+    detail: 'Total 100', userId: uid, userName: uid, ...extra,
+  });
+  await check('pastor CAN save a form with its giving, attendance and log entry in one batch', () => {
+    const db = ctxFor('pastor1');
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'income_forms/pf1'), { service: 'sunday' });
+    batch.set(doc(db, 'giving/pf1_tithe'), { memberName: 'Tithe', amount: 100, incomeFormId: 'pf1' });
+    batch.set(doc(db, 'attendance/pf1_attendance'), { incomeFormId: 'pf1', count: 10 });
+    batch.set(doc(db, 'audit_log/pf1_log'), aEntry('pastor1', 'create'));
+    return assertSucceeds(batch.commit());
+  });
+  await check('the Pastor\'s batch can also clear a category with nothing in it', () => {
+    const db = ctxFor('pastor1');
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'income_forms/pf2'), { service: 'sunday' });
+    batch.delete(doc(db, 'giving/pf2_seed')); // never existed
+    batch.set(doc(db, 'giving/pf2_tithe'), { memberName: 'Tithe', amount: 100, incomeFormId: 'pf2' });
+    batch.set(doc(db, 'attendance/pf2_attendance'), { incomeFormId: 'pf2', count: 10 });
+    batch.set(doc(db, 'audit_log/pf2_log'), aEntry('pastor1', 'create'));
+    return assertSucceeds(batch.commit());
+  });
+  await seedDoc('income_forms/pedit', { service: 'sunday' });
+  await seedDoc('giving/pedit_tithe', { memberName: 'Tithe', amount: 100, incomeFormId: 'pedit' });
+  await seedDoc('giving/pedit_seed', { memberName: 'Seed', amount: 50, incomeFormId: 'pedit' });
+  await seedDoc('attendance/pedit_attendance', { incomeFormId: 'pedit', count: 10 });
+  await check('pastor CAN correct a form: change it, rewrite a record, drop an emptied one', () => {
+    const db = ctxFor('pastor1');
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'income_forms/pedit'), { service: 'sunday', updated: true }, { merge: true });
+    batch.set(doc(db, 'giving/pedit_tithe'), { memberName: 'Tithe', amount: 120, incomeFormId: 'pedit' });
+    batch.delete(doc(db, 'giving/pedit_seed'));
+    batch.set(doc(db, 'attendance/pedit_attendance'), { incomeFormId: 'pedit', count: 12 });
+    batch.set(doc(db, 'audit_log/pedit_log'), aEntry('pastor1', 'update'));
+    return assertSucceeds(batch.commit());
+  });
+
+  await check('pastor CANNOT write a giving record on its own, with no form behind it', () =>
+    assertFails(setDoc(doc(ctxFor('pastor1'), 'giving/alone'), { memberName: 'Tithe', amount: 100, incomeFormId: 'nothere' })));
+  await check('pastor CANNOT record an ordinary contribution', () =>
+    assertFails(setDoc(doc(ctxFor('pastor1'), 'giving/plain'), { memberName: 'Ruth', amount: 100 })));
+  await check('pastor CANNOT record a gift linked to a member', () =>
+    assertFails(setDoc(doc(ctxFor('pastor1'), 'giving/linked'), { memberName: 'Ruth', memberUserId: 'member1', amount: 100 })));
+  await check('pastor CANNOT rewrite a recorded contribution by tagging it to a form', () => {
+    const db = ctxFor('pastor1');
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'income_forms/pf3'), { service: 'sunday' });
+    batch.set(doc(db, 'giving/own1'), { memberName: 'Own', amount: 1, incomeFormId: 'pf3' });
+    return assertFails(batch.commit());
+  });
+  await check('pastor CANNOT delete a form', () =>
+    assertFails(deleteDoc(doc(ctxFor('pastor1'), 'income_forms/pedit'))));
+  await check('pastor CANNOT delete a contribution no form made', () =>
+    assertFails(deleteDoc(doc(ctxFor('pastor1'), 'giving/own1'))));
+
+  await check('pastor CAN add a log entry for an income form, naming the Pastor', () =>
+    assertSucceeds(setDoc(doc(ctxFor('pastor1'), 'audit_log/p_ok'), aEntry('pastor1', 'create'))));
+  await check('pastor CANNOT add a log entry naming someone else', () =>
+    assertFails(setDoc(doc(ctxFor('pastor1'), 'audit_log/p_forge'), aEntry('finance1', 'create'))));
+  await check('pastor CANNOT add a log entry about anything but an income form', () =>
+    assertFails(setDoc(doc(ctxFor('pastor1'), 'audit_log/p_other'), aEntry('pastor1', 'delete', { entity: 'giving' }))));
+  await check('pastor CANNOT change or remove a log entry', async () => {
+    await assertFails(updateDoc(doc(ctxFor('pastor1'), 'audit_log/p_ok'), { detail: 'x' }));
+    await assertFails(deleteDoc(doc(ctxFor('pastor1'), 'audit_log/p_ok')));
+  });
+
+  for (const who of ['elder1', 'deacon1', 'secretariat1', 'hospitality1', 'oversight1', 'member1']) {
+    await check(who + ' CANNOT enter an income form', () =>
+      assertFails(setDoc(doc(ctxFor(who), 'income_forms/nope_' + who), { service: 'sunday' })));
+  }
+  await check('finance still CAN delete a form the Pastor entered', () => {
+    const db = ctxFor('finance1');
+    const batch = writeBatch(db);
+    batch.delete(doc(db, 'giving/pedit_tithe'));
+    batch.delete(doc(db, 'attendance/pedit_attendance'));
+    batch.delete(doc(db, 'income_forms/pedit'));
+    batch.set(doc(db, 'audit_log/pedit_del'), aEntry('finance1', 'delete'));
     return assertSucceeds(batch.commit());
   });
 

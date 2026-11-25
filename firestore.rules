@@ -23,7 +23,8 @@ service cloud.firestore {
     function isLeadership() {
       return hasRole('elder') || hasRole('deacon') || hasRole('deaconess') || hasRole('pastor');
     }
-    // The pastor reads the church's finances (read-only); only Admin and Finance change them.
+    // The pastor reads the church's finances; only Admin and Finance change them (the pastor may
+    // also enter a Sunday Income Form -- see canEnterIncomeForms).
     function canViewGiving() { return isAdmin() || isFinance() || hasRole('oversight') || hasRole('pastor'); }
     function validRoles(data) {
       return !('roles' in data) || (data.roles is list && data.roles.size() > 0
@@ -38,6 +39,19 @@ service cloud.firestore {
     // Mirrors lib/core/providers/user_role_provider.dart — keep in sync.
     function canManageMembers() { return isAdmin() || isSecretariat() || hasRole('hospitality') || hasRole('pastor'); }
     function canManageGiving() { return isAdmin() || isFinance(); }
+    // Entering a Sunday Income Form: Admin and Finance, and also the Pastor, who is
+    // otherwise read-only on finances. The Pastor can do only this: save a form
+    // (with the giving records and activity-log entry that go with it), not record
+    // or change any other giving, and not delete a form.
+    function canEnterIncomeForms() { return canManageGiving() || hasRole('pastor'); }
+    // A giving record that a Sunday Income Form made (keyed to it), written by the
+    // Pastor in the same batch as the form itself.
+    function pastorFormGiving(d) {
+      return hasRole('pastor')
+        && d.get('incomeFormId', '') is string && d.get('incomeFormId', '') != ''
+        && !('memberUserId' in d)
+        && existsAfter(/databases/$(database)/documents/income_forms/$(d.incomeFormId));
+    }
     function canManageAttendance() { return isAdmin() || isSecretariat() || isLeadership(); }
     function canManageEvents() { return isAdmin() || isSecretariat() || hasRole('pastor'); }
     function canPostAnnouncements() { return isAdmin() || isSecretariat() || isLeadership(); }
@@ -96,8 +110,15 @@ service cloud.firestore {
     // Finance can touch this collection, regardless of any other seniority.
     match /giving/{id} {
       allow read: if canViewGiving() || (isSignedIn() && resource.data.get('memberUserId', '') == request.auth.uid);
-      allow create, update: if canManageGiving() && validGivingLink(request.resource.data);
-      allow delete: if canManageGiving();
+      allow create: if (canManageGiving() && validGivingLink(request.resource.data))
+        || pastorFormGiving(request.resource.data);
+      allow update: if (canManageGiving() && validGivingLink(request.resource.data))
+        || (pastorFormGiving(request.resource.data)
+            && resource.data.get('incomeFormId', '') == request.resource.data.incomeFormId);
+      // Editing a form clears the records of categories it no longer has; the
+      // Pastor may delete only records a form made (or ones that are already gone).
+      allow delete: if canManageGiving()
+        || (hasRole('pastor') && (resource == null || resource.data.get('incomeFormId', '') != ''));
     }
 
     // Sunday Income Analysis form — same sensitivity as `giving`, since it
@@ -105,7 +126,8 @@ service cloud.firestore {
     // from (Prepared/Checked/Collected By names included).
     match /income_forms/{id} {
       allow read: if canViewGiving();
-      allow write: if canManageGiving();
+      allow create, update: if canEnterIncomeForms();
+      allow delete: if canManageGiving();
     }
 
     match /attendance/{id} {
@@ -131,7 +153,8 @@ service cloud.firestore {
     // (nobody -- including admins -- can edit or delete an entry).
     match /audit_log/{id} {
       allow read: if canViewGiving();
-      allow create: if canManageGiving()
+      allow create: if (canManageGiving()
+            || (hasRole('pastor') && request.resource.data.get('entity', '') == 'income_form'))
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.action in ['create', 'update', 'delete'];
       allow update, delete: if false;

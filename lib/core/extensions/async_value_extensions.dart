@@ -8,6 +8,7 @@ extension UserRoleAsyncValueX on AsyncValue<UserAccess> {
 
   bool get canManageMembers => valueOrMember.canManageMembers;
   bool get canManageGiving => valueOrMember.canManageGiving;
+  bool get canEnterIncomeForms => valueOrMember.canEnterIncomeForms;
   bool get canManageAttendance => valueOrMember.canManageAttendance;
   bool get canManageEvents => valueOrMember.canManageEvents;
   bool get canPostAnnouncements => valueOrMember.canPostAnnouncements;

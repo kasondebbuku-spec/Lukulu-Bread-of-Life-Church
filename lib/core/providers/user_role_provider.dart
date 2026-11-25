@@ -69,6 +69,11 @@ extension UserRoleX on UserRole {
   bool get canViewGiving =>
       canManageGiving || this == UserRole.oversight || this == UserRole.pastor;
 
+  /// Entering (and correcting) a Sunday Income Form. The Pastor may do this
+  /// although the role cannot otherwise change financial records, and cannot delete
+  /// a form. Mirrors `canEnterIncomeForms` in firestore.rules.
+  bool get canEnterIncomeForms => canManageGiving || this == UserRole.pastor;
+
   bool get canManageAttendance =>
       this == UserRole.admin ||
       this == UserRole.secretariat ||
@@ -117,6 +122,7 @@ class UserAccess {
   bool get canManageMembers => roles.any((r) => r.canManageMembers);
   bool get canManageGiving => roles.any((r) => r.canManageGiving);
   bool get canViewGiving => roles.any((r) => r.canViewGiving);
+  bool get canEnterIncomeForms => roles.any((r) => r.canEnterIncomeForms);
   bool get canManageAttendance => roles.any((r) => r.canManageAttendance);
   bool get canManageEvents => roles.any((r) => r.canManageEvents);
   bool get canPostAnnouncements => roles.any((r) => r.canPostAnnouncements);

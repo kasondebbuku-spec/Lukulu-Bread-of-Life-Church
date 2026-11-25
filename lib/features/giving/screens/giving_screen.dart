@@ -81,6 +81,13 @@ class _GivingScreenState extends ConsumerState<GivingScreen> {
     }
   }
 
+  void _openIncomeForm() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const SundayIncomeFormScreen()),
+    );
+  }
+
   void _showAddMenu() {
     showModalBottomSheet(
       context: context,
@@ -491,10 +498,19 @@ class _GivingScreenState extends ConsumerState<GivingScreen> {
           ),
         ],
       ),
+      // Finance and Admin can record any giving; the Pastor can only enter a
+      // Sunday Income Form, so the button goes straight to it.
       floatingActionButton: canEdit
           ? FloatingActionButton(
               onPressed: _showAddMenu, child: const Icon(Icons.add))
-          : null,
+          : ref.watch(userRoleProvider).canEnterIncomeForms
+              ? FloatingActionButton.extended(
+                  key: const Key('add-income-form'),
+                  onPressed: _openIncomeForm,
+                  icon: const Icon(Icons.receipt_long_outlined),
+                  label: const Text('Sunday Income Form'),
+                )
+              : null,
     );
   }
 }
