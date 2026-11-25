@@ -17,6 +17,7 @@ import '../../../repositories/repository_providers.dart';
 import '../giving_theme.dart';
 import '../zmw_denominations.dart';
 import 'income_forms_list_screen.dart';
+import 'pledges_screen.dart';
 import 'sunday_income_form_screen.dart';
 import 'export_screen.dart';
 import 'period_summary_screen.dart';
@@ -379,6 +380,19 @@ class _GivingScreenState extends ConsumerState<GivingScreen> {
                 context,
                 MaterialPageRoute(
                     builder: (context) => const IncomeFormsListScreen()),
+              ),
+            ),
+          ),
+          Card(
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: ListTile(
+              leading: const Icon(Icons.handshake_outlined, color: AppColors.blue),
+              title: const Text('Pledges'),
+              subtitle: const Text('Who has pledged, what is paid, what is overdue'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const PledgesScreen()),
               ),
             ),
           ),

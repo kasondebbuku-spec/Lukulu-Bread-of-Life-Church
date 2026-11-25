@@ -6,7 +6,7 @@ import {
 import { readFileSync } from 'fs';
 import {
   doc, getDoc, setDoc, updateDoc, deleteDoc,
-  collection, getDocs, addDoc, query, where, writeBatch, deleteField, serverTimestamp,
+  collection, getDocs, addDoc, query, where, writeBatch, deleteField, serverTimestamp, Timestamp,
 } from 'firebase/firestore';
 
 const PROJECT_ID = 'demo-church-access';
@@ -364,6 +364,96 @@ async function main() {
     await check('pastor CAN delete a request', () =>
       assertSucceeds(deleteDoc(doc(ctxFor('pastor1'), 'prayer_requests/aud_elders'))));
   }
+
+  console.log('\n--- Pledges ---');
+  const ts = (d) => Timestamp.fromDate(new Date(d));
+  const pledgeDoc = (uid, extra = {}) => ({
+    userId: uid, memberName: 'Member', amount: 500, madeOn: ts('2026-11-01'),
+    dueDate: ts('2026-12-25'), note: 'Building fund', status: 'open',
+    createdBy: 'Member', createdAt: serverTimestamp(), ...extra,
+  });
+  const seeded = (uid) => ({ ...pledgeDoc(uid), createdAt: ts('2026-11-01') });
+  const pledges = (uid) => collection(ctxFor(uid), 'pledges');
+  const pledgeRef = (uid, id) => doc(ctxFor(uid), 'pledges/' + id);
+  for (const id of ['pl_read', 'pl_a', 'pl_b', 'pl_c', 'pl_d', 'pl_e', 'pl_f', 'pl_g', 'pl_h']) {
+    await seedDoc('pledges/' + id, seeded('member1'));
+  }
+
+  await check('member CAN make their own pledge', () =>
+    assertSucceeds(addDoc(pledges('member1'), pledgeDoc('member1'))));
+  await check('member CANNOT make a pledge in someone else\'s name', () =>
+    assertFails(addDoc(pledges('member2'), pledgeDoc('member1'))));
+  await check('finance CAN record a pledge for a member', () =>
+    assertSucceeds(addDoc(pledges('finance1'), pledgeDoc('member1', { createdBy: 'Finance' }))));
+  await check('admin CAN record a pledge for a member', () =>
+    assertSucceeds(addDoc(pledges('admin1'), pledgeDoc('member1'))));
+  await check('elder CANNOT record a pledge for a member', () =>
+    assertFails(addDoc(pledges('elder1'), pledgeDoc('member1'))));
+  await check('pastor CANNOT record a pledge for a member', () =>
+    assertFails(addDoc(pledges('pastor1'), pledgeDoc('member1'))));
+  await check('anonymous CANNOT make a pledge', () =>
+    assertFails(addDoc(collection(testEnv.unauthenticatedContext().firestore(), 'pledges'), pledgeDoc('member1'))));
+
+  await check('a pledge CANNOT be created with a zero amount', () =>
+    assertFails(addDoc(pledges('member1'), pledgeDoc('member1', { amount: 0 }))));
+  await check('a pledge CANNOT be created with a negative amount', () =>
+    assertFails(addDoc(pledges('member1'), pledgeDoc('member1', { amount: -50 }))));
+  await check('a pledge CANNOT be created with an amount written as text', () =>
+    assertFails(addDoc(pledges('member1'), pledgeDoc('member1', { amount: '500' }))));
+  await check('a pledge CANNOT be created already fulfilled', () =>
+    assertFails(addDoc(pledges('member1'), pledgeDoc('member1', { status: 'fulfilled' }))));
+  await check('a pledge CANNOT carry extra fields', () =>
+    assertFails(addDoc(pledges('member1'), pledgeDoc('member1', { paid: 500 }))));
+  await check('a pledge CANNOT have a note over 200 characters', () =>
+    assertFails(addDoc(pledges('member1'), pledgeDoc('member1', { note: 'x'.repeat(201) }))));
+  await check('a pledge CANNOT have an empty name', () =>
+    assertFails(addDoc(pledges('member1'), pledgeDoc('member1', { memberName: '' }))));
+  await check('a pledge CANNOT have a due date that is not a date', () =>
+    assertFails(addDoc(pledges('member1'), pledgeDoc('member1', { dueDate: 'Christmas' }))));
+
+  await check('member CAN read their own pledge', () =>
+    assertSucceeds(getDoc(pledgeRef('member1', 'pl_read'))));
+  await check('member CAN list their own pledges', () =>
+    assertSucceeds(getDocs(query(pledges('member1'), where('userId', '==', 'member1')))));
+  await check('another member CANNOT read it', () =>
+    assertFails(getDoc(pledgeRef('member2', 'pl_read'))));
+  await check('a member CANNOT list everyone\'s pledges', () =>
+    assertFails(getDocs(pledges('member2'))));
+  for (const who of ['finance1', 'admin1', 'pastor1', 'oversight1']) {
+    await check(who + ' CAN read a member\'s pledge', () =>
+      assertSucceeds(getDoc(pledgeRef(who, 'pl_read'))));
+  }
+  await check('finance CAN list everyone\'s pledges', () =>
+    assertSucceeds(getDocs(pledges('finance1'))));
+  await check('elder CANNOT read a member\'s pledge', () =>
+    assertFails(getDoc(pledgeRef('elder1', 'pl_read'))));
+
+  await check('owner CAN change the amount, due date and note', () =>
+    assertSucceeds(updateDoc(pledgeRef('member1', 'pl_a'),
+      { amount: 800, dueDate: ts('2027-01-31'), note: 'Moved to January' })));
+  await check('owner CAN cancel their pledge', () =>
+    assertSucceeds(updateDoc(pledgeRef('member1', 'pl_b'), { status: 'cancelled' })));
+  await check('owner CANNOT mark it fulfilled themselves', () =>
+    assertFails(updateDoc(pledgeRef('member1', 'pl_c'), { status: 'fulfilled' })));
+  await check('owner CANNOT hand it to another account', () =>
+    assertFails(updateDoc(pledgeRef('member1', 'pl_d'), { userId: 'member2' })));
+  await check('owner CANNOT backdate when it was made', () =>
+    assertFails(updateDoc(pledgeRef('member1', 'pl_e'), { madeOn: ts('2020-01-01') })));
+  await check('owner CANNOT set a negative amount', () =>
+    assertFails(updateDoc(pledgeRef('member1', 'pl_f'), { amount: -1 })));
+  await check('another member CANNOT change it', () =>
+    assertFails(updateDoc(pledgeRef('member2', 'pl_g'), { amount: 1 })));
+  await check('finance CAN change a member\'s pledge', () =>
+    assertSucceeds(updateDoc(pledgeRef('finance1', 'pl_g'), { amount: 600 })));
+  await check('pastor CANNOT change a member\'s pledge', () =>
+    assertFails(updateDoc(pledgeRef('pastor1', 'pl_h'), { amount: 1 })));
+
+  await check('another member CANNOT delete a pledge', () =>
+    assertFails(deleteDoc(pledgeRef('member2', 'pl_h'))));
+  await check('owner CAN delete their own pledge', () =>
+    assertSucceeds(deleteDoc(pledgeRef('member1', 'pl_h'))));
+  await check('finance CAN delete a member\'s pledge', () =>
+    assertSucceeds(deleteDoc(pledgeRef('finance1', 'pl_f'))));
 
   console.log('\n--- Signup role-escalation lockdown ---');
   await check('new user CAN self-signup as member', () =>

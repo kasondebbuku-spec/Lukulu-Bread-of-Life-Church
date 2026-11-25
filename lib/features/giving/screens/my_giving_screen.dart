@@ -8,6 +8,7 @@ import '../../../models/giving_record.dart';
 import '../../../models/member_giving_statement.dart';
 import '../../../repositories/repository_providers.dart';
 import '../pdf/member_statement_pdf.dart';
+import '../widgets/my_pledges_section.dart';
 import '../pdf/pdf_actions.dart';
 
 class MyGivingScreen extends ConsumerStatefulWidget {
@@ -89,6 +90,9 @@ class _MyGivingScreenState extends ConsumerState<MyGivingScreen> {
         const Text(
             'Only contributions linked to your account appear here. If an entry is missing or incorrect, contact the Finance team and quote its reference. Older entries may need to be linked by Finance.'),
         const SizedBox(height: 16),
+        const MyPledgesSection(),
+        const SizedBox(height: 8),
+        const Divider(height: 32),
         Wrap(spacing: 8, runSpacing: 8, children: [
           FilterChip(
               label: const Text('Tithes only'),

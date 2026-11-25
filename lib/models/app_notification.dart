@@ -2,7 +2,7 @@ import '../core/utils/date_format.dart';
 import 'announcement.dart';
 import 'church_event.dart';
 
-enum NotificationKind { announcement, event, incomeForm }
+enum NotificationKind { announcement, event, incomeForm, pledge }
 
 /// One "something new was posted" entry. Derived from announcements and events,
 /// never stored, so it can never disagree with them.

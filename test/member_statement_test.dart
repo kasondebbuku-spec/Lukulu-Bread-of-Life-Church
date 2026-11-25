@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:church_cms/core/providers/pledge_providers.dart';
 import 'package:church_cms/core/theme/app_theme.dart';
 import 'package:church_cms/features/giving/pdf/member_statement_pdf.dart';
 import 'package:church_cms/features/giving/screens/my_giving_screen.dart';
@@ -73,7 +74,10 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(ProviderScope(
-      overrides: [myGivingProvider.overrideWith((ref) => Stream.value(data))],
+      overrides: [
+        myPledgesProvider.overrideWith((ref) => Stream.value(const [])),
+        myGivingProvider.overrideWith((ref) => Stream.value(data)),
+      ],
       child: MaterialApp(theme: AppTheme.lightTheme, home: const MyGivingScreen()),
     ));
     await tester.pumpAndSettle();

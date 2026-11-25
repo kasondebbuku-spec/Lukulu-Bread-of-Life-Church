@@ -23,6 +23,7 @@ import 'widgets/daily_verse_card.dart';
 import 'widgets/dashboard_header.dart';
 import 'widgets/hero_banner.dart';
 import 'widgets/pending_role_banner.dart';
+import 'widgets/pledge_reminder_banner.dart';
 import 'widgets/quick_access_card.dart';
 import 'widgets/upcoming_events_card.dart';
 
@@ -73,6 +74,7 @@ class DashboardScreen extends ConsumerWidget {
                     onLogout: () => ref.read(firebaseAuthProvider).signOut(),
                   ),
                   const PendingRoleBanner(),
+                  const PledgeReminderBanner(),
                   const SizedBox(height: 20),
                   HeroBanner(
                     nextEvent: nextEvent,

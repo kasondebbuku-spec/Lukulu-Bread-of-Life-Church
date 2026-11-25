@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:church_cms/core/providers/audit_actor_provider.dart';
 import 'package:church_cms/core/providers/display_name_provider.dart';
 import 'package:church_cms/core/providers/firebase_providers.dart';
+import 'package:church_cms/core/providers/pledge_providers.dart';
 import 'package:church_cms/core/providers/notifications_provider.dart';
 import 'package:church_cms/core/providers/user_role_provider.dart';
 import 'package:church_cms/core/theme/app_theme.dart';
@@ -269,6 +270,9 @@ void main() {
 
       expect(find.text('Sunday Income Forms'), findsOneWidget);
       expect(find.text('What was entered each Sunday, by whom'), findsOneWidget);
+      // Pledges are one tap away too.
+      expect(find.text('Pledges'), findsOneWidget);
+      expect(find.text('Who has pledged, what is paid, what is overdue'), findsOneWidget);
 
       await tester.tap(find.text('Sunday Income Forms'));
       await tester.pumpAndSettle();
@@ -291,6 +295,7 @@ void main() {
         attendanceRecordsProvider.overrideWith((ref) => Stream.value([])),
         eventsProvider.overrideWith((ref) => Stream.value([])),
         announcementsProvider.overrideWith((ref) => Stream.value([])),
+        myPledgeProgressProvider.overrideWithValue(const []),
         prayerRequestsProvider.overrideWith((ref) => Stream.value([])),
         incomeFormsProvider.overrideWith((ref) => Stream.value([
               _form(
@@ -320,6 +325,7 @@ void main() {
         userRoleProvider.overrideWith((ref) => Stream.value(role)),
         authStateChangesProvider.overrideWith((ref) => Stream.value(null)),
         announcementsProvider.overrideWith((ref) => Stream.value([])),
+        myPledgeProgressProvider.overrideWithValue(const []),
         eventsProvider.overrideWith((ref) => Stream.value([])),
         incomeFormsProvider.overrideWith((ref) => Stream.value(forms)),
       ]);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:church_cms/core/providers/pledge_providers.dart';
 import 'package:church_cms/core/theme/app_theme.dart';
 import 'package:church_cms/features/giving/screens/my_giving_screen.dart';
 import 'package:church_cms/models/giving_record.dart';
@@ -11,6 +12,7 @@ void main() {
       (tester) async {
     await tester.pumpWidget(ProviderScope(
         overrides: [
+          myPledgesProvider.overrideWith((ref) => Stream.value(const [])),
           myGivingProvider.overrideWith((ref) => Stream.value([
                 GivingRecord(
                     id: 'tithe-ref',
@@ -42,6 +44,7 @@ void main() {
   testWidgets('Errors are not displayed as zero giving', (tester) async {
     await tester.pumpWidget(ProviderScope(
         overrides: [
+          myPledgesProvider.overrideWith((ref) => Stream.value(const [])),
           myGivingProvider
               .overrideWith((ref) => Stream.error(StateError('offline'))),
         ],

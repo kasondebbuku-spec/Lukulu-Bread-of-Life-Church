@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/giving/zmw_denominations.dart';
 import '../../models/app_notification.dart';
+import '../../models/pledge.dart';
 import '../../models/sunday_income_form.dart';
 import '../../models/role_request.dart';
 import '../../repositories/repository_providers.dart';
@@ -10,6 +11,7 @@ import '../../services/notification_service.dart';
 import '../utils/currency_format.dart';
 import '../utils/date_format.dart';
 import 'firebase_providers.dart';
+import 'pledge_providers.dart';
 import 'user_profile_provider.dart';
 import 'user_role_provider.dart';
 
@@ -38,11 +40,27 @@ final notificationsProvider = Provider<List<AppNotification>>((ref) {
               ),
         ];
 
+  // A member is reminded about their own pledges that are due within a week or
+  // late: the first reminder dates from a week before the due date, the second
+  // from the due date itself.
+  final pledgeNotices = [
+    for (final p in ref.watch(myPledgeProgressProvider))
+      if (p.needsReminder)
+        AppNotification(
+          kind: NotificationKind.pledge,
+          title: 'Pledge reminder',
+          detail: p.reminderText(),
+          at: p.state == PledgeState.overdue
+              ? p.pledge.dueDate
+              : p.pledge.dueDate.subtract(const Duration(days: pledgeReminderLeadDays)),
+        ),
+  ];
+
   return buildNotifications(
       announcements: announcements,
       events: events,
       now: DateTime.now(),
-      extra: formNotices);
+      extra: [...formNotices, ...pledgeNotices]);
 });
 
 /// When this person last opened their notifications (null = never).

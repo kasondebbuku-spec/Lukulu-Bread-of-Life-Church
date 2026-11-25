@@ -333,13 +333,42 @@ it contains confidential financial information.
 
 ## 8. My Giving (every member)
 
-**My Giving** shows only contributions that Finance has linked to **your** account.
+**My Giving** shows your pledges (see *My Pledges* below) and the contributions that Finance has linked to **your** account.
 Nobody else can see them.
 
 - **Tithes only** filters to tithes; **All dates** lets you pick a date range.
 - Totals are shown separately for each currency.
 - Each entry shows a **Reference**. If something is missing or wrong, contact the
   Finance team and quote the reference. Older gifts may need to be linked by Finance.
+
+### My Pledges
+A pledge is a promise to give an amount by a date. **My Pledges** sits at the top
+of My Giving.
+1. Tap **New pledge**, enter the **amount**, choose the date it is **to be given
+   by**, and add what it is for if you like. Tap **Save**.
+2. Each pledge shows a progress bar: how much you have **given**, how much is **to
+   go**, and a label: **On track**, **Due soon** (within a week), **Overdue** or
+   **Fulfilled**.
+3. Tap the three dots to **Change** the amount, date or note, or to **Cancel
+   pledge**. A cancelled pledge stops counting and stops reminding you.
+
+**What counts as given.** Giving that Finance records in your name with the
+category **Pledge**, on or after the day you made the pledge. It counts
+automatically; you do not tell the app. With more than one pledge, a gift goes to
+the oldest one first, and any extra goes on to the next. If a gift is missing,
+ask Finance to link it to your account (see *My Giving* above).
+
+**Reminders.** From a week before the due date until it is given, a gold
+**Pledge reminder** shows on your Home screen, and a notice appears on the bell
+(once a week before, and again from the due date if it is still owing). The app
+cannot ring a locked phone; the reminder appears when you open it.
+
+**Finance Officer, Admin, Pastor and Financial Oversight** can see everyone's
+pledges under **Giving -> Pledges**: who pledged, how much is paid, what is still
+owing, and what is overdue. The Finance Officer and Admin can also tap **Record a
+pledge** to add one for a member (choose their account), and change or cancel
+one. When a member gives towards a pledge, record the gift with the category
+**Pledge** and link it to their account so it counts.
 
 ### Yearly statement
 At the top of My Giving, the **Yearly statement** card lets you pick a year and

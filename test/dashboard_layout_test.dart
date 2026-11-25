@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:church_cms/core/providers/firebase_providers.dart';
+import 'package:church_cms/core/providers/pledge_providers.dart';
 import 'package:church_cms/core/providers/user_role_provider.dart';
 import 'package:church_cms/core/theme/app_theme.dart';
 import 'package:church_cms/models/church_event.dart';
@@ -31,6 +32,7 @@ void main() {
       announcementsProvider.overrideWith((ref) => Stream.value([])),
       prayerRequestsProvider.overrideWith((ref) => Stream.value([])),
       incomeFormsProvider.overrideWith((ref) => Stream.value([])),
+      myPledgeProgressProvider.overrideWithValue(const []),
     ], child: MaterialApp(theme: AppTheme.lightTheme, home: const AppShell())));
     await tester.pumpAndSettle();
   }

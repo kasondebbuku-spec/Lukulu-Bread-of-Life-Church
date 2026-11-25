@@ -10,6 +10,7 @@ import '../../../models/app_notification.dart';
 import '../../announcements/screens/announcements_screen.dart';
 import '../../events/screens/events_screen.dart';
 import '../../giving/screens/income_forms_list_screen.dart';
+import '../../giving/screens/my_giving_screen.dart';
 
 /// New announcements and events. Opening it marks everything as seen, but the
 /// items that were new when you arrived stay highlighted until you leave.
@@ -63,12 +64,15 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                 final isNew = _captured && (seen == null || item.at.isAfter(seen));
                 final isEvent = item.kind == NotificationKind.event;
                 final isForm = item.kind == NotificationKind.incomeForm;
+                final isPledge = item.kind == NotificationKind.pledge;
                 return ListTile(
                   tileColor: isNew ? const Color(0xFFFFF8E1) : null,
                   leading: Icon(
-                      isForm
-                          ? Icons.receipt_long
-                          : isEvent
+                      isPledge
+                          ? Icons.handshake_outlined
+                          : isForm
+                              ? Icons.receipt_long
+                              : isEvent
                               ? Icons.event
                               : Icons.campaign,
                       color: AppColors.primary),
@@ -83,7 +87,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (_) => isForm
+                        builder: (_) => isPledge
+                            ? const MyGivingScreen()
+                            : isForm
                             ? const IncomeFormsListScreen()
                             : isEvent
                                 ? const EventsScreen()
