@@ -81,6 +81,34 @@ class _GivingScreenState extends ConsumerState<GivingScreen> {
     }
   }
 
+  Widget? _addButtons(bool canRecordGiving) {
+    final canEnterForm = ref.watch(userRoleProvider).canEnterIncomeForms;
+    if (!canRecordGiving && !canEnterForm) return null;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        if (canRecordGiving)
+          FloatingActionButton.small(
+            heroTag: 'add-giving',
+            key: const Key('add-giving'),
+            tooltip: 'Record a contribution',
+            onPressed: _showAddMenu,
+            child: const Icon(Icons.add),
+          ),
+        if (canRecordGiving && canEnterForm) const SizedBox(height: 12),
+        if (canEnterForm)
+          FloatingActionButton.extended(
+            heroTag: 'add-income-form',
+            key: const Key('add-income-form'),
+            onPressed: _openIncomeForm,
+            icon: const Icon(Icons.receipt_long_outlined),
+            label: const Text('Sunday Income Form'),
+          ),
+      ],
+    );
+  }
+
   void _openIncomeForm() {
     Navigator.push(
       context,
@@ -498,19 +526,10 @@ class _GivingScreenState extends ConsumerState<GivingScreen> {
           ),
         ],
       ),
-      // Finance and Admin can record any giving; the Pastor can only enter a
-      // Sunday Income Form, so the button goes straight to it.
-      floatingActionButton: canEdit
-          ? FloatingActionButton(
-              onPressed: _showAddMenu, child: const Icon(Icons.add))
-          : ref.watch(userRoleProvider).canEnterIncomeForms
-              ? FloatingActionButton.extended(
-                  key: const Key('add-income-form'),
-                  onPressed: _openIncomeForm,
-                  icon: const Icon(Icons.receipt_long_outlined),
-                  label: const Text('Sunday Income Form'),
-                )
-              : null,
+      // Everyone who may enter a Sunday Income Form (Finance, Admin and the Pastor)
+      // sees the same labelled button for it. Finance and Admin, who can also record
+      // any other giving, have the smaller plus above it for that.
+      floatingActionButton: _addButtons(canEdit),
     );
   }
 }

@@ -85,13 +85,36 @@ void main() {
       expect(find.byType(SundayIncomeFormScreen), findsOneWidget);
     });
 
-    testWidgets('keeps the full add menu for Finance', (tester) async {
+    for (final role in [UserRole.finance, UserRole.admin]) {
+      testWidgets('shows ${role.name} the same labelled button, with the plus beside it',
+          (tester) async {
+        await _pump(tester, role, const GivingScreen());
+        expect(find.byKey(const Key('add-income-form')), findsOneWidget);
+        expect(find.text('Sunday Income Form'), findsOneWidget);
+        expect(find.byKey(const Key('add-giving')), findsOneWidget);
+        expect(find.byIcon(Icons.add), findsOneWidget);
+      });
+
+      testWidgets('the labelled button opens the income form for ${role.name}',
+          (tester) async {
+        await _pump(tester, role, const GivingScreen());
+        await tester.tap(find.byKey(const Key('add-income-form')));
+        await tester.pumpAndSettle();
+        expect(find.byType(SundayIncomeFormScreen), findsOneWidget);
+      });
+    }
+
+    testWidgets('the plus still records an ordinary contribution for Finance', (tester) async {
       await _pump(tester, UserRole.finance, const GivingScreen());
-      expect(find.byKey(const Key('add-income-form')), findsNothing);
-      await tester.tap(find.byIcon(Icons.add));
+      await tester.tap(find.byKey(const Key('add-giving')));
       await tester.pumpAndSettle();
       expect(find.text('Record Contribution'), findsOneWidget);
-      expect(find.text('Sunday Income Form'), findsOneWidget);
+      expect(find.text('Sunday Income Form'), findsNWidgets(2)); // the menu and the button
+    });
+
+    testWidgets('the Pastor has the labelled button but no plus', (tester) async {
+      await _pump(tester, UserRole.pastor, const GivingScreen());
+      expect(find.byKey(const Key('add-giving')), findsNothing);
     });
 
     for (final role in [UserRole.oversight, UserRole.elder]) {
