@@ -10,11 +10,15 @@ import 'giving_record.dart';
 
 enum ServiceType { morning, evening }
 
-/// The tithe of tithes is this share of the total tithe (10%). It is worked out
-/// from the tithe count, never typed in, and it is not an expense: the reserve
-/// check only asks that the cash set aside covers the expenses plus this amount.
-/// Change the rate here and the labels in the screens, PDFs and CSV header.
-const titheOfTithesRate = 0.10;
+/// The tithe of tithes is this share of the total tithe (20%). It is worked out
+/// from the tithe count, never typed in, and it is not an expense. This is the
+/// only place the rate is written: change it here and the labels in the screens,
+/// PDFs and CSV header follow. Totals are never stored, so every form already
+/// saved is recalculated at the new rate too.
+const titheOfTithesRate = 0.20;
+
+/// The rate as it reads in a label, e.g. `20`.
+final titheOfTithesPercent = (titheOfTithesRate * 100).round();
 
 extension ServiceTypeX on ServiceType {
   String get label => this == ServiceType.morning ? 'Morning' : 'Evening';
@@ -140,7 +144,7 @@ class SundayIncomeForm {
   double grandTotal(Map<String, double> valuesByKey) =>
       overallCashTotal(valuesByKey) + totalForexKwacha + totalCheques;
 
-  /// 10% of the total tithe. Shown as its own line; never an expense entry.
+  /// [titheOfTithesRate] of the total tithe. Shown as its own line; never an expense entry.
   double titheOfTithes(Map<String, double> valuesByKey) =>
       categoryAmount(GivingCategory.tithe, valuesByKey) * titheOfTithesRate;
 

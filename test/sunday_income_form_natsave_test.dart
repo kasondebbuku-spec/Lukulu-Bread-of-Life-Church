@@ -48,16 +48,17 @@ void main() {
       tithe: {'100': 29}, // K2900
       expenses: const [],
     );
-    expect(form.titheOfTithes(valuesByKey), closeTo(290, 0.001)); // 10% of 2900
+    expect(form.titheOfTithes(valuesByKey), closeTo(580, 0.001)); // 20% of 2900
   });
 
-  test('the tithe of tithes is exactly 10% of the tithe, and not an expense', () {
-    expect(titheOfTithesRate, 0.10);
+  test('the tithe of tithes is exactly 20% of the tithe, and not an expense', () {
+    expect(titheOfTithesRate, 0.20);
+    expect(titheOfTithesPercent, 20);
     final form = buildForm(
-      tithe: {'100': 10}, // K1,000 -> K100
+      tithe: {'100': 10}, // K1,000 -> K200
       expenses: const [ExpenseEntry(description: 'Tissue', amount: 80)],
     );
-    expect(form.titheOfTithes(valuesByKey), closeTo(100, 0.001));
+    expect(form.titheOfTithes(valuesByKey), closeTo(200, 0.001));
     // It is calculated, so it never appears among the itemised expenses.
     expect(form.totalExpenses, 80);
     expect(form.expenseEntries.map((e) => e.description), ['Tissue']);
@@ -80,10 +81,10 @@ void main() {
         ], // K580
       );
       expect(form.grandTotal(valuesByKey), closeTo(2900, 0.001));
-      expect(form.titheOfTithes(valuesByKey), closeTo(290, 0.001));
+      expect(form.titheOfTithes(valuesByKey), closeTo(580, 0.001));
       expect(form.totalExpenses, closeTo(580, 0.001));
-      // 2900 - 290 - 580
-      expect(form.natsaveDeposit(valuesByKey), closeTo(2030, 0.001));
+      // 2900 - 580 - 580
+      expect(form.natsaveDeposit(valuesByKey), closeTo(1740, 0.001));
     });
 
     test('with no expenses it is the grand total less the tithe of tithes', () {
@@ -91,7 +92,7 @@ void main() {
         tithe: {'100': 10}, // K1,000
         expenses: const [],
       );
-      expect(form.natsaveDeposit(valuesByKey), closeTo(900, 0.001));
+      expect(form.natsaveDeposit(valuesByKey), closeTo(800, 0.001)); // 1000 - 200
     });
 
     test('with nothing received it is zero', () {
@@ -103,10 +104,10 @@ void main() {
     test('goes negative, rather than hiding it, when expenses outrun the money received',
         () {
       final form = buildForm(
-        tithe: {'100': 10}, // K1,000, tithe of tithes K100
+        tithe: {'100': 10}, // K1,000, tithe of tithes K200
         expenses: const [ExpenseEntry(description: 'Roof', amount: 1200)],
       );
-      expect(form.natsaveDeposit(valuesByKey), closeTo(-300, 0.001));
+      expect(form.natsaveDeposit(valuesByKey), closeTo(-400, 0.001)); // 1000 - 200 - 1200
     });
 
     test('plus the tithe of tithes makes the total collection, which is the net amount',
@@ -132,8 +133,8 @@ void main() {
     expect(form.grandTotal(valuesByKey), closeTo(2900, 0.001));
     expect(form.totalExpenses, closeTo(580, 0.001));
     expect(form.netAmount(valuesByKey), closeTo(2320, 0.001));
-    // The tithe of tithes (290) is not taken off the net amount.
-    expect(form.titheOfTithes(valuesByKey), closeTo(290, 0.001));
+    // The tithe of tithes (580) is not taken off the net amount.
+    expect(form.titheOfTithes(valuesByKey), closeTo(580, 0.001));
   });
 
   test('with no expenses the net amount equals the grand total', () {

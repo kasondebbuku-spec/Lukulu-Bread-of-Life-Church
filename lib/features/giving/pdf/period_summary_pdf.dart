@@ -7,6 +7,7 @@ import '../../../core/utils/currency_format.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../models/giving_record.dart';
 import '../../../models/period_summary.dart';
+import '../../../models/sunday_income_form.dart' show titheOfTithesPercent;
 import '../../../models/trend.dart';
 
 // Text here must stay plain ASCII: the built-in PDF font has no Unicode glyphs.
@@ -118,7 +119,7 @@ Future<Uint8List> buildPeriodSummaryPdf(PeriodSummary summary,
         if (forms.hasForms) ...[
           _heading('Bank deposit'),
           _table(['', 'Amount (K)'], [
-            ['Tithe of Tithes (10% of tithe)', formatZmw(forms.titheOfTithes)],
+            ['Tithe of Tithes ($titheOfTithesPercent% of tithe)', formatZmw(forms.titheOfTithes)],
             ['Natsave Deposit', formatZmw(forms.natsaveDeposit)],
             ['Total Collection', formatZmw(forms.totalCollection)],
           ]),

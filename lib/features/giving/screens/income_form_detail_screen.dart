@@ -164,7 +164,7 @@ class IncomeFormDetailScreen extends ConsumerWidget {
             emphasized: true,
           ),
           _Row(
-            label: 'Tithe of Tithes (10% of tithe)',
+            label: 'Tithe of Tithes ($titheOfTithesPercent% of tithe)',
             value: form.titheOfTithes(valuesByKey),
             color: AppColors.secondary,
           ),

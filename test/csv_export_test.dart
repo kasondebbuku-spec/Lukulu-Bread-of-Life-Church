@@ -117,9 +117,9 @@ void main() {
 
       expect(col('Tithe'), '2900');
       expect(col('Grand total'), '2900');
-      expect(col('Tithe of tithes (10% of tithe)'), '290');
-      // Natsave is the rest: 2900 less the tithe of tithes (290) less expenses (580).
-      expect(col('Natsave deposit'), '2030');
+      expect(col('Tithe of tithes (20% of tithe)'), '580');
+      // Natsave is the rest: 2900 less the tithe of tithes (580) less expenses (580).
+      expect(col('Natsave deposit'), '1740');
       expect(col('Total collection'), '2320');
       expect(col('Total expenses'), '580');
       // Grand total 2900 less expenses 580.

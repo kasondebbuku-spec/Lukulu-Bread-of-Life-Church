@@ -682,7 +682,7 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
                     leading: const Icon(Icons.volunteer_activism_outlined,
                         color: AppColors.secondary),
                     title: Text(
-                        'Tithe of Tithes (10% of tithe): ${formatZmw(_titheOfTithes)}'),
+                        'Tithe of Tithes ($titheOfTithesPercent% of tithe): ${formatZmw(_titheOfTithes)}'),
                   ),
                   const Divider(height: 1),
                   ListTile(
@@ -804,7 +804,7 @@ class _SundayIncomeFormScreenState extends ConsumerState<SundayIncomeFormScreen>
                     _TotalLine('Net Amount', _grandTotal - _expensesTotal,
                         emphasized: true),
                     const Divider(),
-                    _TotalLine('Tithe of Tithes (10% of tithe)', _titheOfTithes),
+                    _TotalLine('Tithe of Tithes ($titheOfTithesPercent% of tithe)', _titheOfTithes),
                     _TotalLine('Natsave Deposit', _natsaveTotal),
                     _TotalLine('Total Collection', _titheOfTithes + _natsaveTotal,
                         emphasized: true),

@@ -49,7 +49,7 @@ String incomeFormsCsv(
       'Forex (Kwacha value)',
       'Cheques',
       'Grand total',
-      'Tithe of tithes (10% of tithe)',
+      'Tithe of tithes ($titheOfTithesPercent% of tithe)',
       'Natsave deposit',
       'Total collection',
       'Total expenses',

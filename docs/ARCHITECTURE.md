@@ -248,7 +248,7 @@ can address exactly them: `<formId>_<category>` for giving and
 `<formId>_attendance` for attendance. Forms saved before this scheme
 (`recordsKeyedById` false) are read-only.
 
-**Derived values are never stored.** Totals, the tithe of tithes (10% of the tithe), Natsave
+**Derived values are never stored.** Totals, the tithe of tithes (20% of the tithe), Natsave
 deposit, net amount, attendance total and so on are computed from
 the stored counts each time, so they cannot disagree with the source data.
 
@@ -310,7 +310,7 @@ as an alternative host.)
 
 | Attribute | How it is addressed |
 |---|---|
-| **Correctness of money** | Derived values only; unit tests replicate the real paper form's figures (2900 tithe, 290 tithe of tithes at 10%, 3180 expenses). |
+| **Correctness of money** | Derived values only; unit tests replicate the real paper form's figures (2900 tithe, 580 tithe of tithes at 20%, 3180 expenses). |
 | **Security** | Server-side rules, immutable audit log, role separation, tested. |
 | **Auditability** | Who/what/when for every form change, with before/after totals. |
 | **Usability** | Live totals while typing, a clear message when Save cannot proceed, role-tailored navigation, responsive layout. |

@@ -168,8 +168,8 @@ Good to know:
 - **The import never saves.** It only fills in the form, so you can check it
   first. If you had already typed counts, it asks before replacing them.
 - The file is read in your browser; it is not sent anywhere.
-- The sheet's own totals and its "20% of tithe" line are ignored. The app works
-  out the totals itself (and the tithe of tithes at 10% of the tithe). If the
+- The sheet's own totals, including its "20% of tithe" line, are not copied. The
+  app works them out itself (the tithe of tithes is 20% of the tithe). If the
   sheet's OVERALL total does not match its own tables, the box warns you.
 - It must be an **.xlsx** file. If it is an older `.xls` or a CSV, open it in
   Excel and choose *Save As -> Excel Workbook (.xlsx)*.
@@ -189,7 +189,7 @@ Good to know:
    amount; it is converted to Kwacha automatically. Use **Add row** for more.
 4. **Cheques.** Name, cheque number and amount. **Add row** for more.
 5. **Tithe of Tithes and Natsave (worked out for you).** After everything is
-   received on Sunday, the **tithe of tithes** (10% of the tithe) and the
+   received on Sunday, the **tithe of tithes** (20% of the tithe) and the
    **expenses** are taken out, and **the rest goes into the Natsave account**.
    The form works both out and shows them in a card, so there is nothing to
    count or type for either. The tithe of tithes is not an expense.
@@ -205,7 +205,7 @@ Good to know:
 9. **Totals (live).** The card above the Save button shows cash, forex, cheques
     and the **Grand Total**. Straight after it come **Less: Total Expenses** and the
     **Net Amount**, which is the grand total with the expenses deducted. Below
-    those are the tithe of tithes (10% of tithe), the **Natsave Deposit** (the
+    those are the tithe of tithes (20% of tithe), the **Natsave Deposit** (the
     net amount less the tithe of tithes) and the total collection (the tithe of
     tithes plus the Natsave deposit, so it equals the net amount). All of it
     updates as you work.

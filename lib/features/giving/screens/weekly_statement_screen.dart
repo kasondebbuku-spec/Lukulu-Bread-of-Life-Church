@@ -117,7 +117,7 @@ class _WeeklyStatementScreenState extends ConsumerState<WeeklyStatementScreen> {
                     style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 8),
                 _StatRow(
-                  label: 'Tithe of Tithes (10% of tithe)',
+                  label: 'Tithe of Tithes ($titheOfTithesPercent% of tithe)',
                   value: formTotals.titheOfTithes,
                   color: AppColors.secondary,
                 ),

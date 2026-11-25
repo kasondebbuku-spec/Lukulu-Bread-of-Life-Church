@@ -30,7 +30,7 @@ void main() {
     await pumpForm(tester);
 
     final expenses = find.text('Expenses');
-    final titheOfTithes = find.textContaining('Tithe of Tithes (10% of tithe):');
+    final titheOfTithes = find.textContaining('Tithe of Tithes (20% of tithe):');
     final natsave = find.textContaining('Natsave Deposit: ZMW');
     final attendance = find.text('Attendance');
 
@@ -64,11 +64,11 @@ void main() {
     expect(find.text('Expenses'), findsOneWidget);
   });
 
-  testWidgets('the totals name the tithe of tithes with its 10% in brackets',
+  testWidgets('the totals name the tithe of tithes with its 20% in brackets',
       (tester) async {
     await pumpForm(tester);
     // One on the worked-out card, one in the live totals.
-    expect(find.textContaining('Tithe of Tithes (10% of tithe)'), findsNWidgets(2));
+    expect(find.textContaining('Tithe of Tithes (20% of tithe)'), findsNWidgets(2));
     expect(find.text('Net Amount'), findsOneWidget);
   });
 }

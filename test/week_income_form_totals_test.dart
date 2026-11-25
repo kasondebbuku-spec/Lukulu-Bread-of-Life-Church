@@ -57,11 +57,11 @@ void main() {
     final totals = WeekIncomeFormTotals.compute(sunday, forms, valuesByKey);
 
     expect(totals.formCount, 2);
-    expect(totals.titheOfTithes, closeTo(390, 0.001)); // 290 + 100
-    // Natsave is the rest of each Sunday: (2900 - 290 - 580) + (1000 - 100 - 300).
-    expect(totals.natsaveDeposit, closeTo(2630, 0.001)); // 2030 + 600
+    expect(totals.titheOfTithes, closeTo(780, 0.001)); // 580 + 200
+    // Natsave is the rest of each Sunday: (2900 - 580 - 580) + (1000 - 200 - 300).
+    expect(totals.natsaveDeposit, closeTo(2240, 0.001)); // 1740 + 500
     // Tithe of tithes plus Natsave is what was received less the expenses.
-    expect(totals.totalCollection, closeTo(3020, 0.001)); // 390 + 2630
+    expect(totals.totalCollection, closeTo(3020, 0.001)); // 780 + 2240
     expect(totals.totalExpenses, closeTo(880, 0.001)); // 580 + 300
   });
 

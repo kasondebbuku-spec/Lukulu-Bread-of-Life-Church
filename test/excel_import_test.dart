@@ -371,8 +371,8 @@ void main() {
 
       // The figures flow through to the totals the same as typed ones.
       expect(find.text('ZMW 2279.00'), findsWidgets); // grand total and overall
-      expect(find.text('Tithe of Tithes (10% of tithe): ZMW 80.00'), findsOneWidget);
-      expect(find.text('Natsave Deposit: ZMW 2199.00'), findsOneWidget);
+      expect(find.text('Tithe of Tithes (20% of tithe): ZMW 160.00'), findsOneWidget);
+      expect(find.text('Natsave Deposit: ZMW 2119.00'), findsOneWidget);
 
       // Attendance is not on the sheet, so the person is told to add it.
       expect(find.text('Not on the sheet, so please fill in: Men, Women, Children.'),

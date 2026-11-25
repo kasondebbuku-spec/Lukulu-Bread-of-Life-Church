@@ -89,9 +89,9 @@ void main() {
   test('forms in the month feed deposits, expenses and attendance', () {
     final s = month();
     expect(s.serviceCount, 2);
-    expect(s.formTotals.titheOfTithes, 100 + 200);
-    // Natsave is the rest of each Sunday: 1000 - 100 - 500 and 2000 - 200 - 500.
-    expect(s.formTotals.natsaveDeposit, 400 + 1300);
+    expect(s.formTotals.titheOfTithes, 200 + 400);
+    // Natsave is the rest of each Sunday: 1000 - 200 - 500 and 2000 - 400 - 500.
+    expect(s.formTotals.natsaveDeposit, 300 + 1100);
     expect(s.formTotals.totalExpenses, 1000);
     // Net amount: the month's giving (1850) less the expenses (1000).
     expect(s.netAmount, 850);
