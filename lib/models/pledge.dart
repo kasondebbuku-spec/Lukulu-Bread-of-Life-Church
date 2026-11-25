@@ -8,6 +8,32 @@ import 'giving_record.dart';
 /// overdue is worked out from what has been given, never stored.
 enum PledgeStatus { open, cancelled }
 
+/// Money received towards the pledge of someone who has not registered. For a
+/// registered member nothing is typed in: their Pledge giving counts instead.
+class PledgePayment {
+  const PledgePayment({required this.amount, required this.date, this.note = ''});
+
+  final double amount;
+  final DateTime date;
+  final String note;
+
+  factory PledgePayment.fromMap(Map<String, dynamic> data) {
+    final d = data['date'] is Timestamp ? (data['date'] as Timestamp).toDate() : DateTime.now();
+    final a = data['amount'];
+    return PledgePayment(
+      amount: a is num ? a.toDouble() : 0,
+      date: DateTime(d.year, d.month, d.day),
+      note: data['note'] as String? ?? '',
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+        'amount': amount,
+        'date': Timestamp.fromDate(date),
+        'note': note,
+      };
+}
+
 /// A member's promise to give an amount by a date.
 class Pledge {
   const Pledge({
@@ -21,11 +47,12 @@ class Pledge {
     this.status = PledgeStatus.open,
     this.createdBy = '',
     this.createdAt,
+    this.payments = const [],
   });
 
   final String id;
 
-  /// The member's account.
+  /// The member's account. Empty for someone who has not registered.
   final String userId;
   final String memberName;
 
@@ -42,6 +69,14 @@ class Pledge {
   /// Who typed it into the app (the member, or the Finance Officer for them).
   final String createdBy;
   final DateTime? createdAt;
+
+  /// Payments received, typed in by the Finance Officer. Only used when the
+  /// person is not registered; a registered member's payments are worked out
+  /// from the giving recorded in their name.
+  final List<PledgePayment> payments;
+
+  /// Whether the pledge belongs to a registered account.
+  bool get isRegistered => userId.isNotEmpty;
 
   bool get isCancelled => status == PledgeStatus.cancelled;
 
@@ -64,6 +99,10 @@ class Pledge {
       status: data['status'] == 'cancelled' ? PledgeStatus.cancelled : PledgeStatus.open,
       createdBy: data['createdBy'] as String? ?? '',
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+      payments: [
+        for (final x in (data['payments'] as List?) ?? const [])
+          if (x is Map) PledgePayment.fromMap(Map<String, dynamic>.from(x)),
+      ],
     );
   }
 
@@ -77,6 +116,7 @@ class Pledge {
         'status': status.name,
         'createdBy': createdBy,
         'createdAt': FieldValue.serverTimestamp(),
+        if (!isRegistered) 'payments': [for (final x in payments) x.toMap()],
       };
 }
 
@@ -130,7 +170,9 @@ DateTime _day(DateTime d) => DateTime(d.year, d.month, d.day);
 /// Giving that counts: category Pledge, Kwacha, linked to the member's account,
 /// dated on or after the day the pledge was made. When a member has several
 /// open pledges, each payment goes to the oldest one first and any surplus
-/// rolls on to the next. Cancelled pledges take nothing.
+/// rolls on to the next. Cancelled pledges take nothing. A pledge for someone
+/// who is not registered counts only the payments the Finance Officer has
+/// recorded on it.
 List<PledgeProgress> pledgeProgress({
   required List<Pledge> pledges,
   required List<GivingRecord> payments,
@@ -141,6 +183,11 @@ List<PledgeProgress> pledgeProgress({
 
   final byUser = <String, List<Pledge>>{};
   for (final p in pledges.where((p) => !p.isCancelled)) {
+    if (!p.isRegistered) {
+      final sum = p.payments.fold(0.0, (s, x) => s + x.amount);
+      paidBy[p.id] = sum < p.amount ? sum : p.amount;
+      continue;
+    }
     byUser.putIfAbsent(p.userId, () => []).add(p);
   }
   for (final entry in byUser.entries) {

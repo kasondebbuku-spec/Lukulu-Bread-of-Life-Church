@@ -142,10 +142,16 @@ service cloud.firestore {
     // and change them for a member; people who may see giving can read them all.
     // Whether one is fulfilled is worked out from the giving records, never stored,
     // so the only states written are 'open' and 'cancelled'.
+    // A pledge for someone who has not registered has an empty userId and can only
+    // be made by the Finance Officer or Admin; because nothing can be linked to it,
+    // the payments received are kept on the pledge itself ('payments'), and only
+    // finance may write them.
     function validPledge(d) {
       return d.keys().hasOnly(['userId', 'memberName', 'amount', 'madeOn', 'dueDate',
-                               'note', 'status', 'createdBy', 'createdAt'])
-        && d.userId is string && d.userId.size() > 0
+                               'note', 'status', 'createdBy', 'createdAt', 'payments'])
+        && d.userId is string
+        && d.get('payments', []) is list && d.get('payments', []).size() <= 200
+        && (d.userId == '' || d.get('payments', []).size() == 0)
         && d.memberName is string && d.memberName.size() > 0 && d.memberName.size() <= 100
         && d.amount is number && d.amount > 0 && d.amount <= 10000000
         && d.madeOn is timestamp && d.dueDate is timestamp
@@ -159,12 +165,15 @@ service cloud.firestore {
       allow create: if isSignedIn() && validPledge(request.resource.data)
         && request.resource.data.status == 'open'
         && (request.resource.data.userId == request.auth.uid || canManageGiving());
-      // Only the amount, due date, note and status can change: not whose it is,
-      // when it was made, or who entered it.
+      // Only the amount, due date, note and status can change (and, for finance,
+      // the payments on an unregistered person's pledge): not whose it is, when it
+      // was made, or who entered it.
       allow update: if isSignedIn() && validPledge(request.resource.data)
         && (resource.data.userId == request.auth.uid || canManageGiving())
         && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['amount', 'dueDate', 'note', 'status']);
+             .hasOnly(['amount', 'dueDate', 'note', 'status', 'payments'])
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['payments'])
+            || canManageGiving());
       allow delete: if isSignedIn()
         && (resource.data.userId == request.auth.uid || canManageGiving());
     }

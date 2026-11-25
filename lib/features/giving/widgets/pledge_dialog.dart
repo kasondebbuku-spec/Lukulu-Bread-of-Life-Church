@@ -11,6 +11,7 @@ class PledgeDraft {
     required this.dueDate,
     required this.note,
     this.account,
+    this.guestName,
   });
 
   final double amount;
@@ -19,6 +20,10 @@ class PledgeDraft {
 
   /// Whose pledge it is, when the Finance Officer is recording it for a member.
   final RegisteredAccount? account;
+
+  /// Set instead of [account] when the pledge is for someone who has not
+  /// registered: their name as the Finance Officer typed it.
+  final String? guestName;
 }
 
 const pledgeMaxAmount = 10000000.0;
@@ -54,7 +59,9 @@ class _PledgeDialogState extends State<_PledgeDialog> {
   late final _note = TextEditingController(text: widget.existing?.note ?? '');
   late DateTime _due = widget.existing?.dueDate ??
       DateTime.now().add(const Duration(days: 30));
+  late final _guestName = TextEditingController();
   RegisteredAccount? _account;
+  bool _guest = false;
   String? _dateError;
 
   static String _plain(double v) =>
@@ -64,6 +71,7 @@ class _PledgeDialogState extends State<_PledgeDialog> {
   void dispose() {
     _amount.dispose();
     _note.dispose();
+    _guestName.dispose();
     super.dispose();
   }
 
@@ -91,7 +99,8 @@ class _PledgeDialogState extends State<_PledgeDialog> {
         amount: double.parse(_amount.text.trim()),
         dueDate: DateTime(_due.year, _due.month, _due.day),
         note: _note.text.trim(),
-        account: _account,
+        account: _guest ? null : _account,
+        guestName: _guest ? _guestName.text.trim() : null,
       ),
     );
   }
@@ -110,19 +119,39 @@ class _PledgeDialogState extends State<_PledgeDialog> {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (accounts != null) ...[
-                DropdownButtonFormField<RegisteredAccount>(
-                  isExpanded: true,
-                  initialValue: _account,
-                  decoration: const InputDecoration(labelText: 'Member account'),
-                  items: [
-                    for (final a in accounts)
-                      DropdownMenuItem(
-                          value: a,
-                          child: Text(a.label, overflow: TextOverflow.ellipsis)),
-                  ],
-                  onChanged: (a) => setState(() => _account = a),
-                  validator: (a) => a == null ? 'Choose the member' : null,
+                SwitchListTile(
+                  key: const Key('pledge-not-registered'),
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Not registered in the app'),
+                  subtitle: const Text(
+                      'Finance records what they give, by hand.'),
+                  value: _guest,
+                  onChanged: (v) => setState(() => _guest = v),
                 ),
+                if (_guest)
+                  TextFormField(
+                    key: const Key('pledge-guest-name'),
+                    controller: _guestName,
+                    maxLength: 100,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: const InputDecoration(labelText: 'Their full name'),
+                    validator: (v) =>
+                        (v ?? '').trim().isEmpty ? 'Enter their name' : null,
+                  )
+                else
+                  DropdownButtonFormField<RegisteredAccount>(
+                    isExpanded: true,
+                    initialValue: _account,
+                    decoration: const InputDecoration(labelText: 'Member account'),
+                    items: [
+                      for (final a in accounts)
+                        DropdownMenuItem(
+                            value: a,
+                            child: Text(a.label, overflow: TextOverflow.ellipsis)),
+                    ],
+                    onChanged: (a) => setState(() => _account = a),
+                    validator: (a) => a == null ? 'Choose the member' : null,
+                  ),
                 const SizedBox(height: 12),
               ],
               TextFormField(

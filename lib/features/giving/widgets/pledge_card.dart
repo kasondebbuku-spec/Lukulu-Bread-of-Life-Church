@@ -14,6 +14,8 @@ class PledgeCard extends StatelessWidget {
     this.showMember = false,
     this.onChange,
     this.onCancel,
+    this.onRecordPayment,
+    this.onShowPayments,
   });
 
   final PledgeProgress progress;
@@ -22,6 +24,11 @@ class PledgeCard extends StatelessWidget {
   final bool showMember;
   final VoidCallback? onChange;
   final VoidCallback? onCancel;
+
+  /// For a pledge of someone who is not registered: the Finance Officer types
+  /// in each payment received, and can look back over them.
+  final VoidCallback? onRecordPayment;
+  final VoidCallback? onShowPayments;
 
   static (String, Color) _look(PledgeState s) => switch (s) {
         PledgeState.fulfilled => ('Fulfilled', AppColors.primary),
@@ -59,10 +66,18 @@ class PledgeCard extends StatelessWidget {
                     onSelected: (v) {
                       if (v == 'change') onChange!();
                       if (v == 'cancel') onCancel!();
+                      if (v == 'pay') onRecordPayment?.call();
+                      if (v == 'payments') onShowPayments?.call();
                     },
-                    itemBuilder: (context) => const [
-                      PopupMenuItem(value: 'change', child: Text('Change')),
-                      PopupMenuItem(value: 'cancel', child: Text('Cancel pledge')),
+                    itemBuilder: (context) => [
+                      if (!p.isRegistered && onRecordPayment != null)
+                        const PopupMenuItem(
+                            value: 'pay', child: Text('Record a payment')),
+                      if (!p.isRegistered && onShowPayments != null)
+                        const PopupMenuItem(
+                            value: 'payments', child: Text('Payments received')),
+                      const PopupMenuItem(value: 'change', child: Text('Change')),
+                      const PopupMenuItem(value: 'cancel', child: Text('Cancel pledge')),
                     ],
                   )
                 else
@@ -70,10 +85,26 @@ class PledgeCard extends StatelessWidget {
               ],
             ),
             if (showMember)
-              Text(p.memberName, style: theme.textTheme.bodyMedium),
+              Wrap(
+                spacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(p.memberName, style: theme.textTheme.bodyMedium),
+                  if (!p.isRegistered)
+                    const TagChip(
+                        key: Key('not-registered-tag'),
+                        label: 'Not registered',
+                        color: AppColors.blue,
+                        icon: Icons.person_off_outlined),
+                ],
+              ),
             Text('To be given by ${formatDate(p.dueDate)}',
                 style: theme.textTheme.bodySmall),
             if (p.note.isNotEmpty) Text(p.note, style: theme.textTheme.bodySmall),
+            if (showMember && !p.isRegistered && !p.isCancelled)
+              Text('Payments are recorded by hand, as they are received.',
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: AppColors.textSecondary)),
             if (!p.isCancelled) ...[
               const SizedBox(height: 10),
               Padding(

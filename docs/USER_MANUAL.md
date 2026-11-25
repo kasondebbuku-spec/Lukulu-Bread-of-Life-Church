@@ -370,6 +370,19 @@ pledge** to add one for a member (choose their account), and change or cancel
 one. When a member gives towards a pledge, record the gift with the category
 **Pledge** and link it to their account so it counts.
 
+**Someone who is not registered.** In **Record a pledge**, switch on **Not
+registered in the app** and type their full name instead of choosing an account.
+Their pledge is marked **Not registered** everywhere it is listed, the top of the
+list says how many there are, and **Not registered only** narrows the list to them.
+Because there is no account to link giving to, Finance records what they give by
+hand: tap the **three dots** on their pledge, then **Record a payment** (amount,
+date received and an optional note). **Payments received** lists them and lets
+Finance remove one entered by mistake. The progress bar, *Due soon* and *Overdue*
+work the same as for everyone else. These people do not get Home-screen or bell
+reminders (they have no account), so look for them on the Pledges screen. If the
+person registers later, record a new pledge on their account for what is still
+owing, then cancel the old one (what they gave before stays in its payment list).
+
 ### Yearly statement
 At the top of My Giving, the **Yearly statement** card lets you pick a year and
 **Download PDF** or **Print** a personal statement: totals by category and month and

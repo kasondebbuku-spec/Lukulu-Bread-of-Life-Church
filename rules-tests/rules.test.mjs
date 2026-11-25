@@ -455,6 +455,89 @@ async function main() {
   await check('finance CAN delete a member\'s pledge', () =>
     assertSucceeds(deleteDoc(pledgeRef('finance1', 'pl_f'))));
 
+  console.log('\n--- Pledges for people who are not registered ---');
+  // No account: an empty userId. Finance records the payments on the pledge.
+  const guestDoc = (extra = {}) => pledgeDoc('', { memberName: 'John Phiri', createdBy: 'Finance', payments: [], ...extra });
+  const guestSeed = () => ({ ...guestDoc(), createdAt: ts('2026-11-01') });
+  const pay = (amount) => ({ amount, date: ts('2026-11-20'), note: '' });
+  for (const id of ['pg_read', 'pg_a', 'pg_b', 'pg_c', 'pg_d', 'pg_e', 'pg_f', 'pg_g']) {
+    await seedDoc('pledges/' + id, guestSeed());
+  }
+
+  await check('finance CAN record a pledge for someone not registered', () =>
+    assertSucceeds(addDoc(pledges('finance1'), guestDoc())));
+  await check('admin CAN record a pledge for someone not registered', () =>
+    assertSucceeds(addDoc(pledges('admin1'), guestDoc())));
+  await check('a member CANNOT record a pledge with no account', () =>
+    assertFails(addDoc(pledges('member1'), guestDoc())));
+  await check('pastor CANNOT record a pledge with no account', () =>
+    assertFails(addDoc(pledges('pastor1'), guestDoc())));
+  await check('elder CANNOT record a pledge with no account', () =>
+    assertFails(addDoc(pledges('elder1'), guestDoc())));
+  await check('a pledge with no account still needs a name', () =>
+    assertFails(addDoc(pledges('finance1'), guestDoc({ memberName: '' }))));
+  await check('a pledge with no account still needs a sensible amount', () =>
+    assertFails(addDoc(pledges('finance1'), guestDoc({ amount: 0 }))));
+  await check('a pledge with a missing account field is refused', async () => {
+    const d = guestDoc();
+    delete d.userId;
+    await assertFails(addDoc(pledges('finance1'), d));
+  });
+
+  await check('finance CAN record a payment on it', () =>
+    assertSucceeds(updateDoc(pledgeRef('finance1', 'pg_a'), { payments: [pay(100)] })));
+  await check('admin CAN record a payment on it', () =>
+    assertSucceeds(updateDoc(pledgeRef('admin1', 'pg_b'), { payments: [pay(50), pay(25)] })));
+  await check('finance CAN take a payment off again', async () => {
+    await assertSucceeds(updateDoc(pledgeRef('finance1', 'pg_c'), { payments: [pay(10)] }));
+    await assertSucceeds(updateDoc(pledgeRef('finance1', 'pg_c'), { payments: [] }));
+  });
+  await check('a member CANNOT record a payment on it', () =>
+    assertFails(updateDoc(pledgeRef('member1', 'pg_d'), { payments: [pay(100)] })));
+  await check('pastor CANNOT record a payment on it', () =>
+    assertFails(updateDoc(pledgeRef('pastor1', 'pg_d'), { payments: [pay(100)] })));
+  await check('elder CANNOT record a payment on it', () =>
+    assertFails(updateDoc(pledgeRef('elder1', 'pg_d'), { payments: [pay(100)] })));
+  await check('payments CANNOT be written as something other than a list', () =>
+    assertFails(updateDoc(pledgeRef('finance1', 'pg_e'), { payments: 'ZMW 100' })));
+  await check('payments CANNOT run past 200 entries', () =>
+    assertFails(updateDoc(pledgeRef('finance1', 'pg_e'), { payments: Array.from({ length: 201 }, () => pay(1)) })));
+  await check('finance CAN change the amount and note on it', () =>
+    assertSucceeds(updateDoc(pledgeRef('finance1', 'pg_f'), { amount: 800, note: 'Roof' })));
+  await check('finance CANNOT hand it to an account afterwards', () =>
+    assertFails(updateDoc(pledgeRef('finance1', 'pg_f'), { userId: 'member1' })));
+  await check('finance CANNOT rename whose it is', () =>
+    assertFails(updateDoc(pledgeRef('finance1', 'pg_f'), { memberName: 'Someone Else' })));
+
+  await check('a member CANNOT read it', () =>
+    assertFails(getDoc(pledgeRef('member1', 'pg_read'))));
+  await check('a member listing their own pledges does not get it', async () => {
+    const snap = await assertSucceeds(getDocs(query(pledges('member1'), where('userId', '==', 'member1'))));
+    if (snap.docs.some((d) => d.id === 'pg_read')) throw new Error('member saw a pledge that is not theirs');
+  });
+  for (const who of ['finance1', 'admin1', 'pastor1']) {
+    await check(who + ' CAN read it', () =>
+      assertSucceeds(getDoc(pledgeRef(who, 'pg_read'))));
+  }
+  await check('elder CANNOT read it', () =>
+    assertFails(getDoc(pledgeRef('elder1', 'pg_read'))));
+
+  await check('finance CAN delete it', () =>
+    assertSucceeds(deleteDoc(pledgeRef('finance1', 'pg_g'))));
+  await check('a member CANNOT delete it', () =>
+    assertFails(deleteDoc(pledgeRef('member1', 'pg_read'))));
+
+  // A registered member's pledge never carries hand-typed payments: theirs are
+  // counted from the giving recorded in their name.
+  await check('a registered pledge CANNOT be created with payments on it', () =>
+    assertFails(addDoc(pledges('finance1'), pledgeDoc('member1', { payments: [pay(100)] }))));
+  await check('a member CANNOT add payments to their own pledge', async () => {
+    await seedDoc('pledges/pl_own', seeded('member1'));
+    await assertFails(updateDoc(pledgeRef('member1', 'pl_own'), { payments: [pay(500)] }));
+  });
+  await check('finance CANNOT add payments to a registered member\'s pledge', () =>
+    assertFails(updateDoc(pledgeRef('finance1', 'pl_own'), { payments: [pay(500)] })));
+
   console.log('\n--- Signup role-escalation lockdown ---');
   await check('new user CAN self-signup as member', () =>
     assertSucceeds(setDoc(doc(ctxFor('newbie1'), 'users/newbie1'), { role: 'member', email: 'newbie1@test.com' })));

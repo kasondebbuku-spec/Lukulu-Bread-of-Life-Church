@@ -33,6 +33,7 @@ Pledge _pledge(
   DateTime? due,
   PledgeStatus status = PledgeStatus.open,
   String name = 'Ruth Banda',
+  List<PledgePayment> payments = const [],
 }) =>
     Pledge(
       id: id,
@@ -42,7 +43,11 @@ Pledge _pledge(
       madeOn: madeOn ?? _inDays(-30),
       dueDate: due ?? _inDays(30),
       status: status,
+      payments: payments,
     );
+
+PledgePayment _paid(double amount, DateTime on, {String note = ''}) =>
+    PledgePayment(amount: amount, date: on, note: note);
 
 GivingRecord _gift(double amount, DateTime on,
         {String? user = 'u1',
@@ -78,6 +83,12 @@ class _FakePledgeRepository implements PledgeRepository {
 
   @override
   Future<void> cancel(String id) async => cancelled.add(id);
+
+  final paymentsSet = <({String id, List<PledgePayment> payments})>[];
+
+  @override
+  Future<void> setPayments(String id, List<PledgePayment> payments) async =>
+      paymentsSet.add((id: id, payments: payments));
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -165,6 +176,78 @@ void main() {
       final byId = {for (final r in result) r.pledge.id: r};
       expect(byId['a']!.state, PledgeState.fulfilled);
       expect(byId['b']!.paid, 0);
+    });
+  });
+
+  group('a pledge for someone who is not registered', () {
+    Pledge guest({double amount = 500, List<PledgePayment> payments = const [], int due = 30}) =>
+        _pledge('g', user: '', name: 'John Phiri', amount: amount, due: _inDays(due), payments: payments);
+
+    test('is recognised by having no account', () {
+      expect(guest().isRegistered, isFalse);
+      expect(_pledge('a').isRegistered, isTrue);
+    });
+
+    test('counts only the payments Finance recorded on it', () {
+      final p = _one(guest(payments: [_paid(100, _inDays(-5)), _paid(150, _inDays(-2))]), const []);
+      expect(p.paid, 250);
+      expect(p.remaining, 250);
+      expect(p.fraction, 0.5);
+    });
+
+    test('is not paid by giving that merely carries the same name', () {
+      final p = _one(guest(), [
+        GivingRecord(
+            id: 'x',
+            memberName: 'John Phiri',
+            amount: 500,
+            currency: 'ZMW',
+            date: _inDays(-3),
+            category: GivingCategory.pledge),
+        _gift(500, _inDays(-3), user: ''),
+        _gift(500, _inDays(-3), user: null),
+      ]);
+      expect(p.paid, 0);
+    });
+
+    test('never shows more than was pledged', () {
+      final p = _one(guest(amount: 100, payments: [_paid(80, _inDays(-3)), _paid(80, _inDays(-1))]), const []);
+      expect(p.paid, 100);
+      expect(p.state, PledgeState.fulfilled);
+    });
+
+    test('is overdue, due soon or on track like any other pledge', () {
+      expect(_one(guest(due: -2), const []).state, PledgeState.overdue);
+      expect(_one(guest(due: 3), const []).state, PledgeState.dueSoon);
+      expect(_one(guest(due: 40), const []).state, PledgeState.upcoming);
+      expect(_one(guest(due: -2, payments: [_paid(500, _inDays(-1))]), const []).state,
+          PledgeState.fulfilled);
+    });
+
+    test('a cancelled one takes and shows nothing', () {
+      final p = _one(
+          _pledge('g', user: '', name: 'John Phiri', status: PledgeStatus.cancelled, payments: [_paid(50, _inDays(-1))]),
+          const []);
+      expect(p.state, PledgeState.cancelled);
+      expect(p.paid, 0);
+    });
+
+    test('does not take money from a registered member\'s pledge giving', () {
+      final result = pledgeProgress(
+        pledges: [guest(payments: [_paid(100, _inDays(-2))]), _pledge('a', user: 'u1')],
+        payments: [_gift(300, _inDays(-3), user: 'u1')],
+        now: _now,
+      );
+      final byId = {for (final r in result) r.pledge.id: r};
+      expect(byId['a']!.paid, 300);
+      expect(byId['g']!.paid, 100);
+    });
+
+    test('the payment survives being written and read back', () {
+      final back = PledgePayment.fromMap(_paid(75.5, _inDays(-2), note: 'Cash').toMap());
+      expect(back.amount, 75.5);
+      expect(back.date, _inDays(-2));
+      expect(back.note, 'Cash');
     });
   });
 
@@ -564,6 +647,163 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Choose the member'), findsOneWidget);
       expect(repo.added, isEmpty);
+    });
+
+    final johnItems = [
+      ...items,
+      _one(
+          _pledge('j', user: '', name: 'John Phiri', amount: 400, due: _inDays(10),
+              payments: [_paid(100, _inDays(-3), note: 'Cash after service')]),
+          const []),
+    ];
+
+    testWidgets('marks anyone who is not registered, and counts them', (tester) async {
+      await pump(tester, const UserAccess({UserRole.finance}), items: johnItems);
+      expect(find.text('John Phiri'), findsOneWidget);
+      expect(find.byKey(const Key('not-registered-tag')), findsOneWidget);
+      expect(find.text('Not registered'), findsOneWidget);
+      expect(find.text('1 not registered in the app'), findsOneWidget);
+      expect(find.text('Payments are recorded by hand, as they are received.'), findsOneWidget);
+      // 100 of 400 has been received
+      expect(find.text('ZMW 100.00 given  •  ZMW 300.00 to go'), findsOneWidget);
+    });
+
+    testWidgets('no mark and no count when everyone is registered', (tester) async {
+      await pump(tester, const UserAccess({UserRole.finance}), items: items);
+      expect(find.byKey(const Key('not-registered-tag')), findsNothing);
+      expect(find.byKey(const Key('only-not-registered')), findsNothing);
+      expect(find.textContaining('not registered in the app'), findsNothing);
+    });
+
+    testWidgets('can be narrowed to the people who are not registered', (tester) async {
+      await pump(tester, const UserAccess({UserRole.finance}), items: johnItems);
+      await tester.tap(find.byKey(const Key('only-not-registered')));
+      await tester.pumpAndSettle();
+      expect(find.text('John Phiri'), findsOneWidget);
+      expect(find.text('Ruth Banda'), findsNothing);
+      expect(find.text('Peter Kabwe'), findsNothing);
+      await tester.tap(find.byKey(const Key('only-not-registered')));
+      await tester.pumpAndSettle();
+      expect(find.text('Ruth Banda'), findsOneWidget);
+    });
+
+    testWidgets('Finance can record a pledge for someone who is not registered', (tester) async {
+      final repo = await pump(tester, const UserAccess({UserRole.finance}), items: items);
+      await tester.tap(find.byKey(const Key('record-pledge')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('pledge-not-registered')));
+      await tester.pumpAndSettle();
+      expect(find.byType(DropdownButtonFormField<RegisteredAccount>), findsNothing);
+      await tester.enterText(find.byKey(const Key('pledge-guest-name')), '  John Phiri ');
+      await tester.enterText(find.widgetWithText(TextFormField, 'Amount pledged (ZMW)'), '400');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      final saved = repo.added.single;
+      expect(saved.userId, ''); // no account
+      expect(saved.isRegistered, isFalse);
+      expect(saved.memberName, 'John Phiri');
+      expect(saved.amount, 400);
+      expect(saved.payments, isEmpty);
+      expect(saved.createdBy, 'Mary Finance');
+      expect(find.text('Pledge recorded for John Phiri (not registered).'), findsOneWidget);
+    });
+
+    testWidgets('their name must be typed', (tester) async {
+      final repo = await pump(tester, const UserAccess({UserRole.finance}), items: items);
+      await tester.tap(find.byKey(const Key('record-pledge')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('pledge-not-registered')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.widgetWithText(TextFormField, 'Amount pledged (ZMW)'), '400');
+      await tester.enterText(find.byKey(const Key('pledge-guest-name')), '   ');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      expect(find.text('Enter their name'), findsOneWidget);
+      expect(repo.added, isEmpty);
+    });
+
+    testWidgets('switching back to a member account needs a member again', (tester) async {
+      final repo = await pump(tester, const UserAccess({UserRole.finance}), items: items);
+      await tester.tap(find.byKey(const Key('record-pledge')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('pledge-not-registered')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('pledge-not-registered')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.widgetWithText(TextFormField, 'Amount pledged (ZMW)'), '400');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      expect(find.text('Choose the member'), findsOneWidget);
+      expect(repo.added, isEmpty);
+    });
+
+    testWidgets('Finance can record a payment received for them', (tester) async {
+      final repo = await pump(tester, const UserAccess({UserRole.finance}), items: johnItems);
+      await tester.tap(find.byTooltip('Options').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Record a payment'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('payment-amount')), '50');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      final set = repo.paymentsSet.single;
+      expect(set.id, 'j');
+      // the earlier ZMW 100 is kept and the new ZMW 50 is added after it
+      expect(set.payments.map((x) => x.amount), [100, 50]);
+      expect(find.text('Recorded ZMW 50.00 for John Phiri.'), findsOneWidget);
+    });
+
+    testWidgets('a payment needs an amount', (tester) async {
+      final repo = await pump(tester, const UserAccess({UserRole.finance}), items: johnItems);
+      await tester.tap(find.byTooltip('Options').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Record a payment'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      expect(find.text('Enter an amount'), findsOneWidget);
+      expect(repo.paymentsSet, isEmpty);
+    });
+
+    testWidgets('Finance can look back at payments and remove one entered by mistake', (tester) async {
+      final repo = await pump(tester, const UserAccess({UserRole.finance}), items: johnItems);
+      await tester.tap(find.byTooltip('Options').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Payments received'));
+      await tester.pumpAndSettle();
+      expect(find.text('Payments from John Phiri'), findsOneWidget);
+      expect(find.text('ZMW 100.00'), findsWidgets);
+      expect(find.textContaining('Cash after service'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('remove-payment-0')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Keep it'));
+      await tester.pumpAndSettle();
+      expect(repo.paymentsSet, isEmpty);
+
+      await tester.tap(find.byKey(const Key('remove-payment-0')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Remove'));
+      await tester.pumpAndSettle();
+      expect(repo.paymentsSet.single.id, 'j');
+      expect(repo.paymentsSet.single.payments, isEmpty);
+    });
+
+    testWidgets('a registered member\'s pledge offers no hand-typed payments', (tester) async {
+      await pump(tester, const UserAccess({UserRole.finance}), items: items);
+      await tester.tap(find.byTooltip('Options').first);
+      await tester.pumpAndSettle();
+      expect(find.text('Record a payment'), findsNothing);
+      expect(find.text('Payments received'), findsNothing);
+      expect(find.text('Change'), findsOneWidget);
+    });
+
+    testWidgets('the Pastor sees who is not registered but cannot record payments', (tester) async {
+      await pump(tester, const UserAccess({UserRole.pastor}), items: johnItems);
+      expect(find.byKey(const Key('not-registered-tag')), findsOneWidget);
+      expect(find.byTooltip('Options'), findsNothing);
     });
 
     testWidgets('the Pastor can see the list but not record or change', (tester) async {

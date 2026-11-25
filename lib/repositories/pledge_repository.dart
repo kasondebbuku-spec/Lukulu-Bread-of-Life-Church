@@ -35,5 +35,9 @@ class PledgeRepository extends FirestoreRepository<Pledge> {
         'note': note,
       });
 
+  /// Replaces the payments recorded on an unregistered person's pledge.
+  Future<void> setPayments(String id, List<PledgePayment> payments) =>
+      col.doc(id).update({'payments': [for (final x in payments) x.toMap()]});
+
   Future<void> cancel(String id) => col.doc(id).update({'status': 'cancelled'});
 }

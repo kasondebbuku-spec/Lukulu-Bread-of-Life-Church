@@ -11,12 +11,20 @@ import '../../members/screens/account_roles_screen.dart';
 import '../widgets/my_pledges_section.dart';
 import '../widgets/pledge_card.dart';
 import '../widgets/pledge_dialog.dart';
+import '../widgets/pledge_payments.dart';
 
 /// Everyone's pledges, for those who may see giving: who has pledged, how much
 /// has been given, and what is overdue. The Finance Officer can also record a
 /// pledge for a member who cannot do it themselves.
-class PledgesScreen extends ConsumerWidget {
+class PledgesScreen extends ConsumerStatefulWidget {
   const PledgesScreen({super.key});
+
+  @override
+  ConsumerState<PledgesScreen> createState() => _PledgesScreenState();
+}
+
+class _PledgesScreenState extends ConsumerState<PledgesScreen> {
+  bool _onlyNotRegistered = false;
 
   Future<void> _record(BuildContext context, WidgetRef ref) async {
     final messenger = ScaffoldMessenger.of(context);
@@ -31,14 +39,19 @@ class PledgesScreen extends ConsumerWidget {
     }
     if (!context.mounted) return;
     final draft = await showPledgeDialog(context, accounts: accounts);
-    final account = draft?.account;
-    if (draft == null || account == null) return;
+    if (draft == null) return;
+    final account = draft.account;
+    final guestName = draft.guestName;
+    if (account == null && guestName == null) return;
+    // Someone who has not registered has no account: their pledge carries an
+    // empty userId and Finance records the payments by hand.
+    final name = account?.name ?? guestName!;
     final today = DateTime.now();
     try {
       await ref.read(pledgeRepositoryProvider).add(Pledge(
             id: '',
-            userId: account.id,
-            memberName: account.name,
+            userId: account?.id ?? '',
+            memberName: name,
             amount: draft.amount,
             madeOn: DateTime(today.year, today.month, today.day),
             dueDate: draft.dueDate,
@@ -46,7 +59,9 @@ class PledgesScreen extends ConsumerWidget {
             createdBy: actor?.name ?? '',
           ));
       messenger.showSnackBar(
-          SnackBar(content: Text('Pledge recorded for ${account.name}.')));
+          SnackBar(content: Text(account == null
+              ? 'Pledge recorded for $name (not registered).'
+              : 'Pledge recorded for $name.')));
     } catch (_) {
       messenger.showSnackBar(const SnackBar(
           content: Text('Could not record the pledge. Please try again.')));
@@ -78,13 +93,17 @@ class PledgesScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final canRecord = ref.watch(userRoleProvider).value?.canManageGiving == true;
     final theme = Theme.of(context);
     final all = ref.watch(allPledgeProgressProvider);
     final open = all.where((p) => p.state != PledgeState.cancelled).toList();
     final outstanding = open.fold(0.0, (s, p) => s + p.remaining);
     final overdue = open.where((p) => p.state == PledgeState.overdue).length;
+    final notRegistered = open.where((p) => !p.pledge.isRegistered).length;
+    final shown = _onlyNotRegistered && notRegistered > 0
+        ? open.where((p) => !p.pledge.isRegistered).toList()
+        : open;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Pledges')),
@@ -114,16 +133,33 @@ class PledgesScreen extends ConsumerWidget {
                         const SizedBox(height: 4),
                         Text('Still to be given: ${formatZmw(outstanding)}'),
                         Text(overdue == 0 ? 'None overdue' : '$overdue overdue'),
+                        if (notRegistered > 0)
+                          Text('$notRegistered not registered in the app'),
                       ],
                     ),
                   ),
                 ),
-                for (final p in open)
+                if (notRegistered > 0)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: FilterChip(
+                        key: const Key('only-not-registered'),
+                        label: const Text('Not registered only'),
+                        selected: _onlyNotRegistered,
+                        onSelected: (v) => setState(() => _onlyNotRegistered = v),
+                      ),
+                    ),
+                  ),
+                for (final p in shown)
                   PledgeCard(
                     progress: p,
                     showMember: true,
                     onChange: canRecord ? () => _change(context, ref, p.pledge) : null,
                     onCancel: canRecord ? () => _cancel(context, ref, p.pledge) : null,
+                    onRecordPayment: canRecord ? () => recordPledgePayment(context, ref, p) : null,
+                    onShowPayments: canRecord ? () => showPledgePayments(context, p.pledge.id) : null,
                   ),
               ],
             ),
