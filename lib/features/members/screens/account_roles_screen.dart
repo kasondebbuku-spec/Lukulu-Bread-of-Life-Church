@@ -2,18 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/auth_providers.dart';
 import '../../../core/providers/firebase_providers.dart';
+import '../../../core/providers/ministry_providers.dart';
 import '../../../core/providers/user_role_provider.dart';
+import '../../../models/ministry_position.dart';
+import '../../../models/phone_login.dart';
 import '../../../models/role_request.dart';
 import 'add_staff_dialog.dart';
 
 class RegisteredAccount {
   const RegisteredAccount(this.id, this.name, this.email, this.access,
-      {this.requestedRole});
+      {this.requestedRole, this.requestedPosition});
+
+  /// [email] is the phone number for someone who signed up with one.
   final String id, name, email;
   final UserAccess access;
 
   /// A role they asked for at sign-up that an Admin has not yet decided on.
   final UserRole? requestedRole;
+
+  /// A ministry position they asked for that an Admin has not yet decided on.
+  final MinistryPosition? requestedPosition;
   String get label => '$name ($email)';
 }
 
@@ -31,9 +39,16 @@ final registeredAccountsProvider =
     final accounts = snapshot.docs.map((doc) {
       final data = doc.data();
       final access = UserAccess.fromData(data);
+      // Someone who signed up with a phone number has a made-up email behind the
+      // scenes; show their number instead.
+      final phone = data['phone'] is String && (data['phone'] as String).isNotEmpty
+          ? formatPhone(data['phone'] as String)
+          : null;
+      final rawEmail = data['email'] as String? ?? '';
       return RegisteredAccount(doc.id, data['name'] as String? ?? 'Member',
-          data['email'] as String? ?? '', access,
-          requestedRole: pendingRoleRequest(data, access));
+          isPhoneLoginEmail(rawEmail) ? (phone ?? rawEmail) : rawEmail, access,
+          requestedRole: pendingRoleRequest(data, access),
+          requestedPosition: MinistryPosition.fromMap(data['requestedPosition']));
     }).toList();
     accounts
         .sort((a, b) => a.label.toLowerCase().compareTo(b.label.toLowerCase()));
@@ -69,6 +84,8 @@ class AccountRolesScreen extends ConsumerWidget {
         data: (items) => ListView(children: [
           _PendingRequests(
               accounts: items.where((a) => a.requestedRole != null).toList()),
+          _PendingPositions(
+              accounts: items.where((a) => a.requestedPosition != null).toList()),
           const Padding(
               padding: EdgeInsets.all(16),
               child: Text(
@@ -97,6 +114,7 @@ class _RoleDialog extends ConsumerStatefulWidget {
 
 class _RoleDialogState extends ConsumerState<_RoleDialog> {
   late final Set<UserRole> selected = {...widget.account.access.roles};
+  late final Map<String, MinistryPosition> positions = {...widget.account.access.positions};
   bool saving = false;
   String? error;
   Future<void> save() async {
@@ -119,7 +137,13 @@ class _RoleDialogState extends ConsumerState<_RoleDialog> {
         'roles': (selected.isEmpty ? {UserRole.member} : selected)
             .map((r) => r.name)
             .toList(),
+        'positions': {for (final e in positions.entries) e.key: e.value.toMap()},
       });
+      // Keep the leaders directory in step. If this fails the roles are already
+      // saved; the Refresh button on the Leaders screen puts it right.
+      try {
+        await ref.read(leaderDirectoryServiceProvider).syncFor(widget.account.id);
+      } catch (_) {}
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
@@ -155,6 +179,24 @@ class _RoleDialogState extends ConsumerState<_RoleDialog> {
                               }
                             }),
                   ),
+                if (positions.isNotEmpty) ...[
+                  const Divider(),
+                  const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text('Ministry positions')),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Wrap(spacing: 8, children: [
+                      for (final e in positions.entries)
+                        InputChip(
+                          label: Text(e.value.label),
+                          onDeleted: saving
+                              ? null
+                              : () => setState(() => positions.remove(e.key)),
+                        ),
+                    ]),
+                  ),
+                ],
                 if (error != null)
                   Text(error!,
                       style: TextStyle(
@@ -220,9 +262,86 @@ class _PendingRequests extends ConsumerWidget {
                   FilledButton(
                     onPressed: () => _run(
                         context,
-                        () => service.approve(account.id, account.access.roles,
-                            account.requestedRole!),
+                        () async {
+                          await service.approve(account.id, account.access.roles,
+                              account.requestedRole!);
+                          try {
+                            await ref
+                                .read(leaderDirectoryServiceProvider)
+                                .syncFor(account.id);
+                          } catch (_) {}
+                        },
                         '${account.name} is now ${account.requestedRole!.label}.'),
+                    child: const Text('Approve'),
+                  ),
+                ]),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// People who asked for a place in a ministry (Choir Leader, ...), awaiting
+/// one-tap approval. Approving lets them send reports to the Pastor.
+class _PendingPositions extends ConsumerWidget {
+  const _PendingPositions({required this.accounts});
+  final List<RegisteredAccount> accounts;
+
+  Future<void> _run(BuildContext context, Future<void> Function() action,
+      String done) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await action();
+      messenger.showSnackBar(SnackBar(content: Text(done)));
+    } catch (_) {
+      messenger.showSnackBar(
+          const SnackBar(content: Text('Could not save. Please try again.')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (accounts.isEmpty) return const SizedBox.shrink();
+    final service = ref.read(positionServiceProvider);
+    final directory = ref.read(leaderDirectoryServiceProvider);
+    return Card(
+      key: const Key('pending-positions'),
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: Text('Ministry positions waiting (${accounts.length})',
+                  style: Theme.of(context).textTheme.titleMedium),
+            ),
+            for (final account in accounts)
+              ListTile(
+                title: Text(account.label),
+                subtitle: Text('Wants to be ${account.requestedPosition!.label}'),
+                trailing: Wrap(spacing: 4, children: [
+                  TextButton(
+                    onPressed: () => _run(
+                        context,
+                        () => service.decline(account.id),
+                        'Request declined.'),
+                    child: const Text('Decline'),
+                  ),
+                  FilledButton(
+                    onPressed: () => _run(
+                        context,
+                        () async {
+                          await service.approve(
+                              account.id, account.requestedPosition!);
+                          try {
+                            await directory.syncFor(account.id);
+                          } catch (_) {}
+                        },
+                        '${account.name} is now ${account.requestedPosition!.label}.'),
                     child: const Text('Approve'),
                   ),
                 ]),

@@ -36,6 +36,22 @@ service cloud.firestore {
         && !('denominationBreakdown' in data) && !('incomeFormId' in data)
         && exists(/databases/$(database)/documents/users/$(data.memberUserId)));
     }
+    // A ministry position someone asks for (Admin approves it into `positions`).
+    function validPositionRequest(p) {
+      return p is map && p.keys().hasOnly(['ministry', 'title'])
+        && p.ministry is string && p.ministry.size() > 0 && p.ministry.size() <= 60
+        && p.title is string && p.title.size() > 0 && p.title.size() <= 60;
+    }
+    // Whether the signed-in person holds a position in the ministry with this key.
+    function hasPositionKey(k) {
+      return isSignedIn() && userData(request.auth.uid).get('positions', {}).keys().hasAny([k]);
+    }
+    // Anyone with a church role or a ministry position (not a plain member).
+    function isLeaderAccount() {
+      return isSignedIn() && (userData(request.auth.uid).get('positions', {}).size() > 0
+        || userData(request.auth.uid).get('roles', [userData(request.auth.uid).get('role', 'member')])
+             .hasAny(['deacon', 'deaconess', 'elder', 'pastor', 'finance', 'secretariat', 'hospitality', 'oversight', 'admin']));
+    }
     // Mirrors lib/core/providers/user_role_provider.dart — keep in sync.
     function canManageMembers() { return isAdmin() || isSecretariat() || hasRole('hospitality') || hasRole('pastor'); }
     function canManageGiving() { return isAdmin() || isFinance(); }
@@ -90,14 +106,25 @@ service cloud.firestore {
         // A sign-up may name the role the person holds, for an Admin to approve.
         // It grants nothing by itself, and 'admin' cannot be requested.
         && (!('requestedRole' in request.resource.data)
-            || request.resource.data.requestedRole in ['deacon', 'deaconess', 'elder', 'pastor', 'finance', 'secretariat', 'hospitality', 'oversight']);
+            || request.resource.data.requestedRole in ['deacon', 'deaconess', 'elder', 'pastor', 'finance', 'secretariat', 'hospitality', 'oversight'])
+        // A ministry position can be asked for the same way, but never held at sign-up.
+        && (!('requestedPosition' in request.resource.data)
+            || validPositionRequest(request.resource.data.requestedPosition))
+        && !('positions' in request.resource.data)
+        // Someone signing up with a phone number keeps it on their profile.
+        && (!('phone' in request.resource.data)
+            || (request.resource.data.phone is string && request.resource.data.phone.matches('^[0-9]{9,15}$')))
+        && (!('loginKind' in request.resource.data) || request.resource.data.loginKind == 'phone');
       allow update: if (isAdmin() && validRoles(request.resource.data)
         && (request.auth.uid != uid || ('admin' in request.resource.data.get('roles', [request.resource.data.get('role', 'member')]))))
         || (isSignedIn() && request.auth.uid == uid
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'notificationsSeenAt'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'notificationsSeenAt', 'requestedPosition'])
           // 'last opened notifications' is stamped with the server's own clock.
           && (!('notificationsSeenAt' in request.resource.data)
-              || request.resource.data.notificationsSeenAt == request.time));
+              || request.resource.data.notificationsSeenAt == request.time)
+          // A person may ask for a ministry position; only an Admin grants one.
+          && (!('requestedPosition' in request.resource.data)
+              || validPositionRequest(request.resource.data.requestedPosition)));
       allow delete: if isAdmin() && request.auth.uid != uid;
     }
     // Congregation directory holds personal contact info (email, phone) —
@@ -199,6 +226,78 @@ service cloud.firestore {
             || canManageGiving());
       allow delete: if isSignedIn()
         && (resource.data.userId == request.auth.uid || canManageGiving());
+    }
+
+    // Leaders directory: a copy of each leader's name, church roles and ministry
+    // positions that an Admin keeps up to date, so every signed-in person can see who
+    // the leaders are without reading anyone's private profile. Phone and email are
+    // kept apart and shown only to other leaders.
+    function validLeader(d) {
+      return d.keys().hasOnly(['name', 'roles', 'positions', 'updatedAt'])
+        && d.name is string && d.name.size() > 0 && d.name.size() <= 100
+        && d.roles is list && d.roles.size() <= 10
+        && d.positions is list && d.positions.size() <= 20;
+    }
+    match /leaders/{uid} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin() && validLeader(request.resource.data);
+      allow delete: if isAdmin();
+    }
+    match /leader_contacts/{uid} {
+      allow read: if isLeaderAccount();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['email', 'phone', 'updatedAt'])
+        && request.resource.data.get('email', '') is string && request.resource.data.get('email', '').size() <= 200
+        && request.resource.data.get('phone', '') is string && request.resource.data.get('phone', '').size() <= 20;
+      allow delete: if isAdmin();
+    }
+
+    // Ministry reports: a leader (someone an Admin has given a ministry position)
+    // writes to the Pastor about their ministry. The leader reads, corrects and
+    // withdraws their own until it is reviewed; the Pastor and Admin read them all
+    // and mark them reviewed with an optional reply, and can change nothing else.
+    function validReport(d) {
+      return d.keys().hasOnly(['authorUid', 'authorName', 'ministryKey', 'ministry', 'position',
+                               'period', 'attendance', 'summary', 'challenges', 'needs', 'status',
+                               'createdAt', 'pastorNote', 'reviewedBy', 'reviewedAt'])
+        && d.authorUid is string
+        && d.authorName is string && d.authorName.size() <= 100
+        && d.ministryKey is string && d.ministryKey.size() > 0 && d.ministryKey.size() <= 80
+        && d.ministry is string && d.ministry.size() > 0 && d.ministry.size() <= 60
+        && d.position is string && d.position.size() > 0 && d.position.size() <= 60
+        && d.period is timestamp
+        && d.attendance is number && d.attendance >= 0 && d.attendance <= 100000
+        && d.summary is string && d.summary.size() > 0 && d.summary.size() <= 4000
+        && d.get('challenges', '') is string && d.get('challenges', '').size() <= 2000
+        && d.get('needs', '') is string && d.get('needs', '').size() <= 2000
+        && d.status in ['sent', 'reviewed']
+        && d.get('pastorNote', '') is string && d.get('pastorNote', '').size() <= 2000
+        && d.get('reviewedBy', '') is string && d.get('reviewedBy', '').size() <= 100
+        && d.get('reviewedAt', request.time) is timestamp;
+    }
+    match /ministry_reports/{id} {
+      allow read: if isSignedIn()
+        && (resource.data.authorUid == request.auth.uid || hasRole('pastor') || isAdmin());
+      allow create: if isSignedIn() && validReport(request.resource.data)
+        && request.resource.data.authorUid == request.auth.uid
+        && request.resource.data.status == 'sent'
+        && request.resource.data.get('pastorNote', '') == ''
+        && request.resource.data.get('reviewedBy', '') == ''
+        && !('reviewedAt' in request.resource.data)
+        // The ministry and title must be the ones the Admin approved.
+        && hasPositionKey(request.resource.data.ministryKey)
+        && userData(request.auth.uid).positions[request.resource.data.ministryKey].ministry == request.resource.data.ministry
+        && userData(request.auth.uid).positions[request.resource.data.ministryKey].title == request.resource.data.position;
+      allow update: if isSignedIn() && validReport(request.resource.data) && (
+        (resource.data.authorUid == request.auth.uid && resource.data.status == 'sent'
+          && request.resource.data.status == 'sent'
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['period', 'attendance', 'summary', 'challenges', 'needs']))
+        || ((hasRole('pastor') || isAdmin())
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['status', 'pastorNote', 'reviewedBy', 'reviewedAt'])));
+      allow delete: if isSignedIn()
+        && ((resource.data.authorUid == request.auth.uid && resource.data.status == 'sent') || isAdmin());
     }
 
     // Events are public to every signed-in member; only certain roles edit them.

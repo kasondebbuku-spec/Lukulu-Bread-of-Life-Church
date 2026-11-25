@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../core/constants/firestore_collections.dart';
 import '../core/providers/user_role_provider.dart';
+import '../models/ministry_position.dart';
+import '../models/phone_login.dart';
 import '../models/role_request.dart';
 
 class AuthService {
@@ -22,10 +24,17 @@ class AuthService {
   /// must be granted by an admin (enforced by security rules). A person can name
   /// the role they hold in the church as [requestedRole]; that is only a note for
   /// the Admin to approve and grants no access by itself.
+  ///
+  /// With [phone] (digits from [normalizePhone]) the account is made under the
+  /// private address [phoneLoginEmail] instead of a real email, and the number is
+  /// kept on the profile. [requestedPosition] is a ministry position to be
+  /// approved by the Admin, like [requestedRole].
   Future<User?> signUp(String email, String password, String name,
-      {UserRole? requestedRole}) async {
+      {UserRole? requestedRole,
+      MinistryPosition? requestedPosition,
+      String? phone}) async {
     final result = await _auth.createUserWithEmailAndPassword(
-      email: email,
+      email: phone != null ? phoneLoginEmail(phone) : email,
       password: password,
     );
     final user = result.user;
@@ -34,8 +43,12 @@ class AuthService {
         'email': user.email,
         'name': name,
         'role': 'member',
+        if (phone != null) 'phone': phone,
+        if (phone != null) 'loginKind': 'phone',
         if (requestedRole != null && requestableRoles.contains(requestedRole))
           'requestedRole': requestedRole.name,
+        if (requestedPosition != null)
+          'requestedPosition': requestedPosition.toMap(),
         'createdAt': FieldValue.serverTimestamp(),
       });
       await user.updateDisplayName(name);
@@ -50,9 +63,11 @@ class AuthService {
     return UserAccess.fromData(doc.data());
   }
 
-  Future<User?> signIn(String email, String password) async {
+  /// [identifier] is an email, or a phone number (anything [looksLikePhone]).
+  Future<User?> signIn(String identifier, String password) async {
+    final phone = looksLikePhone(identifier) ? normalizePhone(identifier) : null;
     final result = await _auth.signInWithEmailAndPassword(
-      email: email,
+      email: phone != null ? phoneLoginEmail(phone) : identifier,
       password: password,
     );
     return result.user;

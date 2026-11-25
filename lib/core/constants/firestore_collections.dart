@@ -10,5 +10,8 @@ abstract final class FirestoreCollections {
   static const announcements = 'announcements';
   static const prayerRequests = 'prayer_requests';
   static const pledges = 'pledges';
+  static const leaders = 'leaders';
+  static const leaderContacts = 'leader_contacts';
+  static const ministryReports = 'ministry_reports';
   static const auditLog = 'audit_log';
 }

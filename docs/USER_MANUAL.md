@@ -22,6 +22,7 @@ This manual explains how to use the church app. Start with
 10. [Account Roles (Admin)](#10-account-roles-admin)
 11. [Troubleshooting and FAQ](#11-troubleshooting-and-faq)
 12. [Good practice for financial records](#12-good-practice-for-financial-records)
+13. [Leaders and ministry reports](#13-leaders-and-ministry-reports)
 
 ---
 
@@ -39,16 +40,25 @@ the code as a picture (for slides or printing) is in the project at
 2. Tap **Need an account? Sign up**.
 3. Enter your **full name**, **email** and a **password** (at least 6 characters), then tap **Sign Up**.
 
+**No email?** Tap **No email? Use your phone number** under the box, type your
+number (for example `0971 234 567`) and choose a password. You sign in the same way
+afterwards, with your number and password. Two things to know: no text message is
+sent, so the app cannot prove the number is yours; and a phone account has **no reset
+link** (see *Forgot your password*).
+
 Every new account starts as a **Member**. If you serve as a Pastor, Elder,
 Deacon, Deaconess, Finance Officer, Secretariat, Hospitality or Financial
-Oversight, choose it under **I am registering as** on the sign-up form. You can use
+Oversight, choose it under **I am registering as** on the sign-up form. If you lead
+a ministry (Choir, Women of Integrity, Youth and so on), tick **I lead a ministry**
+and choose the ministry and your position (see
+[Leaders and ministry reports](#13-leaders-and-ministry-reports)). You can use
 the app as a Member straight away, and an **Admin** approves your role with one tap
 (see [Account Roles](#10-account-roles-admin)). Nobody can give themselves a higher
 role: asking grants nothing until it is approved.
 
 ### Sign in
-Enter your email and password and tap **Login** (pressing **Enter** on the
-password box also works).
+Enter your email (or your phone number) and password and tap **Login** (pressing
+**Enter** on the password box also works).
 
 ### Forgot your password
 1. On the login page tap **Forgot password?**
@@ -57,6 +67,10 @@ password box also works).
 
 For privacy the app always says "if an account exists..." whether or not the
 address is registered.
+
+**Phone number accounts cannot get a reset link**, because there is no email to send
+it to. If you forget the password of a phone account, ask the Admin to help you
+sign up again.
 
 ### Sign out
 Open your profile (bottom of the left sidebar on a computer, or the round
@@ -432,6 +446,12 @@ group. **Watch Live** opens the church Facebook page for live services.
 
 ## 10. Account Roles (Admin)
 
+> **Ministry positions.** People who asked for a place in a ministry appear in a
+> second card, **Ministry positions waiting**: tap **Approve** or **Decline**. To take
+> a position away, open the person (**tap their row**) and remove it from the
+> **Ministry positions** list, then **Save Roles**. People who signed up with a
+> phone number show their number where an email would be.
+
 *Admin only.* **Account Roles** lists registered accounts.
 
 **Requests.** People who chose a role when they signed up appear in a **Waiting for
@@ -488,3 +508,46 @@ out), and only an Admin can change roles.
 5. **Export a backup monthly** and store it safely.
 6. **Review the Activity log** regularly for unexpected edits or deletions.
 7. **Protect your password.** Do not share it; sign out on shared devices.
+
+---
+
+## 13. Leaders and ministry reports
+
+### The Leaders directory (everyone)
+**Leaders** lists who the church's leaders are: the Pastor, Elders, Deacons,
+Deaconesses, Secretariat, Finance, Hospitality and Financial Oversight, and then each
+**ministry** with the people who lead it and their position (for example *Leader,
+Choir*). Everyone signed in sees **names and positions**. **Phone numbers and emails
+show only to other leaders**, so the congregation's contact details are not exposed.
+
+### Asking for your position
+If you lead a ministry, either tick **I lead a ministry** when you sign up, or open
+**Leaders -> Request my position** later. Choose the ministry (or **Other** to type
+one that is not listed) and your position (Leader, Secretary, Treasurer...). The Admin
+approves it, and you then appear in the directory and can send reports.
+
+### Sending a report to the Pastor (ministry leaders)
+Once approved, **Ministry Reports** appears in the menu.
+1. Tap **New report**.
+2. Choose the ministry (if you lead more than one), the **date** the report is about,
+   and optionally how many attended.
+3. Write **what happened**. Add **challenges** and **what you need** if you wish.
+4. Tap **Send to the Pastor**.
+
+Your reports are listed with their status: **Sent**, then **Reviewed** once the
+Pastor has read it. You can **change** or **withdraw** a report until it has been
+reviewed; after that it is locked, and any **reply** from the Pastor shows on it.
+
+### Reading reports (Pastor and Admin)
+**Ministry Reports** shows everyone's reports, how many are **waiting to be
+reviewed**, and filters for **All / New / Reviewed**. Open one, optionally type a reply,
+and tap **Mark as reviewed**. The Pastor can change the reply later but cannot change
+what the leader wrote. Only the leader who wrote a report, the Pastor and the Admin
+can read it.
+
+### Keeping the directory up to date (Admin)
+The directory updates itself when you approve a position or save roles. If someone was
+given a role before the directory existed, tap the **refresh** button at the top of
+**Leaders** once to fill it from the accounts.
+
+> Rosters of ministry members and ministry finances are not part of the app yet.

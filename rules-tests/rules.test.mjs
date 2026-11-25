@@ -761,6 +761,181 @@ async function main() {
     return assertSucceeds(batch.commit());
   });
 
+  console.log('\n--- Ministry positions, the leaders directory and phone sign-up ---');
+  const choir = { choir: { ministry: 'Choir', title: 'Leader' } };
+  const woi = { 'women-of-integrity': { ministry: 'Women of Integrity', title: 'Secretary' } };
+  await seedDoc('users/leader1', { role: 'member', email: 'leader1@test.com', positions: choir });
+  await seedDoc('users/leader2', { role: 'member', email: 'leader2@test.com', positions: woi });
+  await seedDoc('users/asker1', { role: 'member', email: 'asker1@test.com' });
+  await seedDoc('users/plain1', { role: 'member', email: 'plain1@test.com' });
+  const request = (extra = {}) => ({ role: 'member', email: 'x@test.com', requestedPosition: { ministry: 'Choir', title: 'Leader' }, ...extra });
+
+  await check('sign-up CAN ask for a ministry position', () =>
+    assertSucceeds(setDoc(doc(ctxFor('posnew1'), 'users/posnew1'), request({ email: 'posnew1@test.com' }))));
+  await check('sign-up CANNOT already hold a position', () =>
+    assertFails(setDoc(doc(ctxFor('posnew2'), 'users/posnew2'),
+      { role: 'member', email: 'posnew2@test.com', positions: choir })));
+  await check('a position request with an extra field is refused', () =>
+    assertFails(setDoc(doc(ctxFor('posnew3'), 'users/posnew3'),
+      request({ email: 'posnew3@test.com', requestedPosition: { ministry: 'Choir', title: 'Leader', admin: true } }))));
+  await check('a position request with an empty title is refused', () =>
+    assertFails(setDoc(doc(ctxFor('posnew4'), 'users/posnew4'),
+      request({ email: 'posnew4@test.com', requestedPosition: { ministry: 'Choir', title: '' } }))));
+  await check('a position request with a very long ministry name is refused', () =>
+    assertFails(setDoc(doc(ctxFor('posnew5'), 'users/posnew5'),
+      request({ email: 'posnew5@test.com', requestedPosition: { ministry: 'x'.repeat(61), title: 'Leader' } }))));
+  await check('sign-up CAN keep a phone number on the profile', () =>
+    assertSucceeds(setDoc(doc(ctxFor('phone1'), 'users/phone1'),
+      { role: 'member', email: 'phone1@test.com', phone: '260971234567', loginKind: 'phone' })));
+  await check('a phone number with letters is refused', () =>
+    assertFails(setDoc(doc(ctxFor('phone2'), 'users/phone2'),
+      { role: 'member', email: 'phone2@test.com', phone: '26097abc', loginKind: 'phone' })));
+  await check('a made-up login kind is refused', () =>
+    assertFails(setDoc(doc(ctxFor('phone3'), 'users/phone3'),
+      { role: 'member', email: 'phone3@test.com', loginKind: 'admin' })));
+
+  await check('a person CAN ask for a position on their own profile', () =>
+    assertSucceeds(updateDoc(doc(ctxFor('asker1'), 'users/asker1'), { requestedPosition: { ministry: 'Youth', title: 'Leader' } })));
+  await check('a person CANNOT give themselves a position', () =>
+    assertFails(updateDoc(doc(ctxFor('asker1'), 'users/asker1'), { positions: choir })));
+  await check('a person CANNOT ask for a position on someone else\'s profile', () =>
+    assertFails(updateDoc(doc(ctxFor('member1'), 'users/asker1'), { requestedPosition: { ministry: 'Youth', title: 'Leader' } })));
+  await check('an Admin CAN approve a position', () =>
+    assertSucceeds(updateDoc(doc(ctxFor('admin1'), 'users/asker1'), { positions: { youth: { ministry: 'Youth', title: 'Leader' } }, requestedPosition: deleteField() })));
+  await check('finance CANNOT grant a position', () =>
+    assertFails(updateDoc(doc(ctxFor('finance1'), 'users/leader2'), { positions: choir })));
+
+  const leaderDoc = (extra = {}) => ({ name: 'Mary Banda', roles: ['elder'], positions: [{ ministry: 'Choir', title: 'Leader' }], updatedAt: serverTimestamp(), ...extra });
+  await seedDoc('leaders/seed1', { name: 'Seed Leader', roles: ['pastor'], positions: [] });
+  await seedDoc('leader_contacts/seed1', { phone: '260971234567', email: 'seed@test.com' });
+  await check('any signed-in member CAN read the leaders directory', () =>
+    assertSucceeds(getDocs(collection(ctxFor('member1'), 'leaders'))));
+  await check('someone not signed in CANNOT read the leaders directory', () =>
+    assertFails(getDocs(collection(testEnv.unauthenticatedContext().firestore(), 'leaders'))));
+  await check('an Admin CAN write the directory', () =>
+    assertSucceeds(setDoc(doc(ctxFor('admin1'), 'leaders/new1'), leaderDoc())));
+  for (const who of ['member1', 'pastor1', 'finance1', 'secretariat1', 'leader1']) {
+    await check(who + ' CANNOT write the directory', () =>
+      assertFails(setDoc(doc(ctxFor(who), 'leaders/hack_' + who), leaderDoc())));
+  }
+  await check('a directory entry with a contact field in it is refused', () =>
+    assertFails(setDoc(doc(ctxFor('admin1'), 'leaders/bad1'), leaderDoc({ email: 'x@test.com' }))));
+  await check('an Admin CAN remove a directory entry', () =>
+    assertSucceeds(deleteDoc(doc(ctxFor('admin1'), 'leaders/new1'))));
+
+  for (const who of ['elder1', 'deacon1', 'deaconess1', 'pastor1', 'secretariat1', 'finance1', 'hospitality1', 'oversight1', 'admin1', 'leader1']) {
+    await check(who + ' CAN read leaders\' phone and email', () =>
+      assertSucceeds(getDoc(doc(ctxFor(who), 'leader_contacts/seed1'))));
+  }
+  await check('a plain member CANNOT read leaders\' phone and email', () =>
+    assertFails(getDoc(doc(ctxFor('plain1'), 'leader_contacts/seed1'))));
+  await check('a plain member CANNOT list leaders\' phone and email', () =>
+    assertFails(getDocs(collection(ctxFor('plain1'), 'leader_contacts'))));
+  await check('someone not signed in CANNOT read leaders\' phone and email', () =>
+    assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'leader_contacts/seed1'))));
+  await check('an Admin CAN write a contact', () =>
+    assertSucceeds(setDoc(doc(ctxFor('admin1'), 'leader_contacts/new1'), { phone: '260971234567', updatedAt: serverTimestamp() })));
+  await check('a leader CANNOT write a contact', () =>
+    assertFails(setDoc(doc(ctxFor('leader1'), 'leader_contacts/hack1'), { phone: '260971234567' })));
+  await check('a contact with an extra field is refused', () =>
+    assertFails(setDoc(doc(ctxFor('admin1'), 'leader_contacts/bad1'), { phone: '260971234567', role: 'admin' })));
+
+  console.log('\n--- Ministry reports to the Pastor ---');
+  const report = (uid, extra = {}) => ({
+    authorUid: uid, authorName: 'Leader One', ministryKey: 'choir', ministry: 'Choir', position: 'Leader',
+    period: ts('2026-11-22'), attendance: 24, summary: 'Rehearsed for the Christmas cantata.',
+    challenges: '', needs: '', status: 'sent', createdAt: serverTimestamp(), ...extra,
+  });
+  const reports = (uid) => collection(ctxFor(uid), 'ministry_reports');
+  const rRef = (uid, id) => doc(ctxFor(uid), 'ministry_reports/' + id);
+  const seededReport = { ...report('leader1'), createdAt: ts('2026-11-23') };
+  for (const id of ['mr_read', 'mr_edit', 'mr_review', 'mr_review2', 'mr_del', 'mr_admin_del', 'mr_pastor_del']) {
+    await seedDoc('ministry_reports/' + id, seededReport);
+  }
+  await seedDoc('ministry_reports/mr_done', { ...seededReport, status: 'reviewed', pastorNote: 'Thank you', reviewedBy: 'Pastor', reviewedAt: ts('2026-11-24') });
+  await seedDoc('ministry_reports/mr_done2', { ...seededReport, status: 'reviewed', pastorNote: 'Thank you', reviewedBy: 'Pastor', reviewedAt: ts('2026-11-24') });
+
+  await check('a leader CAN send a report for their own ministry', () =>
+    assertSucceeds(addDoc(reports('leader1'), report('leader1'))));
+  await check('a leader CANNOT report for a ministry they do not hold a position in', () =>
+    assertFails(addDoc(reports('leader1'), report('leader1', { ministryKey: 'women-of-integrity', ministry: 'Women of Integrity', position: 'Secretary' }))));
+  await check('a report CANNOT claim a different title than the one approved', () =>
+    assertFails(addDoc(reports('leader1'), report('leader1', { position: 'Bishop' }))));
+  await check('a report CANNOT be sent in someone else\'s name', () =>
+    assertFails(addDoc(reports('leader2'), report('leader1'))));
+  for (const who of ['member1', 'pastor1', 'elder1', 'finance1']) {
+    await check(who + ' CANNOT send a report without a ministry position', () =>
+      assertFails(addDoc(reports(who), report(who))));
+  }
+  await check('someone not signed in CANNOT send a report', () =>
+    assertFails(addDoc(collection(testEnv.unauthenticatedContext().firestore(), 'ministry_reports'), report('leader1'))));
+  await check('a report CANNOT be sent already reviewed', () =>
+    assertFails(addDoc(reports('leader1'), report('leader1', { status: 'reviewed' }))));
+  await check('a report CANNOT arrive with a Pastor\'s reply already on it', () =>
+    assertFails(addDoc(reports('leader1'), report('leader1', { pastorNote: 'Approved' }))));
+  await check('a report CANNOT have an empty summary', () =>
+    assertFails(addDoc(reports('leader1'), report('leader1', { summary: '' }))));
+  await check('a report CANNOT have a huge summary', () =>
+    assertFails(addDoc(reports('leader1'), report('leader1', { summary: 'x'.repeat(4001) }))));
+  await check('a report CANNOT have a negative attendance', () =>
+    assertFails(addDoc(reports('leader1'), report('leader1', { attendance: -1 }))));
+  await check('a report CANNOT carry extra fields', () =>
+    assertFails(addDoc(reports('leader1'), report('leader1', { approved: true }))));
+
+  await check('the author CAN read their own report', () =>
+    assertSucceeds(getDoc(rRef('leader1', 'mr_read'))));
+  await check('the author CAN list their own reports', () =>
+    assertSucceeds(getDocs(query(reports('leader1'), where('authorUid', '==', 'leader1')))));
+  for (const who of ['pastor1', 'admin1']) {
+    await check(who + ' CAN read any report', () =>
+      assertSucceeds(getDoc(rRef(who, 'mr_read'))));
+    await check(who + ' CAN list every report', () =>
+      assertSucceeds(getDocs(reports(who))));
+  }
+  for (const who of ['leader2', 'elder1', 'member1', 'finance1', 'oversight1', 'secretariat1']) {
+    await check(who + ' CANNOT read another leader\'s report', () =>
+      assertFails(getDoc(rRef(who, 'mr_read'))));
+  }
+  await check('another leader CANNOT list everyone\'s reports', () =>
+    assertFails(getDocs(reports('leader2'))));
+
+  await check('the author CAN correct a report that is not reviewed', () =>
+    assertSucceeds(updateDoc(rRef('leader1', 'mr_edit'), { summary: 'Corrected', attendance: 30 })));
+  await check('the author CANNOT correct a report after it is reviewed', () =>
+    assertFails(updateDoc(rRef('leader1', 'mr_done'), { summary: 'Changed my mind' })));
+  await check('the author CANNOT mark their own report reviewed', () =>
+    assertFails(updateDoc(rRef('leader1', 'mr_edit'), { status: 'reviewed' })));
+  await check('the author CANNOT write the Pastor\'s reply', () =>
+    assertFails(updateDoc(rRef('leader1', 'mr_edit'), { pastorNote: 'Great work' })));
+  await check('the author CANNOT move a report to another ministry', () =>
+    assertFails(updateDoc(rRef('leader1', 'mr_edit'), { ministryKey: 'women-of-integrity', ministry: 'Women of Integrity' })));
+  await check('another leader CANNOT correct a report', () =>
+    assertFails(updateDoc(rRef('leader2', 'mr_edit'), { summary: 'Hijacked' })));
+
+  await check('the Pastor CAN mark a report reviewed with a reply', () =>
+    assertSucceeds(updateDoc(rRef('pastor1', 'mr_review'), { status: 'reviewed', pastorNote: 'Well done', reviewedBy: 'Pastor', reviewedAt: serverTimestamp() })));
+  await check('the Pastor CAN update the reply later', () =>
+    assertSucceeds(updateDoc(rRef('pastor1', 'mr_done'), { pastorNote: 'See me on Sunday' })));
+  await check('an Admin CAN mark a report reviewed', () =>
+    assertSucceeds(updateDoc(rRef('admin1', 'mr_review2'), { status: 'reviewed', reviewedBy: 'Admin', reviewedAt: serverTimestamp() })));
+  await check('the Pastor CANNOT change what the leader wrote', () =>
+    assertFails(updateDoc(rRef('pastor1', 'mr_edit'), { summary: 'Rewritten' })));
+  for (const who of ['elder1', 'finance1', 'oversight1', 'secretariat1']) {
+    await check(who + ' CANNOT review a report', () =>
+      assertFails(updateDoc(rRef(who, 'mr_edit'), { status: 'reviewed', reviewedBy: who })));
+  }
+
+  await check('the author CAN withdraw a report that is not reviewed', () =>
+    assertSucceeds(deleteDoc(rRef('leader1', 'mr_del'))));
+  await check('the author CANNOT withdraw a report after it is reviewed', () =>
+    assertFails(deleteDoc(rRef('leader1', 'mr_done2'))));
+  await check('another leader CANNOT delete a report', () =>
+    assertFails(deleteDoc(rRef('leader2', 'mr_pastor_del'))));
+  await check('the Pastor CANNOT delete a report', () =>
+    assertFails(deleteDoc(rRef('pastor1', 'mr_pastor_del'))));
+  await check('an Admin CAN delete a report', () =>
+    assertSucceeds(deleteDoc(rRef('admin1', 'mr_admin_del'))));
+
   console.log('\n--- Members editing and deleting their own prayer requests ---');
   await seedUser('member3', 'member');
   const prayer = (uid) => ({ userId: uid, userName: uid, request: 'original', status: 'pending' });

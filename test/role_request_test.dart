@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:church_cms/core/providers/auth_providers.dart';
 import 'package:church_cms/core/providers/user_role_provider.dart';
 import 'package:church_cms/core/theme/app_theme.dart';
+import 'package:church_cms/models/ministry_position.dart';
 import 'package:church_cms/features/members/screens/account_roles_screen.dart';
 import 'package:church_cms/models/role_request.dart';
 import 'package:church_cms/screens/auth_screen.dart';
@@ -16,7 +17,9 @@ class _SignUpSpy implements AuthService {
 
   @override
   Future<User?> signUp(String email, String password, String name,
-      {UserRole? requestedRole}) async {
+      {UserRole? requestedRole,
+      MinistryPosition? requestedPosition,
+      String? phone}) async {
     signUps.add([email, name, requestedRole?.name]);
     return null;
   }

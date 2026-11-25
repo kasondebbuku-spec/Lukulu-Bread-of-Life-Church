@@ -6,6 +6,7 @@ import 'package:church_cms/core/providers/pledge_providers.dart';
 import 'package:church_cms/core/providers/user_role_provider.dart';
 import 'package:church_cms/core/theme/app_theme.dart';
 import 'package:church_cms/navigation/app_shell.dart';
+import 'package:church_cms/navigation/app_sidebar.dart';
 import 'package:church_cms/repositories/repository_providers.dart';
 
 void main() {
@@ -31,6 +32,10 @@ void main() {
     ], child: MaterialApp(theme: AppTheme.lightTheme, home: const AppShell())));
     await tester.pumpAndSettle();
     expect(find.text('My Giving'), findsOneWidget);
+    // The side menu scrolls: the last entries are below the fold on a short window.
+    await tester.scrollUntilVisible(find.text('Account Roles'), 80,
+        scrollable: find.descendant(
+            of: find.byType(AppSidebar), matching: find.byType(Scrollable)));
     expect(find.text('Account Roles'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

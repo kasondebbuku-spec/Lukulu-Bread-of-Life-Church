@@ -11,6 +11,8 @@ import '../features/attendance/screens/attendance_screen.dart';
 import '../features/dashboard/dashboard_screen.dart';
 import '../features/events/screens/events_screen.dart';
 import '../features/giving/screens/giving_screen.dart';
+import '../features/leaders/screens/leaders_screen.dart';
+import '../features/leaders/screens/ministry_reports_screen.dart';
 import '../features/members/screens/members_screen.dart';
 import '../features/prayer/screens/prayer_screen.dart';
 import 'app_sidebar.dart';
@@ -69,6 +71,16 @@ List<NavDestination> _destinationsForRole(UserAccess role) {
     events,
     announcements,
     prayer,
+    NavDestination(
+        label: 'Leaders',
+        icon: Icons.groups,
+        builder: () => const LeadersScreen()),
+    if (role.hasPosition || role.canReviewMinistryReports)
+      NavDestination(
+          label: 'Ministry Reports',
+          shortLabel: 'Reports',
+          icon: Icons.assignment_outlined,
+          builder: () => const MinistryReportsScreen()),
     if (role.isAdmin)
       NavDestination(
           label: 'Account Roles',

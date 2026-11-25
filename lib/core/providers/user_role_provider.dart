@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../models/ministry_position.dart';
 import '../../models/prayer_request.dart';
 import '../constants/firestore_collections.dart';
 import 'firebase_providers.dart';
@@ -105,9 +106,13 @@ extension UserRoleX on UserRole {
 
 /// Multiple responsibilities; legacy profiles with a single role still work.
 class UserAccess {
-  const UserAccess(this.roles);
+  const UserAccess(this.roles, {this.positions = const {}});
   static const member = UserAccess({UserRole.member});
   final Set<UserRole> roles;
+
+  /// Places held in ministries (Choir Leader, ...), approved by an Admin and keyed
+  /// by [ministryKey]. They let the person send reports to the Pastor.
+  final Map<String, MinistryPosition> positions;
   factory UserAccess.fromData(Map<String, dynamic>? data) {
     final raw = data?['roles'];
     if (data?.containsKey('roles') == true && raw is! List) return member;
@@ -115,7 +120,8 @@ class UserAccess {
     final roles = raw is List
         ? raw.whereType<String>().map(UserRoleX.fromString).toSet()
         : {UserRoleX.fromString(legacy is String ? legacy : null)};
-    return UserAccess(roles.isEmpty ? {UserRole.member} : roles);
+    return UserAccess(roles.isEmpty ? {UserRole.member} : roles,
+        positions: parsePositions(data?['positions']));
   }
   String get label => roles.map((r) => r.label).join(' · ');
   bool get isAdmin => roles.contains(UserRole.admin);
@@ -123,6 +129,17 @@ class UserAccess {
   bool get canManageGiving => roles.any((r) => r.canManageGiving);
   bool get canViewGiving => roles.any((r) => r.canViewGiving);
   bool get canEnterIncomeForms => roles.any((r) => r.canEnterIncomeForms);
+
+  /// Holds at least one ministry position, so can send reports to the Pastor.
+  bool get hasPosition => positions.isNotEmpty;
+
+  /// Reads the reports ministry leaders send: the Pastor (and Admin).
+  bool get canReviewMinistryReports =>
+      roles.contains(UserRole.pastor) || roles.contains(UserRole.admin);
+
+  /// Holds a church role or a ministry position (anyone but a plain member).
+  bool get isLeaderAccount =>
+      hasPosition || roles.any((r) => r != UserRole.member);
   bool get canManageAttendance => roles.any((r) => r.canManageAttendance);
   bool get canManageEvents => roles.any((r) => r.canManageEvents);
   bool get canPostAnnouncements => roles.any((r) => r.canPostAnnouncements);

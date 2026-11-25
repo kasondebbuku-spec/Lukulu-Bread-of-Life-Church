@@ -4,6 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../core/providers/auth_providers.dart';
 import '../core/providers/user_role_provider.dart';
+import '../features/leaders/widgets/ministry_position_fields.dart';
+import '../models/ministry_position.dart';
+import '../models/phone_login.dart';
 import '../models/role_request.dart';
 import '../core/theme/app_theme.dart';
 
@@ -22,6 +25,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   final _emailController = TextEditingController();
   String _email = '', _password = '', _name = '';
   UserRole? _requestedRole;
+
+  /// Signing in or up with a phone number instead of an email.
+  bool _usePhone = false;
+
+  /// Asking for a place in a ministry (Choir Leader, ...) at sign-up.
+  bool _leadsMinistry = false;
+  MinistryPosition? _position;
 
   @override
   void dispose() {
@@ -45,24 +55,29 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           loginNote = signInMessage(wanted, await auth.loadAccess(user.uid));
         }
       } else {
+        final phone = _usePhone ? normalizePhone(_email) : null;
         await auth.signUp(_email, _password, _name,
-            requestedRole: _requestedRole);
+            requestedRole: _requestedRole,
+            phone: phone,
+            requestedPosition: _leadsMinistry ? _position : null);
       }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content: Text(_isLogin
                 ? (loginNote ?? 'Logged in!')
-                : _requestedRole == null
+                : _requestedRole == null && !(_leadsMinistry && _position != null)
                     ? 'Account created!'
-                    : 'Account created! Your request to be ${_requestedRole!.label} '
-                        'has been sent to the Admin.')),
+                    : 'Account created! Your request to be '
+                        '${[
+                        if (_requestedRole != null) _requestedRole!.label,
+                        if (_leadsMinistry && _position != null) _position!.label,
+                      ].join(' and ')} has been sent to the Admin.')),
       );
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(e.message ?? 'Authentication failed (${e.code})')),
+        SnackBar(content: Text(_authMessage(e))),
       );
     } catch (_) {
       if (!mounted) return;
@@ -75,6 +90,25 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     }
   }
 
+  /// A plain-words message for a failed sign-in or sign-up. Phone accounts are
+  /// told about the phone number, never the made-up address behind it.
+  String _authMessage(FirebaseAuthException e) {
+    final phone = _usePhone || looksLikePhone(_email);
+    if (phone) {
+      switch (e.code) {
+        case 'email-already-in-use':
+          return 'That phone number already has an account. Try logging in.';
+        case 'invalid-credential':
+        case 'wrong-password':
+        case 'user-not-found':
+          return 'The phone number or password is not right.';
+        case 'invalid-email':
+          return 'That phone number does not look right.';
+      }
+    }
+    return e.message ?? 'Authentication failed (${e.code})';
+  }
+
   Future<void> _forgotPassword() async {
     final email = await showDialog<String>(
       context: context,
@@ -82,6 +116,25 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           _ResetPasswordDialog(initialEmail: _emailController.text.trim()),
     );
     if (email == null || email.isEmpty || !mounted) return;
+
+    if (looksLikePhone(email)) {
+      // A phone account has no real email, so there is nowhere to send a link.
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Phone number accounts'),
+          content: const Text(
+              'A reset link cannot be sent to a phone number. Please ask the '
+              'Admin to help you sign up again.'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK')),
+          ],
+        ),
+      );
+      return;
+    }
 
     try {
       await ref.read(authServiceProvider).sendPasswordReset(email);
@@ -175,19 +228,49 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                               const SizedBox(height: 14),
                             ],
                             TextFormField(
-                              decoration: const InputDecoration(
-                                labelText: 'Email',
-                                prefixIcon: Icon(Icons.email_outlined),
+                              key: Key(_usePhone ? 'phone-field' : 'email-field'),
+                              decoration: InputDecoration(
+                                labelText: _usePhone ? 'Phone number' : 'Email',
+                                hintText: _usePhone ? 'e.g. 0971 234 567' : null,
+                                prefixIcon: Icon(_usePhone
+                                    ? Icons.phone_outlined
+                                    : Icons.email_outlined),
                               ),
                               controller: _emailController,
-                              keyboardType: TextInputType.emailAddress,
+                              keyboardType: _usePhone
+                                  ? TextInputType.phone
+                                  : TextInputType.emailAddress,
                               textInputAction: TextInputAction.next,
-                              autofillHints: const [AutofillHints.email],
+                              autofillHints: [
+                                _usePhone
+                                    ? AutofillHints.telephoneNumber
+                                    : AutofillHints.email,
+                              ],
                               onSaved: (val) => _email = val!.trim(),
-                              validator: (val) =>
-                                  (val != null && val.contains('@'))
+                              validator: (val) => _usePhone
+                                  ? (normalizePhone(val ?? '') != null
+                                      ? null
+                                      : 'Enter a valid phone number')
+                                  : (val != null &&
+                                          (val.contains('@') ||
+                                              (_isLogin && looksLikePhone(val))))
                                       ? null
                                       : 'Invalid email',
+                            ),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: TextButton(
+                                key: const Key('toggle-phone'),
+                                onPressed: _isSubmitting
+                                    ? null
+                                    : () => setState(() {
+                                          _usePhone = !_usePhone;
+                                          _emailController.clear();
+                                        }),
+                                child: Text(_usePhone
+                                    ? 'Use an email instead'
+                                    : 'No email? Use your phone number'),
+                              ),
                             ),
                             const SizedBox(height: 14),
                             TextFormField(
@@ -237,6 +320,25 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                   : (role) =>
                                       setState(() => _requestedRole = role),
                             ),
+                            if (!_isLogin) ...[
+                              CheckboxListTile(
+                                key: const Key('leads-ministry'),
+                                contentPadding: EdgeInsets.zero,
+                                controlAffinity: ListTileControlAffinity.leading,
+                                title: const Text(
+                                    'I lead a ministry (Choir, Women of Integrity...)'),
+                                value: _leadsMinistry,
+                                onChanged: _isSubmitting
+                                    ? null
+                                    : (v) => setState(() {
+                                          _leadsMinistry = v ?? false;
+                                          if (!_leadsMinistry) _position = null;
+                                        }),
+                              ),
+                              if (_leadsMinistry)
+                                MinistryPositionFields(
+                                    onChanged: (p) => _position = p),
+                            ],
                             if (_isLogin)
                               Align(
                                 alignment: Alignment.centerRight,
@@ -328,7 +430,7 @@ class _ResetPasswordDialogState extends State<_ResetPasswordDialog> {
             controller: _controller,
             autofocus: true,
             keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(labelText: 'Email'),
+            decoration: const InputDecoration(labelText: 'Email or phone number'),
             onSubmitted: (v) => Navigator.pop(context, v.trim()),
           ),
         ],
