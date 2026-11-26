@@ -42,9 +42,14 @@ the code as a picture (for slides or printing) is in the project at
 2. Tap **Need an account? Sign up**.
 3. Enter your **full name**, **email** and a **password** (at least 6 characters), then tap **Sign Up**.
 
-**No email?** Tap **No email? Use your phone number** under the box, type your
-number (for example `0971 234 567`) and choose a password. You sign in the same way
-afterwards, with your number and password. Two things to know: no text message is
+**No email?** Type your phone number into the **Email or phone number** box (or tap
+**No email? Use your phone number** to get the number keypad) and choose a password.
+The app spaces the number for you and shows how it reads it, for example **Phone
+number: +260 97 123 4567**. `0971234567`, `097 123 4567`, `+260 97 123 4567` and
+`+260 0971234567` are all the same number, and numbers copied from your contacts or
+WhatsApp work too. You sign in the same way afterwards, with your number and
+password. **An account made with an email signs in with that email**, not with a
+phone number. Two things to know: no text message is
 sent, so the app cannot prove the number is yours; and a phone account has **no reset
 link** (see *Forgot your password*).
 
@@ -82,8 +87,12 @@ initial at the top right of Home on a phone) and choose **Logout**.
 
 ## 2. Roles: who can do what
 
-A person can hold **more than one role** (for example Finance and Elder); they
-get everything either role allows.
+A person can hold **more than one role** (for example Elder, Finance and
+Secretariat); they get everything all of them allow, **all at once**. There is
+nothing to switch: log in once and the menus for every role are there. The Admin
+ticks each role in **Account Roles** and taps **Save Roles**; the menus appear
+straight away, without logging out. (The **Sign in as** box on the log-in screen
+does not change what you can do.)
 
 | Role | Members directory | Giving and finances | Attendance | Events | Announcements | Prayer requests |
 |---|:-:|:-:|:-:|:-:|:-:|:-:|

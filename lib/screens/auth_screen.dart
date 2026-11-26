@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -55,7 +56,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           loginNote = signInMessage(wanted, await auth.loadAccess(user.uid));
         }
       } else {
-        final phone = _usePhone ? normalizePhone(_email) : null;
+        // A number in the box means a phone account, whichever keypad was used.
+        final phone = looksLikePhone(_email) ? normalizePhone(_email) : null;
         await auth.signUp(_email, _password, _name,
             requestedRole: _requestedRole,
             phone: phone,
@@ -90,6 +92,24 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     }
   }
 
+  /// Under the box while a number is typed: how the app will read it.
+  String? _phoneHelper(String text) {
+    if (!isPhoneAttempt(text)) return null;
+    final digits = normalizePhone(text);
+    return digits == null
+        ? 'For example 0971234567 or +260971234567'
+        : 'Phone number: ${prettyPhone(digits)}';
+  }
+
+  /// An email or a phone number is accepted in the same box.
+  String? _checkEntry(String text) {
+    if (isPhoneAttempt(text)) {
+      return normalizePhone(text) != null ? null : phoneProblem(text);
+    }
+    if (_usePhone) return 'Enter a valid phone number';
+    return text.contains('@') ? null : 'Enter your email or phone number';
+  }
+
   /// A plain-words message for a failed sign-in or sign-up. Phone accounts are
   /// told about the phone number, never the made-up address behind it.
   String _authMessage(FirebaseAuthException e) {
@@ -101,7 +121,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         case 'invalid-credential':
         case 'wrong-password':
         case 'user-not-found':
-          return 'The phone number or password is not right.';
+          return 'That phone number and password do not match an account. If you '
+              'first signed up with an email, log in with that email. New to the '
+              'app? Tap Sign up.';
         case 'invalid-email':
           return 'That phone number does not look right.';
       }
@@ -227,15 +249,24 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                               ),
                               const SizedBox(height: 14),
                             ],
-                            TextFormField(
+                            ValueListenableBuilder<TextEditingValue>(
+                              valueListenable: _emailController,
+                              builder: (context, value, _) => TextFormField(
                               key: Key(_usePhone ? 'phone-field' : 'email-field'),
                               decoration: InputDecoration(
-                                labelText: _usePhone ? 'Phone number' : 'Email',
-                                hintText: _usePhone ? 'e.g. 0971 234 567' : null,
-                                prefixIcon: Icon(_usePhone
-                                    ? Icons.phone_outlined
-                                    : Icons.email_outlined),
+                                labelText: _usePhone
+                                    ? 'Phone number'
+                                    : 'Email or phone number',
+                                hintText: _usePhone ? 'e.g. 097 123 4567' : null,
+                                helperText: _phoneHelper(value.text),
+                                helperMaxLines: 2,
+                                errorMaxLines: 3,
+                                prefixIcon: Icon(
+                                    _usePhone || isPhoneAttempt(value.text)
+                                        ? Icons.phone_outlined
+                                        : Icons.email_outlined),
                               ),
+                              inputFormatters: const [_SignInEntryFormatter()],
                               controller: _emailController,
                               keyboardType: _usePhone
                                   ? TextInputType.phone
@@ -247,15 +278,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                     : AutofillHints.email,
                               ],
                               onSaved: (val) => _email = val!.trim(),
-                              validator: (val) => _usePhone
-                                  ? (normalizePhone(val ?? '') != null
-                                      ? null
-                                      : 'Enter a valid phone number')
-                                  : (val != null &&
-                                          (val.contains('@') ||
-                                              (_isLogin && looksLikePhone(val))))
-                                      ? null
-                                      : 'Invalid email',
+                              validator: (val) => _checkEntry(val ?? ''),
+                            ),
                             ),
                             Align(
                               alignment: Alignment.centerLeft,
@@ -396,6 +420,24 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         ),
       ),
     );
+  }
+}
+
+/// Tidies the sign-in box as you type or paste: a Zambian number is spaced the
+/// way the app reads it, and copied-in oddities are dropped. It only reformats
+/// while you are typing at the end, so editing in the middle is left alone.
+class _SignInEntryFormatter extends TextInputFormatter {
+  const _SignInEntryFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    final atEnd = newValue.selection.baseOffset >= newValue.text.length;
+    if (!atEnd) return newValue;
+    final text = formatSignInEntry(newValue.text);
+    if (text == newValue.text) return newValue;
+    return TextEditingValue(
+        text: text, selection: TextSelection.collapsed(offset: text.length));
   }
 }
 

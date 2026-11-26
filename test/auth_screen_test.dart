@@ -64,7 +64,7 @@ void main() {
 
   testWidgets('pressing Enter on the password field logs in', (tester) async {
     await pumpAuth(tester);
-    await tester.enterText(find.widgetWithText(TextFormField, 'Email'), ' a@b.com ');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Email or phone number'), ' a@b.com ');
     await tester.enterText(find.widgetWithText(TextFormField, 'Password'), 'secret1');
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pumpAndSettle();
@@ -74,7 +74,7 @@ void main() {
   testWidgets('forgot password sends a reset link to the typed email',
       (tester) async {
     await pumpAuth(tester);
-    await tester.enterText(find.widgetWithText(TextFormField, 'Email'), 'me@church.org');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Email or phone number'), 'me@church.org');
     await tester.tap(find.text('Forgot password?'));
     await tester.pumpAndSettle();
 
@@ -112,15 +112,15 @@ void main() {
 
     testWidgets('the sign-in form offers a phone number instead of an email', (tester) async {
       await pumpAuth(tester);
-      expect(find.widgetWithText(TextFormField, 'Email'), findsOneWidget);
+      expect(find.widgetWithText(TextFormField, 'Email or phone number'), findsOneWidget);
       await tester.tap(find.byKey(const Key('toggle-phone')));
       await tester.pumpAndSettle();
       expect(find.widgetWithText(TextFormField, 'Phone number'), findsOneWidget);
-      expect(find.widgetWithText(TextFormField, 'Email'), findsNothing);
+      expect(find.widgetWithText(TextFormField, 'Email or phone number'), findsNothing);
       expect(find.text('Use an email instead'), findsOneWidget);
       await tester.tap(find.byKey(const Key('toggle-phone')));
       await tester.pumpAndSettle();
-      expect(find.widgetWithText(TextFormField, 'Email'), findsOneWidget);
+      expect(find.widgetWithText(TextFormField, 'Email or phone number'), findsOneWidget);
     });
 
     testWidgets('a phone number and password log in', (tester) async {
@@ -131,16 +131,16 @@ void main() {
       await tester.enterText(find.widgetWithText(TextFormField, 'Password'), 'secret1');
       await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.pumpAndSettle();
-      expect(fake.signIns, ['0971 234 567|secret1']);
+      expect(fake.signIns, ['097 123 4567|secret1']); // spaced the app's way
     });
 
     testWidgets('a phone number typed into the email box still logs in', (tester) async {
       await pumpAuth(tester);
-      await tester.enterText(find.widgetWithText(TextFormField, 'Email'), '0971234567');
+      await tester.enterText(find.widgetWithText(TextFormField, 'Email or phone number'), '0971234567');
       await tester.enterText(find.widgetWithText(TextFormField, 'Password'), 'secret1');
       await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.pumpAndSettle();
-      expect(fake.signIns, ['0971234567|secret1']);
+      expect(fake.signIns, ['097 123 4567|secret1']);
     });
 
     testWidgets('something that is not a phone number is turned away', (tester) async {
@@ -171,16 +171,70 @@ void main() {
     testWidgets('an email sign-up passes no phone number', (tester) async {
       await openSignUp(tester);
       await tester.enterText(find.widgetWithText(TextFormField, 'Full Name'), 'Mary Banda');
-      await tester.enterText(find.widgetWithText(TextFormField, 'Email'), 'mary@x.com');
+      await tester.enterText(find.widgetWithText(TextFormField, 'Email or phone number'), 'mary@x.com');
       await tester.enterText(find.widgetWithText(TextFormField, 'Password'), 'secret1');
       await signUp(tester);
       expect(fake.phones, [null]);
       expect(fake.signUps.single[0], 'mary@x.com');
     });
 
+    String boxText(WidgetTester tester) => tester
+        .widget<TextFormField>(find.byType(TextFormField).first)
+        .controller!
+        .text;
+
+    final loginBox = find.widgetWithText(TextFormField, 'Email or phone number');
+
+    testWidgets('the number is spaced for you as you type, and read back', (tester) async {
+      await pumpAuth(tester);
+      await tester.enterText(loginBox, '0971234567');
+      await tester.pump();
+      expect(boxText(tester), '097 123 4567');
+      expect(find.text('Phone number: +260 97 123 4567'), findsOneWidget);
+    });
+
+    testWidgets('a number pasted from contacts is cleaned up', (tester) async {
+      await pumpAuth(tester);
+      await tester.enterText(loginBox, '\u202A+260 0971-234-567\u202C');
+      await tester.pump();
+      expect(boxText(tester), '+260 97 123 4567');
+      await tester.enterText(find.widgetWithText(TextFormField, 'Password'), 'secret1');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+      expect(fake.signIns, ['+260 97 123 4567|secret1']);
+    });
+
+    testWidgets('an email is left as typed, without spaces', (tester) async {
+      await pumpAuth(tester);
+      await tester.enterText(loginBox, 'mary.banda@gmail.com ');
+      await tester.pump();
+      expect(boxText(tester), 'mary.banda@gmail.com');
+      expect(find.textContaining('Phone number:'), findsNothing);
+    });
+
+    testWidgets('a short number says how many digits are missing', (tester) async {
+      await pumpAuth(tester);
+      await tester.enterText(loginBox, '097123456');
+      await tester.enterText(find.widgetWithText(TextFormField, 'Password'), 'secret1');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+      expect(find.text('Too short: a number like 0971234567 has 10 digits (this has 9)'),
+          findsOneWidget);
+      expect(fake.signIns, isEmpty);
+    });
+
+    testWidgets('signing up by typing a number into the first box makes a phone account', (tester) async {
+      await openSignUp(tester);
+      await tester.enterText(find.widgetWithText(TextFormField, 'Full Name'), 'John Phiri');
+      await tester.enterText(loginBox, '0971234567');
+      await tester.enterText(find.widgetWithText(TextFormField, 'Password'), 'secret1');
+      await signUp(tester);
+      expect(fake.phones, ['260971234567']);
+    });
+
     testWidgets('forgot password explains that a phone account has no reset link', (tester) async {
       await pumpAuth(tester);
-      await tester.enterText(find.widgetWithText(TextFormField, 'Email'), '0971234567');
+      await tester.enterText(find.widgetWithText(TextFormField, 'Email or phone number'), '0971234567');
       await tester.tap(find.text('Forgot password?'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Send link'));
@@ -197,7 +251,7 @@ void main() {
       await tester.tap(find.text('Need an account? Sign up'));
       await tester.pumpAndSettle();
       await tester.enterText(find.widgetWithText(TextFormField, 'Full Name'), 'Ruth Banda');
-      await tester.enterText(find.widgetWithText(TextFormField, 'Email'), 'ruth@x.com');
+      await tester.enterText(find.widgetWithText(TextFormField, 'Email or phone number'), 'ruth@x.com');
       await tester.enterText(find.widgetWithText(TextFormField, 'Password'), 'secret1');
     }
 

@@ -103,7 +103,7 @@ void main() {
 
     expect(find.text('You will join as a Member.'), findsOneWidget);
     await tester.enterText(find.widgetWithText(TextFormField, 'Full Name'), 'Mary');
-    await tester.enterText(find.widgetWithText(TextFormField, 'Email'), 'm@x.org');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Email or phone number'), 'm@x.org');
     await tester.enterText(find.widgetWithText(TextFormField, 'Password'), 'secret1');
     await tester.tap(find.text('Church member'));
     await tester.pumpAndSettle();

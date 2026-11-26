@@ -20,6 +20,13 @@ void main() {
     expect(displayNameFor(email: 'kaskas@gmail.com'), 'Kaskas');
   });
 
+  test('never uses the made-up address of a phone account as a name', () {
+    const email = '260971234567@phone.lukulu-bread-of-life.app';
+    expect(displayNameFor(email: email), 'User');
+    expect(displayNameFor(email: email, profileName: 'John Phiri'), 'John Phiri');
+    expect(displayNameFor(email: email, authDisplayName: 'John Phiri'), 'John Phiri');
+  });
+
   test('uses a safe default when nothing is known', () {
     expect(displayNameFor(), 'User');
   });

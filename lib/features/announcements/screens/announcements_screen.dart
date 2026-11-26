@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/providers/firebase_providers.dart';
+import '../../../core/providers/display_name_provider.dart';
 import '../../../core/providers/user_role_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_format.dart';
@@ -37,12 +37,11 @@ class _AnnouncementsScreenState extends ConsumerState<AnnouncementsScreen> {
   Future<void> _addAnnouncement() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final user = ref.read(firebaseAuthProvider).currentUser;
     final announcement = Announcement(
       id: '',
       title: _titleController.text.trim(),
       content: _contentController.text.trim(),
-      createdBy: user?.displayName ?? user?.email ?? 'unknown',
+      createdBy: ref.read(displayNameProvider),
       targetAudience: _selectedAudience,
     );
     await ref.read(announcementsRepositoryProvider).add(announcement);
