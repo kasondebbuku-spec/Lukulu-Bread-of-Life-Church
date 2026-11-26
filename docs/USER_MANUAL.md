@@ -24,6 +24,7 @@ This manual explains how to use the church app. Start with
 12. [Good practice for financial records](#12-good-practice-for-financial-records)
 13. [Leaders and ministry reports](#13-leaders-and-ministry-reports)
 14. [Phone notifications](#14-phone-notifications)
+15. [Sunday Service Report (Secretariat)](#15-sunday-service-report-secretariat)
 
 ---
 
@@ -577,3 +578,46 @@ because they can show on a locked screen.
   open it from there; otherwise iPhones cannot receive them.
 * This feature is switched on by the church's administrator (see
   `docs/PUSH_NOTIFICATIONS_SETUP.md`). Until then the card does not appear.
+
+---
+
+## 15. Sunday Service Report (Secretariat)
+
+This is the church's **Sunday Service Summary Report**, the secretariat's two-page
+paper form, filled in on the app.
+
+### Where it is
+On the Secretariat's **Home** screen there is a **Sunday Service Report** card with
+**Fill in report** and **Past reports**. It is also in the menu as **Service Report**.
+
+### Filling it in
+It follows the paper from top to bottom:
+1. **Routine** or **Special** service, and the **date** (today is filled in).
+2. **Programme:** who gave the opening prayer, intercession, praises and worship, the
+   leaders on duty, announcements, **exhortation** (title and reading) and the **main
+   word** (preacher, title, reading and a summary), **testimonies** and the closing prayer.
+3. **Attendance** (men, women, children; the total is added up) and **collections**
+   (pledges, thanks giving, seed, offering, tithe; the total is added up).
+4. **Announcements:** visitors and where they come from, notifications (absent with
+   apology, patients, new babies...), special offering and next week's leaders on duty.
+5. **Signatures** for the Secretary, Treasurer and Elder (type each name; they can sign
+   on the screen).
+
+Use **Add** under a list for more lines. **Nothing has to be complete**: you can save
+during the service and open the report again to finish it. If you try to leave with
+unsaved typing, the app asks first. If a report for the same date and service type is
+already saved, it warns you before saving a second one.
+
+> The report does **not** add to Giving or Attendance. Those come from the **Sunday
+> Income Form**, so nothing is counted twice.
+
+### Reading and printing
+Open **Past reports**, tap a report, then **Print** or **Download PDF** (laid out like
+the paper form, two pages). The printer button on the list prints a **blank form** to
+fill in by hand.
+
+### Who can see it
+The report includes collections, tithers' names and personal notices, so only these
+people can see it: **Secretariat and Admin** (fill in and correct; only the Admin can
+delete), and the **Pastor, Finance Officer and Financial Oversight** (read and print).
+Elders and other members cannot open it; an Elder signs on the Secretary's device.

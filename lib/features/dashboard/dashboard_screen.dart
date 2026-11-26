@@ -24,6 +24,7 @@ import 'widgets/dashboard_header.dart';
 import 'widgets/hero_banner.dart';
 import 'widgets/pending_role_banner.dart';
 import 'widgets/pledge_reminder_banner.dart';
+import '../service_report/widgets/service_report_home_card.dart';
 import 'widgets/quick_access_card.dart';
 import 'widgets/upcoming_events_card.dart';
 
@@ -75,6 +76,7 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                   const PendingRoleBanner(),
                   const PledgeReminderBanner(),
+                  const ServiceReportHomeCard(),
                   const SizedBox(height: 20),
                   HeroBanner(
                     nextEvent: nextEvent,

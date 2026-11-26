@@ -314,6 +314,56 @@ service cloud.firestore {
       allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
     }
 
+    // Sunday Service Summary Report (the secretariat's weekly form). It records
+    // collections, tithers' names and personal notices (sickness, new babies), so
+    // only those below may see it. The Secretariat and Admin fill it in and correct
+    // it; only the Admin deletes one. It creates no giving or attendance records.
+    function canViewServiceReports() {
+      return isAdmin() || isSecretariat() || hasRole('pastor') || isFinance() || hasRole('oversight');
+    }
+    function canWriteServiceReports() { return isAdmin() || isSecretariat(); }
+    function shortText(d, k) { return d.get(k, '') is string && d.get(k, '').size() <= 120; }
+    function rowList(d, k) { return d.get(k, []) is list && d.get(k, []).size() <= 30; }
+    function headCount(d, k) { return d.get(k, 0) is number && d.get(k, 0) >= 0 && d.get(k, 0) <= 100000; }
+    function signatureText(d, k) { return d.get(k, '') is string && d.get(k, '').size() <= 200000; }
+    function validServiceReport(d) {
+      return d.keys().hasOnly(['date', 'serviceType', 'openingPrayerBy', 'intercessionBy', 'praisesBy',
+          'worshipBy', 'leadersOnDuty', 'announcementsBy', 'exhortationBy', 'exhortationTitle',
+          'exhortationReading', 'preacher', 'wordTitle', 'wordReading', 'wordSummary', 'testimonies',
+          'closingPrayerBy', 'men', 'women', 'children', 'collections', 'noticesBy', 'visitors',
+          'notices', 'specialOffering', 'nextWeekLeaders', 'secretaryName', 'treasurerName',
+          'elderName', 'secretarySignature', 'treasurerSignature', 'elderSignature',
+          'enteredBy', 'enteredByUid', 'createdAt', 'updatedAt'])
+        && d.date is timestamp
+        && d.serviceType in ['routine', 'special']
+        && shortText(d, 'openingPrayerBy') && shortText(d, 'intercessionBy')
+        && shortText(d, 'praisesBy') && shortText(d, 'worshipBy')
+        && shortText(d, 'announcementsBy') && shortText(d, 'exhortationBy')
+        && shortText(d, 'exhortationTitle') && shortText(d, 'exhortationReading')
+        && shortText(d, 'preacher') && shortText(d, 'wordTitle') && shortText(d, 'wordReading')
+        && shortText(d, 'closingPrayerBy') && shortText(d, 'noticesBy')
+        && shortText(d, 'secretaryName') && shortText(d, 'treasurerName') && shortText(d, 'elderName')
+        && d.get('wordSummary', '') is string && d.get('wordSummary', '').size() <= 6000
+        && rowList(d, 'leadersOnDuty') && rowList(d, 'testimonies') && rowList(d, 'visitors')
+        && rowList(d, 'notices') && rowList(d, 'specialOffering') && rowList(d, 'nextWeekLeaders')
+        && headCount(d, 'men') && headCount(d, 'women') && headCount(d, 'children')
+        && d.get('collections', {}) is map
+        && d.get('collections', {}).keys().hasOnly(['pledge', 'thanksgiving', 'seed', 'offering', 'tithe'])
+        && signatureText(d, 'secretarySignature') && signatureText(d, 'treasurerSignature')
+        && signatureText(d, 'elderSignature')
+        && d.get('enteredBy', '') is string && d.get('enteredBy', '').size() <= 100;
+    }
+    match /service_reports/{id} {
+      allow read: if canViewServiceReports();
+      allow create: if canWriteServiceReports() && validServiceReport(request.resource.data)
+        && request.resource.data.enteredByUid == request.auth.uid;
+      // Who first entered it, and when, cannot be rewritten.
+      allow update: if canWriteServiceReports() && validServiceReport(request.resource.data)
+        && !request.resource.data.diff(resource.data).affectedKeys()
+             .hasAny(['enteredBy', 'enteredByUid', 'createdAt']);
+      allow delete: if isAdmin();
+    }
+
     // Events are public to every signed-in member; only certain roles edit them.
     match /events/{id} {
       allow read: if isSignedIn();

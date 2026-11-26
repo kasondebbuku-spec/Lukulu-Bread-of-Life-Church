@@ -979,6 +979,103 @@ async function main() {
   await check('a person CAN remove their own device', () =>
     assertSucceeds(deleteDoc(dev('member2', 'tok_del'))));
 
+  console.log('\n--- Sunday Service Report (secretariat) ---');
+  // elder1 may have been given other roles earlier in this file, so use fresh people
+  await seedDoc('users/sr_member', { role: 'member', email: 'sr_member@test.com' });
+  await seedDoc('users/sr_elder', { role: 'elder', email: 'sr_elder@test.com' });
+  const svc = (uid, extra = {}) => ({
+    date: ts('2026-11-22'), serviceType: 'routine', openingPrayerBy: 'Elder Banda',
+    intercessionBy: '', praisesBy: '', worshipBy: '', leadersOnDuty: ['Peter'], announcementsBy: '',
+    exhortationBy: '', exhortationTitle: '', exhortationReading: '', preacher: 'Pastor',
+    wordTitle: '', wordReading: '', wordSummary: 'Faith.', testimonies: [{ name: 'J', summary: 's' }],
+    closingPrayerBy: '', men: 20, women: 30, children: 10, collections: { tithe: 800, seed: 50 },
+    noticesBy: '', visitors: [], notices: [], specialOffering: [], nextWeekLeaders: [],
+    secretaryName: 'Sec', treasurerName: '', elderName: '',
+    enteredBy: 'Sec', enteredByUid: uid, createdAt: serverTimestamp(), ...extra,
+  });
+  const sRef = (uid, id) => doc(ctxFor(uid), 'service_reports/' + id);
+  const sCol = (uid) => collection(ctxFor(uid), 'service_reports');
+  const seededSvc = { ...svc('secretariat1'), createdAt: ts('2026-11-22') };
+  for (const id of ['sv_read', 'sv_edit', 'sv_del', 'sv_del2']) {
+    await seedDoc('service_reports/' + id, seededSvc);
+  }
+
+  await check('the secretariat CAN save a service report', () =>
+    assertSucceeds(addDoc(sCol('secretariat1'), svc('secretariat1'))));
+  await check('an admin CAN save a service report', () =>
+    assertSucceeds(addDoc(sCol('admin1'), svc('admin1'))));
+  await check('a report can be saved nearly empty, to be finished later', () =>
+    assertSucceeds(addDoc(sCol('secretariat1'), {
+      date: ts('2026-11-29'), serviceType: 'special', enteredBy: 'Sec',
+      enteredByUid: 'secretariat1', createdAt: serverTimestamp(),
+    })));
+  for (const who of ['pastor1', 'finance1', 'oversight1', 'sr_member', 'sr_elder', 'hospitality1']) {
+    await check(who + ' CANNOT write a service report', () =>
+      assertFails(addDoc(sCol(who), svc(who))));
+  }
+  await check('someone not signed in CANNOT write a service report', () =>
+    assertFails(addDoc(collection(testEnv.unauthenticatedContext().firestore(), 'service_reports'), svc('x'))));
+
+  for (const who of ['secretariat1', 'admin1', 'pastor1', 'finance1', 'oversight1']) {
+    await check(who + ' CAN read service reports', () =>
+      assertSucceeds(getDoc(sRef(who, 'sv_read'))));
+    await check(who + ' CAN list service reports', () =>
+      assertSucceeds(getDocs(sCol(who))));
+  }
+  for (const who of ['sr_member', 'sr_elder', 'hospitality1']) {
+    await check(who + ' CANNOT read a service report', () =>
+      assertFails(getDoc(sRef(who, 'sv_read'))));
+    await check(who + ' CANNOT list service reports', () =>
+      assertFails(getDocs(sCol(who))));
+  }
+
+  await check('a report CANNOT be entered in someone else\'s name', () =>
+    assertFails(addDoc(sCol('secretariat1'), svc('admin1'))));
+  await check('a report needs a real date', () =>
+    assertFails(addDoc(sCol('secretariat1'), svc('secretariat1', { date: 'Sunday' }))));
+  await check('a report CANNOT have a made-up service type', () =>
+    assertFails(addDoc(sCol('secretariat1'), svc('secretariat1', { serviceType: 'secret' }))));
+  await check('a report CANNOT carry extra fields', () =>
+    assertFails(addDoc(sCol('secretariat1'), svc('secretariat1', { role: 'admin' }))));
+  await check('a report CANNOT have a negative head count', () =>
+    assertFails(addDoc(sCol('secretariat1'), svc('secretariat1', { men: -1 }))));
+  await check('a report CANNOT have a head count written as text', () =>
+    assertFails(addDoc(sCol('secretariat1'), svc('secretariat1', { women: 'many' }))));
+  await check('a report CANNOT have collections of another kind', () =>
+    assertFails(addDoc(sCol('secretariat1'), svc('secretariat1', { collections: { bribe: 5 } }))));
+  await check('a report CANNOT have an enormous message', () =>
+    assertFails(addDoc(sCol('secretariat1'), svc('secretariat1', { wordSummary: 'x'.repeat(6001) }))));
+  await check('a report CANNOT have an enormous name', () =>
+    assertFails(addDoc(sCol('secretariat1'), svc('secretariat1', { preacher: 'x'.repeat(121) }))));
+  await check('a report CANNOT have more than 30 lines in a list', () =>
+    assertFails(addDoc(sCol('secretariat1'), svc('secretariat1', { notices: Array(31).fill('n') }))));
+  await check('a list CANNOT be written as something else', () =>
+    assertFails(addDoc(sCol('secretariat1'), svc('secretariat1', { visitors: 'John' }))));
+
+  await check('the secretariat CAN correct a report', () =>
+    assertSucceeds(updateDoc(sRef('secretariat1', 'sv_edit'), { men: 25, updatedAt: serverTimestamp() })));
+  await check('an admin CAN correct a report', () =>
+    assertSucceeds(updateDoc(sRef('admin1', 'sv_edit'), { preacher: 'Pastor Mwale' })));
+  await check('who first entered a report CANNOT be rewritten', () =>
+    assertFails(updateDoc(sRef('admin1', 'sv_edit'), { enteredByUid: 'admin1' })));
+  await check('when a report was first saved CANNOT be rewritten', () =>
+    assertFails(updateDoc(sRef('secretariat1', 'sv_edit'), { createdAt: ts('2020-01-01') })));
+  for (const who of ['pastor1', 'finance1', 'oversight1', 'sr_member']) {
+    await check(who + ' CANNOT change a service report', () =>
+      assertFails(updateDoc(sRef(who, 'sv_edit'), { men: 1 })));
+  }
+  await check('the secretariat CANNOT delete a report', () =>
+    assertFails(deleteDoc(sRef('secretariat1', 'sv_del'))));
+  await check('the pastor CANNOT delete a report', () =>
+    assertFails(deleteDoc(sRef('pastor1', 'sv_del'))));
+  await check('an admin CAN delete a report', () =>
+    assertSucceeds(deleteDoc(sRef('admin1', 'sv_del2'))));
+
+  await check('the secretariat still CANNOT see giving or income forms', async () => {
+    await assertFails(getDocs(collection(ctxFor('secretariat1'), 'giving')));
+    await assertFails(getDocs(collection(ctxFor('secretariat1'), 'income_forms')));
+  });
+
   console.log('\n--- Members editing and deleting their own prayer requests ---');
   await seedUser('member3', 'member');
   const prayer = (uid) => ({ userId: uid, userName: uid, request: 'original', status: 'pending' });

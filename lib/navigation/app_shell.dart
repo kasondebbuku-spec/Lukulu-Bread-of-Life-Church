@@ -15,6 +15,7 @@ import '../features/leaders/screens/leaders_screen.dart';
 import '../features/leaders/screens/ministry_reports_screen.dart';
 import '../features/members/screens/members_screen.dart';
 import '../features/prayer/screens/prayer_screen.dart';
+import '../features/service_report/screens/service_report_list_screen.dart';
 import 'app_sidebar.dart';
 import 'more_screen.dart';
 import 'nav_destination.dart';
@@ -59,8 +60,17 @@ List<NavDestination> _destinationsForRole(UserAccess role) {
     builder: () => const PrayerScreen(),
   );
 
+  final serviceReport = NavDestination(
+    label: 'Service Report',
+    shortLabel: 'Service',
+    icon: Icons.description_outlined,
+    builder: () => const ServiceReportListScreen(),
+  );
+  final isSecretariat = role.roles.contains(UserRole.secretariat);
+
   return [
     home,
+    if (isSecretariat) serviceReport,
     if (role.canManageMembers) members,
     if (role.canViewGiving) giving,
     NavDestination(
@@ -68,6 +78,7 @@ List<NavDestination> _destinationsForRole(UserAccess role) {
         icon: Icons.favorite_outline,
         builder: () => const MyGivingScreen()),
     if (role.canManageAttendance) attendance,
+    if (!isSecretariat && role.canViewServiceReports) serviceReport,
     events,
     announcements,
     prayer,

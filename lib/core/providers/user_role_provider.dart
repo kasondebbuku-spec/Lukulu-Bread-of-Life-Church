@@ -70,6 +70,18 @@ extension UserRoleX on UserRole {
   bool get canViewGiving =>
       canManageGiving || this == UserRole.oversight || this == UserRole.pastor;
 
+  /// The Sunday Service Report: the Secretariat fills it in (with the Admin).
+  /// It holds collections, tithers' names and personal notices (sickness, new
+  /// babies), so only these people and the Pastor, Finance and Oversight see it.
+  /// Mirrors `canViewServiceReports` / `canWriteServiceReports` in firestore.rules.
+  bool get canWriteServiceReports =>
+      this == UserRole.admin || this == UserRole.secretariat;
+  bool get canViewServiceReports =>
+      canWriteServiceReports ||
+      this == UserRole.pastor ||
+      this == UserRole.finance ||
+      this == UserRole.oversight;
+
   /// Entering (and correcting) a Sunday Income Form. The Pastor may do this
   /// although the role cannot otherwise change financial records, and cannot delete
   /// a form. Mirrors `canEnterIncomeForms` in firestore.rules.
@@ -129,6 +141,8 @@ class UserAccess {
   bool get canManageGiving => roles.any((r) => r.canManageGiving);
   bool get canViewGiving => roles.any((r) => r.canViewGiving);
   bool get canEnterIncomeForms => roles.any((r) => r.canEnterIncomeForms);
+  bool get canWriteServiceReports => roles.any((r) => r.canWriteServiceReports);
+  bool get canViewServiceReports => roles.any((r) => r.canViewServiceReports);
 
   /// Holds at least one ministry position, so can send reports to the Pastor.
   bool get hasPosition => positions.isNotEmpty;
