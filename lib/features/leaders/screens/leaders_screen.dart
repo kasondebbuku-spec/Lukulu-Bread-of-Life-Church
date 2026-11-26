@@ -9,6 +9,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../models/ministry_position.dart';
 import '../../../services/leader_directory_service.dart';
 import '../widgets/ministry_position_fields.dart';
+import '../widgets/role_request_card.dart';
 
 /// Church roles in the order they are listed.
 const _roleOrder = <UserRole>[
@@ -156,6 +157,8 @@ class LeadersScreen extends ConsumerWidget {
                 for (final (l, p) in byMinistry[m]!) person(l, '${p.title}, $m'),
               ],
               const SizedBox(height: 16),
+              const RoleRequestCard(),
+              const SizedBox(height: 12),
               Card(
                 margin: const EdgeInsets.symmetric(horizontal: 16),
                 child: Padding(

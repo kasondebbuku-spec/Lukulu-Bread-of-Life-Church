@@ -76,9 +76,9 @@ final notificationServiceProvider = Provider<NotificationService>((ref) =>
     NotificationService(ref.watch(firestoreProvider),
         ref.watch(authStateChangesProvider).value?.uid));
 
-/// The role this person asked for at sign-up that the Admin has not decided on.
-final ownPendingRoleRequestProvider = Provider<UserRole?>((ref) {
-  final data = ref.watch(userProfileProvider).value;
-  final access = ref.watch(userRoleProvider).value ?? UserAccess.member;
-  return pendingRoleRequest(data, access);
+/// The roles this person has asked for that the Admin has not decided on.
+final ownPendingRoleRequestsProvider = Provider<List<UserRole>>((ref) {
+  final data = ref.watch(userProfileProvider).valueOrNull;
+  final access = ref.watch(userRoleProvider).valueOrNull ?? UserAccess.member;
+  return pendingRoleRequests(data, access);
 });

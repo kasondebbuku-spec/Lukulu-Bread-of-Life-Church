@@ -24,6 +24,32 @@ function hasAnyRole(user, wanted) {
   return wanted.some((r) => have.includes(r));
 }
 
+/** The church roles a profile is asking for (the list, or the older single one). */
+function askedRoles(user) {
+  const out = new Set();
+  if (user && Array.isArray(user.requestedRoles)) {
+    for (const r of user.requestedRoles) if (typeof r === 'string') out.add(r);
+  }
+  if (user && typeof user.requestedRole === 'string' && user.requestedRole) {
+    out.add(user.requestedRole);
+  }
+  return out;
+}
+
+/**
+ * What a profile change newly asks the Admin to approve: roles not asked for
+ * before, and a ministry position that is new or changed.
+ * @returns {{roles: string[], position: object|null}}
+ */
+function newRequests(before, after) {
+  const had = askedRoles(before);
+  const roles = [...askedRoles(after)].filter((r) => !had.has(r));
+  const p = after && after.requestedPosition;
+  const b = before && before.requestedPosition;
+  const changed = p && (!b || b.ministry !== p.ministry || b.title !== p.title);
+  return { roles, position: changed ? p : null };
+}
+
 /** Roles that may post announcements (and so read "leaders only" ones). */
 const LEADER_ROLES = ['admin', 'secretariat', 'elder', 'deacon', 'deaconess', 'pastor'];
 
@@ -45,4 +71,6 @@ function selectRecipients(users, who) {
   return [...out];
 }
 
-module.exports = { rolesOf, hasAnyRole, selectRecipients, LEADER_ROLES, NON_MEMBER_ROLES };
+module.exports = {
+  rolesOf, hasAnyRole, selectRecipients, askedRoles, newRequests, LEADER_ROLES, NON_MEMBER_ROLES,
+};

@@ -36,6 +36,12 @@ service cloud.firestore {
         && !('denominationBreakdown' in data) && !('incomeFormId' in data)
         && exists(/databases/$(database)/documents/users/$(data.memberUserId)));
     }
+    // Church roles a person asks for (several allowed; never Admin). Asking grants
+    // nothing: an Admin approves each one into `roles`.
+    function validRequestedRoles(r) {
+      return r is list && r.size() <= 8
+        && r.hasOnly(['deacon', 'deaconess', 'elder', 'pastor', 'finance', 'secretariat', 'hospitality', 'oversight']);
+    }
     // A ministry position someone asks for (Admin approves it into `positions`).
     function validPositionRequest(p) {
       return p is map && p.keys().hasOnly(['ministry', 'title'])
@@ -107,6 +113,8 @@ service cloud.firestore {
         // It grants nothing by itself, and 'admin' cannot be requested.
         && (!('requestedRole' in request.resource.data)
             || request.resource.data.requestedRole in ['deacon', 'deaconess', 'elder', 'pastor', 'finance', 'secretariat', 'hospitality', 'oversight'])
+        && (!('requestedRoles' in request.resource.data)
+            || validRequestedRoles(request.resource.data.requestedRoles))
         // A ministry position can be asked for the same way, but never held at sign-up.
         && (!('requestedPosition' in request.resource.data)
             || validPositionRequest(request.resource.data.requestedPosition))
@@ -118,7 +126,10 @@ service cloud.firestore {
       allow update: if (isAdmin() && validRoles(request.resource.data)
         && (request.auth.uid != uid || ('admin' in request.resource.data.get('roles', [request.resource.data.get('role', 'member')]))))
         || (isSignedIn() && request.auth.uid == uid
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'notificationsSeenAt', 'requestedPosition'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'notificationsSeenAt', 'requestedPosition', 'requestedRoles'])
+          // A person may ask for more church roles later; only an Admin grants them.
+          && (!('requestedRoles' in request.resource.data)
+              || validRequestedRoles(request.resource.data.requestedRoles))
           // 'last opened notifications' is stamped with the server's own clock.
           && (!('notificationsSeenAt' in request.resource.data)
               || request.resource.data.notificationsSeenAt == request.time)

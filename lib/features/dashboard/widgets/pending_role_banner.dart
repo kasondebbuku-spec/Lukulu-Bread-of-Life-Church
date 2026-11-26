@@ -4,16 +4,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/notifications_provider.dart';
 import '../../../core/providers/user_role_provider.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../models/role_request.dart';
 
-/// Tells someone who asked for a role at sign-up that the Admin has not yet
-/// approved it. Disappears by itself once approved or declined.
+/// Tells someone who asked for roles that the Admin has not yet approved them.
+/// Each leaves the list once decided; the notice disappears with the last one.
 class PendingRoleBanner extends ConsumerWidget {
   const PendingRoleBanner({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final role = ref.watch(ownPendingRoleRequestProvider);
-    if (role == null) return const SizedBox.shrink();
+    final waiting = ref.watch(ownPendingRoleRequestsProvider);
+    if (waiting.isEmpty) return const SizedBox.shrink();
+    final roles = inWords([for (final r in waiting) r.label]);
     return Padding(
       padding: const EdgeInsets.only(top: 16),
       child: Container(
@@ -38,9 +40,9 @@ class PendingRoleBanner extends ConsumerWidget {
                           .titleMedium
                           ?.copyWith(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 4),
-                  Text('You asked to be ${role.label}. Until the Admin approves it '
-                      'you can use the app as a Member. This notice disappears '
-                      'by itself once it is approved.'),
+                  Text('You asked to be $roles. Until the Admin approves, you can '
+                      'carry on using the app with what you already have. This '
+                      'notice disappears by itself once it is decided.'),
                 ],
               ),
             ),

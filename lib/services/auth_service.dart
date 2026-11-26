@@ -22,15 +22,15 @@ class AuthService {
   ///
   /// New accounts are always created with the `member` role — elevated roles
   /// must be granted by an admin (enforced by security rules). A person can name
-  /// the role they hold in the church as [requestedRole]; that is only a note for
+  /// the roles they hold in the church as [requestedRoles]; that is only a note for
   /// the Admin to approve and grants no access by itself.
   ///
   /// With [phone] (digits from [normalizePhone]) the account is made under the
   /// private address [phoneLoginEmail] instead of a real email, and the number is
   /// kept on the profile. [requestedPosition] is a ministry position to be
-  /// approved by the Admin, like [requestedRole].
+  /// approved by the Admin, like [requestedRoles].
   Future<User?> signUp(String email, String password, String name,
-      {UserRole? requestedRole,
+      {Set<UserRole> requestedRoles = const {},
       MinistryPosition? requestedPosition,
       String? phone}) async {
     final result = await _auth.createUserWithEmailAndPassword(
@@ -45,8 +45,11 @@ class AuthService {
         'role': 'member',
         if (phone != null) 'phone': phone,
         if (phone != null) 'loginKind': 'phone',
-        if (requestedRole != null && requestableRoles.contains(requestedRole))
-          'requestedRole': requestedRole.name,
+        if (requestableRoles.any(requestedRoles.contains))
+          'requestedRoles': [
+            for (final r in requestableRoles)
+              if (requestedRoles.contains(r)) r.name,
+          ],
         if (requestedPosition != null)
           'requestedPosition': requestedPosition.toMap(),
         'createdAt': FieldValue.serverTimestamp(),
@@ -54,13 +57,6 @@ class AuthService {
       await user.updateDisplayName(name);
     }
     return user;
-  }
-
-  /// The roles recorded on a profile (a plain member if there is none yet).
-  Future<UserAccess> loadAccess(String uid) async {
-    final doc =
-        await _firestore.collection(FirestoreCollections.users).doc(uid).get();
-    return UserAccess.fromData(doc.data());
   }
 
   /// [identifier] is an email, or a phone number (anything [looksLikePhone]).

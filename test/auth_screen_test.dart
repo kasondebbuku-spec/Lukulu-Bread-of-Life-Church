@@ -27,17 +27,14 @@ class _FakeAuthService implements AuthService {
 
   @override
   Future<User?> signUp(String email, String password, String name,
-      {UserRole? requestedRole,
+      {Set<UserRole> requestedRoles = const {},
       MinistryPosition? requestedPosition,
       String? phone}) async {
-    signUps.add([email, name, requestedRole?.name]);
+    signUps.add([email, name]);
     phones.add(phone);
     positions.add(requestedPosition);
     return null;
   }
-
-  @override
-  Future<UserAccess> loadAccess(String uid) async => UserAccess.member;
 
   @override
   Future<void> signOut() async {}

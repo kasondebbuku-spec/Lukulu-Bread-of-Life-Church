@@ -55,12 +55,14 @@ link** (see *Forgot your password*).
 
 Every new account starts as a **Member**. If you serve as a Pastor, Elder,
 Deacon, Deaconess, Finance Officer, Secretariat, Hospitality or Financial
-Oversight, choose it under **I am registering as** on the sign-up form. If you lead
+Oversight, tick it under **Do you serve as a leader?** on the sign-up form.
+**Tick every role you serve in**, for example Elder, Finance Officer and
+Secretariat. If you lead
 a ministry (Choir, Women of Integrity, Youth and so on), tick **I lead a ministry**
 and choose the ministry and your position (see
 [Leaders and ministry reports](#13-leaders-and-ministry-reports)). You can use
-the app as a Member straight away, and an **Admin** approves your role with one tap
-(see [Account Roles](#10-account-roles-admin)). Nobody can give themselves a higher
+the app as a Member straight away, and an **Admin** approves **each role
+separately** (see [Account Roles](#10-account-roles-admin)). Nobody can give themselves a higher
 role: asking grants nothing until it is approved.
 
 ### Sign in
@@ -91,8 +93,11 @@ A person can hold **more than one role** (for example Elder, Finance and
 Secretariat); they get everything all of them allow, **all at once**. There is
 nothing to switch: log in once and the menus for every role are there. The Admin
 ticks each role in **Account Roles** and taps **Save Roles**; the menus appear
-straight away, without logging out. (The **Sign in as** box on the log-in screen
-does not change what you can do.)
+straight away, without logging out.
+
+**Asking for another role later:** open **Leaders -> Ask for a role**, tick the
+roles and tap **Send**. Roles waiting for approval are listed there and in the gold
+notice on Home.
 
 | Role | Members directory | Giving and finances | Attendance | Events | Announcements | Prayer requests |
 |---|:-:|:-:|:-:|:-:|:-:|:-:|
@@ -134,9 +139,9 @@ Home greets you by name and shows:
   many announcements and events were posted since you last looked. Tap it to see them
   (the new ones are highlighted); tap an item to open that section. Opening the bell
   clears the number, on every device you use. It shows news from the last 30 days.
-- **Waiting for Admin approval:** if you asked for a role when you signed up and the
-  Admin has not decided yet, a gold notice says so. It disappears by itself once your
-  request is approved or declined.
+- **Waiting for Admin approval:** while roles you asked for are undecided, a gold
+  notice names them. Each leaves the list when the Admin approves or declines it, and
+  the notice disappears with the last one.
 - **Banner:** the next upcoming event, or a welcome message if none is scheduled.
   Buttons: **Watch Live** (opens the church Facebook page), **View Events**,
   **Join WhatsApp**.
@@ -456,6 +461,12 @@ group. **Watch Live** opens the church Facebook page for live services.
 ---
 
 ## 10. Account Roles (Admin)
+
+> **Role requests.** At the top, **Waiting for your approval** has **one line for each
+> role** a person asked for, with its own **Approve** and **Decline**. So you can
+> approve someone as Elder and decline Finance. Lines for roles that open the
+> church's money records (Pastor, Finance Officer, Financial Oversight) say so:
+> check those carefully.
 
 > **Ministry positions.** People who asked for a place in a ministry appear in a
 > second card, **Ministry positions waiting**: tap **Approve** or **Decline**. To take

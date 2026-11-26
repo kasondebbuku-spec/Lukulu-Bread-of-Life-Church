@@ -14,7 +14,7 @@ const { onDocumentCreated, onDocumentUpdated, onDocumentWritten } =
   require('firebase-functions/v2/firestore');
 const { logger } = require('firebase-functions');
 
-const { selectRecipients, LEADER_ROLES } = require('./lib/recipients');
+const { selectRecipients, newRequests, LEADER_ROLES } = require('./lib/recipients');
 const { deliver } = require('./lib/send');
 const msg = require('./lib/messages');
 
@@ -54,22 +54,16 @@ exports.onMinistryReportReviewed = onDocumentUpdated('ministry_reports/{id}', as
   await notify({ uids: [after.authorUid] }, msg.reportReviewed(after), 'report reviewed');
 });
 
-// Someone asked for a role or a ministry position: tell the Admin.
+// Someone asked for roles or a ministry position: tell the Admin.
 exports.onApprovalRequested = onDocumentWritten('users/{uid}', async (event) => {
   const after = event.data.after.exists ? event.data.after.data() : null;
   if (!after) return;
   const before = event.data.before.exists ? event.data.before.data() : {};
-  const roleChanged = after.requestedRole && after.requestedRole !== before.requestedRole;
-  const p = after.requestedPosition;
-  const b = before.requestedPosition;
-  const positionChanged = p && (!b || b.ministry !== p.ministry || b.title !== p.title);
-  if (!roleChanged && !positionChanged) return;
+  const asked = newRequests(before, after);
+  if (asked.roles.length === 0 && !asked.position) return;
   await notify(
     { roles: ['admin'], exclude: [event.params.uid] },
-    msg.approvalNeeded(after.name, {
-      requestedRole: roleChanged ? after.requestedRole : null,
-      requestedPosition: roleChanged ? null : p,
-    }),
+    msg.approvalNeeded(after.name, asked),
     'approval needed',
   );
 });

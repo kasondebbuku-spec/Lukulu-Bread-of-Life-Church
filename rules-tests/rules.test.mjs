@@ -1076,6 +1076,63 @@ async function main() {
     await assertFails(getDocs(collection(ctxFor('secretariat1'), 'income_forms')));
   });
 
+  console.log('\n--- Asking for several church roles ---');
+  const signUp = (uid, extra = {}) =>
+    setDoc(doc(ctxFor(uid), 'users/' + uid), { role: 'member', email: uid + '@test.com', ...extra });
+  await seedDoc('users/many_later', { role: 'member', email: 'many_later@test.com' });
+  await seedDoc('users/many_wait', { role: 'member', email: 'many_wait@test.com', requestedRoles: ['elder', 'finance'] });
+
+  await check('sign-up CAN ask for several roles, and is still only a member', async () => {
+    await assertSucceeds(signUp('many1', { requestedRoles: ['elder', 'finance', 'secretariat'] }));
+    await assertFails(getDocs(collection(ctxFor('many1'), 'giving')));
+    await assertFails(getDocs(collection(ctxFor('many1'), 'service_reports')));
+  });
+  await check('sign-up CANNOT slip Admin into the list', () =>
+    assertFails(signUp('many2', { requestedRoles: ['elder', 'admin'] })));
+  await check('sign-up CANNOT ask for a made-up role', () =>
+    assertFails(signUp('many3', { requestedRoles: ['bishop'] })));
+  await check('the list of roles asked for must be a list', () =>
+    assertFails(signUp('many4', { requestedRoles: 'elder' })));
+  await check('the list of roles asked for cannot be padded out', () =>
+    assertFails(signUp('many5', { requestedRoles: Array(9).fill('elder') })));
+  await check('sign-up CANNOT ask for roles and hold them too', () =>
+    assertFails(signUp('many6', { requestedRoles: ['finance'], roles: ['finance'] })));
+
+  await check('a person CAN ask for more roles later', () =>
+    assertSucceeds(updateDoc(doc(ctxFor('many_later'), 'users/many_later'), { requestedRoles: ['secretariat', 'elder'] })));
+  await check('asking later CANNOT include Admin', () =>
+    assertFails(updateDoc(doc(ctxFor('many_later'), 'users/many_later'), { requestedRoles: ['admin'] })));
+  await check('a person CANNOT grant themselves a role while asking', () =>
+    assertFails(updateDoc(doc(ctxFor('many_later'), 'users/many_later'), { requestedRoles: ['elder'], roles: ['elder'] })));
+  await check('a person CANNOT ask on someone else\'s profile', () =>
+    assertFails(updateDoc(doc(ctxFor('many_later'), 'users/many_wait'), { requestedRoles: ['pastor'] })));
+  for (const who of ['finance1', 'secretariat1', 'pastor1']) {
+    await check(who + ' CANNOT approve someone\'s role', () =>
+      assertFails(updateDoc(doc(ctxFor(who), 'users/many_wait'), { roles: ['elder'], requestedRoles: ['finance'] })));
+  }
+  await check('an Admin CAN approve one role and leave another waiting', () =>
+    assertSucceeds(updateDoc(doc(ctxFor('admin1'), 'users/many_wait'), { roles: ['elder'], requestedRoles: ['finance'] })));
+  await check('having Elder approved does not open the money records', () =>
+    assertFails(getDocs(collection(ctxFor('many_wait'), 'giving'))));
+
+  console.log('\n--- One person holding several roles gets all of them at once ---');
+  await seedDoc('users/triple1', { email: 'triple1@test.com', roles: ['elder', 'finance', 'secretariat'] });
+  await check('as Finance: reads and records giving', async () => {
+    await assertSucceeds(getDocs(collection(ctxFor('triple1'), 'giving')));
+    await assertSucceeds(setDoc(doc(ctxFor('triple1'), 'giving/triple_g'), { memberName: 'T', amount: 10 }));
+  });
+  await check('as Secretariat: writes a service report and keeps the directory', async () => {
+    await assertSucceeds(setDoc(doc(ctxFor('triple1'), 'service_reports/triple_s'),
+      { date: ts('2026-11-29'), serviceType: 'routine', enteredByUid: 'triple1' }));
+    await assertSucceeds(getDocs(collection(ctxFor('triple1'), 'members')));
+  });
+  await check('as Elder: reads leaders\' contacts and records attendance', async () => {
+    await assertSucceeds(getDocs(collection(ctxFor('triple1'), 'leader_contacts')));
+    await assertSucceeds(setDoc(doc(ctxFor('triple1'), 'attendance/triple_a'), { count: 10 }));
+  });
+  await check('and still CANNOT do what none of the three allows (change roles)', () =>
+    assertFails(updateDoc(doc(ctxFor('triple1'), 'users/many_wait'), { roles: ['finance'] })));
+
   console.log('\n--- Members editing and deleting their own prayer requests ---');
   await seedUser('member3', 'member');
   const prayer = (uid) => ({ userId: uid, userName: uid, request: 'original', status: 'pending' });

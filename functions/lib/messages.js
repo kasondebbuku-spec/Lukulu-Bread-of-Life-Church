@@ -47,19 +47,22 @@ function reportReviewed(report) {
   };
 }
 
-/** Someone asked for a church role or a ministry position. */
-function approvalNeeded(name, { requestedRole, requestedPosition }) {
+/** `a`, `a and b`, or `a, b and c`. */
+function inWords(items) {
+  if (items.length < 2) return items.join('');
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+}
+
+/** Someone asked for church roles and/or a ministry position. */
+function approvalNeeded(name, { roles = [], position = null }) {
   const who = snippet(name, 40) || 'Someone';
-  if (requestedRole) {
-    return {
-      title: 'Approval needed',
-      body: `${who} asked to be ${ROLE_LABELS[requestedRole] || requestedRole}.`,
-    };
+  const asked = roles.map((r) => ROLE_LABELS[r] || r);
+  if (position) {
+    asked.push(`${snippet(position.ministry, 40)} · ${snippet(position.title, 40)}`);
   }
-  const p = requestedPosition || {};
   return {
     title: 'Approval needed',
-    body: `${who} asked to be ${snippet(p.ministry, 40)} · ${snippet(p.title, 40)}.`,
+    body: snippet(`${who} asked to be ${inWords(asked)}.`, 160),
   };
 }
 

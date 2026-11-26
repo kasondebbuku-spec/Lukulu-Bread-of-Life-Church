@@ -11,14 +11,14 @@ import 'add_staff_dialog.dart';
 
 class RegisteredAccount {
   const RegisteredAccount(this.id, this.name, this.email, this.access,
-      {this.requestedRole, this.requestedPosition});
+      {this.requestedRoles = const [], this.requestedPosition});
 
   /// [email] is the phone number for someone who signed up with one.
   final String id, name, email;
   final UserAccess access;
 
-  /// A role they asked for at sign-up that an Admin has not yet decided on.
-  final UserRole? requestedRole;
+  /// Roles they asked for that an Admin has not yet decided on.
+  final List<UserRole> requestedRoles;
 
   /// A ministry position they asked for that an Admin has not yet decided on.
   final MinistryPosition? requestedPosition;
@@ -47,7 +47,7 @@ final registeredAccountsProvider =
       final rawEmail = data['email'] as String? ?? '';
       return RegisteredAccount(doc.id, data['name'] as String? ?? 'Member',
           isPhoneLoginEmail(rawEmail) ? (phone ?? rawEmail) : rawEmail, access,
-          requestedRole: pendingRoleRequest(data, access),
+          requestedRoles: pendingRoleRequests(data, access),
           requestedPosition: MinistryPosition.fromMap(data['requestedPosition']));
     }).toList();
     accounts
@@ -83,7 +83,7 @@ class AccountRolesScreen extends ConsumerWidget {
         )),
         data: (items) => ListView(children: [
           _PendingRequests(
-              accounts: items.where((a) => a.requestedRole != null).toList()),
+              accounts: items.where((a) => a.requestedRoles.isNotEmpty).toList()),
           _PendingPositions(
               accounts: items.where((a) => a.requestedPosition != null).toList()),
           const Padding(
@@ -235,6 +235,11 @@ class _PendingRequests extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     if (accounts.isEmpty) return const SizedBox.shrink();
     final service = ref.read(roleRequestServiceProvider);
+    // One line, and one decision, for each role a person asked for.
+    final requests = [
+      for (final account in accounts)
+        for (final role in account.requestedRoles) (account, role),
+    ];
     return Card(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Padding(
@@ -244,34 +249,38 @@ class _PendingRequests extends ConsumerWidget {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-              child: Text('Waiting for your approval (${accounts.length})',
+              child: Text('Waiting for your approval (${requests.length})',
                   style: Theme.of(context).textTheme.titleMedium),
             ),
-            for (final account in accounts)
+            for (final (account, role) in requests)
               ListTile(
+                key: ValueKey('request-${account.id}-${role.name}'),
                 title: Text(account.label),
-                subtitle: Text('Wants to be ${account.requestedRole!.label}'),
+                subtitle: Text('Wants to be ${role.label}'
+                    '${opensFinances(role) ? '\nThis opens the church\'s money records.' : ''}'),
+                isThreeLine: opensFinances(role),
                 trailing: Wrap(spacing: 4, children: [
                   TextButton(
+                    key: Key('decline-${account.id}-${role.name}'),
                     onPressed: () => _run(
                         context,
-                        () => service.decline(account.id),
-                        'Request declined.'),
+                        () => service.decline(account.id, role),
+                        'Request to be ${role.label} declined.'),
                     child: const Text('Decline'),
                   ),
                   FilledButton(
+                    key: Key('approve-${account.id}-${role.name}'),
                     onPressed: () => _run(
                         context,
                         () async {
-                          await service.approve(account.id, account.access.roles,
-                              account.requestedRole!);
+                          await service.approve(account.id, role);
                           try {
                             await ref
                                 .read(leaderDirectoryServiceProvider)
                                 .syncFor(account.id);
                           } catch (_) {}
                         },
-                        '${account.name} is now ${account.requestedRole!.label}.'),
+                        '${account.name} is now ${role.label}.'),
                     child: const Text('Approve'),
                   ),
                 ]),

@@ -45,15 +45,23 @@ test('a reviewed report carries the reply, or a plain line when there is none', 
 });
 
 test('an approval request names the role or the position asked for', () => {
-  assert.deepEqual(m.approvalNeeded('Joseph Phiri', { requestedRole: 'finance' }), {
+  assert.deepEqual(m.approvalNeeded('Joseph Phiri', { roles: ['finance'] }), {
     title: 'Approval needed',
     body: 'Joseph Phiri asked to be Finance Officer.',
   });
   assert.equal(
-    m.approvalNeeded('Ruth', { requestedPosition: { ministry: 'Choir', title: 'Leader' } }).body,
+    m.approvalNeeded('Ruth', { position: { ministry: 'Choir', title: 'Leader' } }).body,
     'Ruth asked to be Choir · Leader.',
   );
-  assert.equal(m.approvalNeeded('', { requestedRole: 'pastor' }).body, 'Someone asked to be Pastor.');
+  assert.equal(m.approvalNeeded('', { roles: ['pastor'] }).body, 'Someone asked to be Pastor.');
+  assert.equal(
+    m.approvalNeeded('Mary', { roles: ['elder', 'finance', 'secretariat'] }).body,
+    'Mary asked to be Elder, Finance Officer and Secretariat.',
+  );
+  assert.equal(
+    m.approvalNeeded('Mary', { roles: ['elder'], position: { ministry: 'Choir', title: 'Leader' } }).body,
+    'Mary asked to be Elder and Choir · Leader.',
+  );
 });
 
 test('a saved income form says when and by whom, and never an amount', () => {

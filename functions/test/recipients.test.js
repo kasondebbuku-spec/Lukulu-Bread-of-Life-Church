@@ -1,7 +1,9 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { rolesOf, hasAnyRole, selectRecipients, LEADER_ROLES } = require('../lib/recipients');
+const {
+  rolesOf, hasAnyRole, selectRecipients, newRequests, LEADER_ROLES,
+} = require('../lib/recipients');
 
 const users = [
   { uid: 'm1', roles: ['member'] },
@@ -81,4 +83,37 @@ test('no rule means nobody is picked', () => {
   assert.deepEqual(selectRecipients(users, {}), []);
   assert.deepEqual(selectRecipients([], { everyone: true }), []);
   assert.deepEqual(selectRecipients([null, {}], { everyone: true }), []);
+});
+
+test('a sign-up asking for several roles and a position is all new', () => {
+  const asked = newRequests({}, {
+    requestedRoles: ['elder', 'finance'],
+    requestedPosition: { ministry: 'Choir', title: 'Leader' },
+  });
+  assert.deepEqual(asked.roles, ['elder', 'finance']);
+  assert.deepEqual(asked.position, { ministry: 'Choir', title: 'Leader' });
+});
+
+test('only the roles added since last time are new', () => {
+  assert.deepEqual(
+    newRequests({ requestedRoles: ['elder'] }, { requestedRoles: ['elder', 'finance'] }).roles,
+    ['finance'],
+  );
+});
+
+test('an Admin deciding a request asks for nothing new', () => {
+  // approving one of two, including a request made before several were allowed
+  assert.deepEqual(
+    newRequests({ requestedRole: 'elder' }, { roles: ['elder'] }),
+    { roles: [], position: null },
+  );
+  assert.deepEqual(
+    newRequests({ requestedRoles: ['elder', 'finance'] }, { requestedRoles: ['finance'] }),
+    { roles: [], position: null },
+  );
+});
+
+test('an unrelated profile change asks for nothing', () => {
+  const same = { requestedRoles: ['elder'], requestedPosition: { ministry: 'Choir', title: 'Leader' } };
+  assert.deepEqual(newRequests(same, { ...same, name: 'x' }), { roles: [], position: null });
 });

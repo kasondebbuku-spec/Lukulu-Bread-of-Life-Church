@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../core/providers/auth_providers.dart';
 import '../core/providers/user_role_provider.dart';
 import '../features/leaders/widgets/ministry_position_fields.dart';
+import '../features/leaders/widgets/role_chips.dart';
 import '../models/ministry_position.dart';
 import '../models/phone_login.dart';
 import '../models/role_request.dart';
@@ -25,7 +26,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   bool _obscurePassword = true;
   final _emailController = TextEditingController();
   String _email = '', _password = '', _name = '';
-  UserRole? _requestedRole;
+
+  /// Church roles asked for at sign-up; a person may serve in several.
+  final Set<UserRole> _requestedRoles = {};
 
   /// Signing in or up with a phone number instead of an email.
   bool _usePhone = false;
@@ -48,33 +51,29 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     setState(() => _isSubmitting = true);
     try {
       final auth = ref.read(authServiceProvider);
-      String? loginNote;
       if (_isLogin) {
-        final user = await auth.signIn(_email, _password);
-        final wanted = _requestedRole;
-        if (user != null && wanted != null) {
-          loginNote = signInMessage(wanted, await auth.loadAccess(user.uid));
-        }
+        await auth.signIn(_email, _password);
       } else {
         // A number in the box means a phone account, whichever keypad was used.
         final phone = looksLikePhone(_email) ? normalizePhone(_email) : null;
         await auth.signUp(_email, _password, _name,
-            requestedRole: _requestedRole,
+            requestedRoles: {..._requestedRoles},
             phone: phone,
             requestedPosition: _leadsMinistry ? _position : null);
       }
       if (!mounted) return;
+      final asked = [
+        ..._roleWords(),
+        if (_leadsMinistry && _position != null) _position!.label,
+      ];
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content: Text(_isLogin
-                ? (loginNote ?? 'Logged in!')
-                : _requestedRole == null && !(_leadsMinistry && _position != null)
+                ? 'Logged in!'
+                : asked.isEmpty
                     ? 'Account created!'
-                    : 'Account created! Your request to be '
-                        '${[
-                        if (_requestedRole != null) _requestedRole!.label,
-                        if (_leadsMinistry && _position != null) _position!.label,
-                      ].join(' and ')} has been sent to the Admin.')),
+                    : 'Account created! Your request to be ${inWords(asked)} '
+                        'has been sent to the Admin.')),
       );
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
@@ -91,6 +90,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       if (mounted) setState(() => _isSubmitting = false);
     }
   }
+
+  /// The ticked roles' names, in a fixed order.
+  List<String> _roleWords() => [
+        for (final r in requestableRoles)
+          if (_requestedRoles.contains(r)) r.label,
+      ];
 
   /// Under the box while a number is typed: how the app will read it.
   String? _phoneHelper(String text) {
@@ -323,28 +328,20 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                       ? null
                                       : 'Min 6 chars',
                             ),
-                            const SizedBox(height: 14),
-                            DropdownButtonFormField<UserRole?>(
-                              initialValue: _requestedRole,
-                              isExpanded: true,
-                              decoration: InputDecoration(
-                                labelText:
-                                    _isLogin ? 'Sign in as' : 'I am registering as',
-                                prefixIcon: const Icon(Icons.badge_outlined),
-                              ),
-                              items: [
-                                const DropdownMenuItem(
-                                    value: null, child: Text('Church member')),
-                                for (final role in requestableRoles)
-                                  DropdownMenuItem(
-                                      value: role, child: Text(role.label)),
-                              ],
-                              onChanged: _isSubmitting
-                                  ? null
-                                  : (role) =>
-                                      setState(() => _requestedRole = role),
-                            ),
                             if (!_isLogin) ...[
+                              const SizedBox(height: 14),
+                              Text('Do you serve as a leader? Tick all that apply.',
+                                  style: Theme.of(context).textTheme.bodyMedium),
+                              const SizedBox(height: 8),
+                              RoleChips(
+                                roles: requestableRoles,
+                                selected: _requestedRoles,
+                                enabled: !_isSubmitting,
+                                onChanged: (role, on) => setState(() => on
+                                    ? _requestedRoles.add(role)
+                                    : _requestedRoles.remove(role)),
+                              ),
+                              const SizedBox(height: 6),
                               CheckboxListTile(
                                 key: const Key('leads-ministry'),
                                 contentPadding: EdgeInsets.zero,
@@ -374,10 +371,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             if (!_isLogin) ...[
                               const SizedBox(height: 8),
                               Text(
-                                _requestedRole == null
+                                _requestedRoles.isEmpty
                                     ? 'You will join as a Member.'
                                     : 'You can use the app as a Member now. The Admin '
-                                        'will approve your ${_requestedRole!.label} '
+                                        'will approve your ${inWords(_roleWords())} '
                                         'access.',
                                 textAlign: TextAlign.center,
                                 style: Theme.of(context).textTheme.bodySmall,
