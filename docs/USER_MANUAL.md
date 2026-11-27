@@ -78,8 +78,23 @@ For privacy the app always says "if an account exists..." whether or not the
 address is registered.
 
 **Phone number accounts cannot get a reset link**, because there is no email to send
-it to. If you forget the password of a phone account, ask the Admin to help you
-sign up again.
+it to. If you forget the password of a phone account, ask the Admin for help.
+
+**Message the Admin on WhatsApp:** after you tap **Forgot password?**, this button
+opens a WhatsApp chat with the church's Admin with a message ready, including the
+phone number or email you typed. Add your name and press send. It only asks for
+help: **it does not reset anything.** Never send a password in a message. (The button
+appears once the church has set the Admin's number.)
+
+### Change your password
+While you are logged in:
+1. Open your account menu (the round initial at the top of **Home**, or your name at
+   the bottom of the side menu on a computer) and tap **Change password**.
+2. Type your **current** password, then the **new** one twice (at least 6 characters).
+3. Tap **Change password**.
+
+Use the new password from your next log-in. If you have **forgotten** your current
+password, this screen cannot help: use **Forgot password?** on the log-in screen.
 
 ### Sign out
 Open your profile (bottom of the left sidebar on a computer, or the round

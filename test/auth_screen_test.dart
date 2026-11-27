@@ -40,6 +40,9 @@ class _FakeAuthService implements AuthService {
   Future<void> signOut() async {}
 
   @override
+  Future<void> changePassword(String currentPassword, String newPassword) async {}
+
+  @override
   User? get currentUser => null;
 }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/theme/app_theme.dart';
+import '../features/account/screens/change_password_screen.dart';
 import 'nav_destination.dart';
 
 /// Branded left sidebar for wide screens: logo header, rounded nav items with a
@@ -166,9 +167,14 @@ class _ProfileTile extends StatelessWidget {
       tooltip: 'Account',
       position: PopupMenuPosition.over,
       onSelected: (v) {
+        if (v == 'password') {
+          Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const ChangePasswordScreen()));
+        }
         if (v == 'logout') onLogout();
       },
       itemBuilder: (context) => const [
+        PopupMenuItem(value: 'password', child: Text('Change password')),
         PopupMenuItem(value: 'logout', child: Text('Logout')),
       ],
       child: Padding(

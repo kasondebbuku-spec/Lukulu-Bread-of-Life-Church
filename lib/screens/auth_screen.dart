@@ -11,6 +11,7 @@ import '../models/ministry_position.dart';
 import '../models/phone_login.dart';
 import '../models/role_request.dart';
 import '../core/theme/app_theme.dart';
+import '../features/account/widgets/admin_whatsapp_button.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -150,9 +151,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Phone number accounts'),
-          content: const Text(
-              'A reset link cannot be sent to a phone number. Please ask the '
-              'Admin to help you sign up again.'),
+          scrollable: true,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('A reset link cannot be sent to a phone number. Please '
+                  'ask the Admin for help.'),
+              AdminWhatsAppButton(typed: email),
+            ],
+          ),
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(context),
@@ -460,6 +467,7 @@ class _ResetPasswordDialogState extends State<_ResetPasswordDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Reset password'),
+      scrollable: true,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -471,6 +479,12 @@ class _ResetPasswordDialogState extends State<_ResetPasswordDialog> {
             keyboardType: TextInputType.emailAddress,
             decoration: const InputDecoration(labelText: 'Email or phone number'),
             onSubmitted: (v) => Navigator.pop(context, v.trim()),
+          ),
+          // Under the box, for anyone who cannot get a link (or never got it).
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: _controller,
+            builder: (context, value, _) =>
+                AdminWhatsAppButton(typed: value.text),
           ),
         ],
       ),

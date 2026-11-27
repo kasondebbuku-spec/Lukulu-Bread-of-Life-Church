@@ -80,6 +80,21 @@ class AuthService {
     }
   }
 
+  /// Changes the signed-in person's password. The current one is checked first,
+  /// so someone who picks up an unlocked phone cannot change it. Throws
+  /// [FirebaseAuthException] (`wrong-password` / `invalid-credential` when the
+  /// current password is wrong).
+  Future<void> changePassword(String currentPassword, String newPassword) async {
+    final user = _auth.currentUser;
+    final email = user?.email;
+    if (user == null || email == null) {
+      throw FirebaseAuthException(code: 'no-current-user');
+    }
+    await user.reauthenticateWithCredential(
+        EmailAuthProvider.credential(email: email, password: currentPassword));
+    await user.updatePassword(newPassword);
+  }
+
   Future<void> signOut() async {
     await _auth.signOut();
   }

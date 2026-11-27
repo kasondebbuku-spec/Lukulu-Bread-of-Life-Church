@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/providers/user_role_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/role_badge.dart';
+import '../../account/screens/change_password_screen.dart';
 import '../../notifications/widgets/notification_bell.dart';
 
 /// Greeting row at the top of the dashboard with the account menu on the right.
@@ -43,6 +44,10 @@ class DashboardHeader extends StatelessWidget {
         PopupMenuButton<String>(
           tooltip: 'Account',
           onSelected: (v) {
+            if (v == 'password') {
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const ChangePasswordScreen()));
+            }
             if (v == 'logout') onLogout();
           },
           itemBuilder: (context) => [
@@ -57,6 +62,8 @@ class DashboardHeader extends StatelessWidget {
                 ],
               ),
             ),
+            const PopupMenuItem(
+                value: 'password', child: Text('Change password')),
             const PopupMenuItem(value: 'logout', child: Text('Logout')),
           ],
           child: CircleAvatar(
