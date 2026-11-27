@@ -340,11 +340,12 @@ void main() {
       expect(uri.queryParameters['text'], passwordHelpMessage('0971234567'));
     });
 
-    test('no button until a number has been set', () {
+    test('the set number is read with the country code, ready for the link', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
-      // The app ships with the number empty until the church chooses one.
-      expect(container.read(adminWhatsAppProvider), isNull);
+      // Guards against a typo in admin_contact.dart: a wrong or unfinished number
+      // would silently hide the button or open a chat with someone else.
+      expect(container.read(adminWhatsAppProvider), '260972357358');
     });
   });
 

@@ -5,4 +5,4 @@
 /// It is shown to **anyone who opens the app**, before they log in, so use a
 /// number the church is happy to make public. While it is empty the WhatsApp
 /// button is not shown.
-const adminWhatsAppNumber = '';
+const adminWhatsAppNumber = '0972357358';
